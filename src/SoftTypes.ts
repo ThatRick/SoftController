@@ -61,9 +61,9 @@ export const functionHeaderByteLength = sizeOfStruct(FunctionHeaderStruct);
 
 
 // TASK DATA
-export interface Task
+export interface ITask
 {
-    blockID:        number              // ID of callable circuit or function 
+    targetID:       number              // ID of callable circuit or function 
     interval:       number              // time interval between calls (ms)
     offset:         number              // time offset to spread cpu load between tasks with same interval (ms)
     timeAccu:       number              // time accumulator (ms)
@@ -73,13 +73,13 @@ export interface Task
 }
 export const TaskStruct: StructType =
 {
-    blockID:        DataType.uint32,    // ID of callable circuit or function 
+    targetID:       DataType.uint32,    // ID of callable circuit or function 
     interval:       DataType.float,     // time interval between calls (ms)
     offset:         DataType.float,     // time offset to spread cpu load between tasks with same interval (ms)
     timeAccu:       DataType.float,     // time accumulator
-    runCount:       DataType.uint32,    // counts number of calls
+    cpuTime:        DataType.float,     // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt
     cpuTimeInt:     DataType.uint32,    // counts whole number of cpu milliseconds
-    cpuTime:        DataType.float      // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt
+    runCount:       DataType.uint32     // counts number of calls
 }
 export const taskStructByteLength = sizeOfStruct(TaskStruct)
 

@@ -18,16 +18,15 @@ export interface StructType
 export interface Struct
 {
     [index: string]: number;
-    _size: number;
 }
 
 
 // Read a struct from buffer
-export function readStruct(buffer: ArrayBuffer, startByteOffset: number, struct: StructType): Struct
+export function readStruct<T>(buffer: ArrayBuffer, startByteOffset: number, struct: StructType): T
 {
     let offset = startByteOffset;
     const view = new DataView(buffer);
-    const obj: Struct = {_size: undefined};
+    const obj = {};
 
     const readValue = (type: DataType): number => {
         let value;
@@ -50,26 +49,25 @@ export function readStruct(buffer: ArrayBuffer, startByteOffset: number, struct:
         obj[variable] = readValue(type);
     };
 
-    obj._size = offset - startByteOffset;
-    return obj;
+    return obj as T;
 }
 
 
 // Read an array of structs from buffer
-export function readStructArray(buffer: ArrayBuffer, startByteOffset: number, struct: StructType): Array<Object>
+export function readStructArray<T>(buffer: ArrayBuffer, startByteOffset: number, struct: StructType): Array<T>
 {
     let offset = startByteOffset;
-    const view = new DataView(buffer);
-    const len = Math.floor((buffer.byteLength - startByteOffset) / sizeOfStruct(struct));
-    const array = new Array<Object>(len);
+    const structByteLength = sizeOfStruct(struct);
+    const len = Math.floor((buffer.byteLength - startByteOffset) / structByteLength);
+    const array = new Array<T>(len);
     console.log('Read Struct Array: len = %d / %d = %d\n', (buffer.byteLength - startByteOffset), sizeOfStruct(struct), len);
 
 
     // Iterate all array elements
     for (let i = 0; i < len; i++) {
-        const obj = readStruct(buffer, offset, struct);
-        offset += obj._size;
-        array.push(obj);
+        const elem = readStruct<T>(buffer, offset, struct);
+        offset += structByteLength;
+        array.push(elem);
     }
 
     return array;

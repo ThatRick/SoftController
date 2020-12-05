@@ -1,6 +1,10 @@
 
-import {DataType, StructType, sizeOfStruct, sizeOfType, readStruct, writeStruct} from './TypedStructs'
-import {IDatablockHeader, ID, DatablockType, DatablockHeaderStruct, IFunctionHeader, FunctionHeaderStruct, IFunctionLibrary, IFunctionParams, datablockHeaderByteLength, functionHeaderByteLength, IO_FLAG, IFunction} from './SoftTypes'
+import {readStruct, writeStruct} from './TypedStructs'
+import {ID, IO_FLAG, DatablockType} from './SoftTypes'
+import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionParams} from './SoftTypes'
+import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from './SoftTypes'
+import {ITask, TaskStruct, taskStructByteLength} from './SoftTypes'
+import {IFunctionLibrary} from './SoftTypes'
 import {LogicLib} from './SoftFuncLib'
 
 const BYTES_PER_VALUE = 4
@@ -108,6 +112,9 @@ export default class SoftController
             this.datablockTableVersion = 0;
             this.taskListPtr = taskListOffset;
             this.taskListLength = taskListLength;
+
+            // prevent using zero index of data block table by adding dummy block
+            this.addDatablock(DatablockType.DATA, new ArrayBuffer(0));
         }
 
         // Load function libraries
@@ -139,18 +146,76 @@ export default class SoftController
     get totalDataMemSize() { return this.totalMemSize - this.bytes.byteOffset }
     get freeMem() { return this.totalDataMemSize - this.freeDataMemPtr }
 
-
+    
     // Process controller tasks
-    tick() {
-        Date.now()
+    tick(dt: number)
+    {
+        // Loop through tasks, break on null
+        for (let i = 0; i < this.taskListLength; i++)
+        {
+            const taskID = this.ints[this.taskListPtr + i];
+            if (taskID == null) break;
+            // read task data
+            let taskByteOffset = this.datablockTable[taskID] + datablockHeaderByteLength;
+            const task = readStruct<ITask>(this.mem, taskByteOffset, TaskStruct);
+            // add delta time to accumulator
+            task.timeAccu += dt;
+            if (task.timeAccu > task.interval) {
+                task.timeAccu -= task.interval;
+                // run target function / circuit
+                const taskStartTime = performance.now();
+                this.runFunction(task.targetID, task.interval);
+                const elapsedTime = performance.now() - taskStartTime;
+                // save performance data
+                task.cpuTime += elapsedTime;
+                if (task.cpuTime > 1) {
+                    task.cpuTime--;
+                    task.cpuTimeInt++;
+                }
+                task.runCount++
+            }
+            writeStruct(this.mem, taskByteOffset, TaskStruct, task);
+        }
     }
 
+    createTask(targetID: ID, interval: number, offset = 0) {
+        const task: ITask = {
+            targetID,               // ID of callable circuit or function 
+            interval,               // time interval between calls (ms)
+            offset,                 // time offset to spread cpu load between tasks with same interval (ms)
+            timeAccu:   offset,     // time accumulator (ms)
+            cpuTime:    0,          // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt            
+            cpuTimeInt: 0,          // counts whole number of cpu milliseconds
+            runCount:   0,          // counts number of calls
+        }
+        const buffer = new ArrayBuffer(taskStructByteLength);
+        writeStruct(buffer, 0, TaskStruct, task);
+
+        return this.addDatablock(DatablockType.TASK, buffer);
+    }
+
+    // Optimized version of reading task data (for benchmarking)
+    // getTask(id: ID): ITask {
+    //     let byteOffset = this.datablockTable[id] + datablockHeaderByteLength;
+    //     assert(byteOffset % BYTES_PER_VALUE == 0);
+    //     let pointer = byteOffset / BYTES_PER_VALUE;
+    //     return {
+    //         targetID:     this.ints[pointer + 0],
+    //         interval:   this.floats[pointer + 1],
+    //         offset:     this.floats[pointer + 2],
+    //         timeAccu:   this.floats[pointer + 3],
+    //         cpuTime:    this.floats[pointer + 4],
+    //         cpuTimeInt:   this.ints[pointer + 5],
+    //         runCount:     this.ints[pointer + 6],
+    //     }
+    // }
+
     // Creates a new circuit data block
-    createCircuitBlock(inputCount: number, outputCount: number, functionCount: number): ID {
+    createCircuit(inputCount: number, outputCount: number, functionCount: number): ID {
         const ioCount = inputCount + outputCount
 
-        let byteLength = sizeOfStruct(FunctionHeaderStruct)     // Function header
-        byteLength += alignBytes(ioCount)                       // IO flags
+        let byteLength = functionHeaderByteLength               // Function header
+        byteLength = alignBytes(byteLength + ioCount)           // IO flags
         byteLength += inputCount * BYTES_PER_REF                // Input references
         byteLength += ioCount * BYTES_PER_VALUE                 // IO values
         byteLength += functionCount * BYTES_PER_VALUE           // function calls
@@ -174,6 +239,20 @@ export default class SoftController
         bytes.fill(IO_FLAG.HIDDEN, offset, offset+ioCount)                          // Write IO flags (hidden by default)
         
         return this.addDatablock(DatablockType.CIRCUIT, buffer)
+    }
+
+    defineCircuitIO(id: ID, index: number, flags: number, value: number = 0) {
+        const circHeader = this.getFunctionHeader(id);
+
+        if (index < 0 || index >= circHeader.inputCount + circHeader.outputCount) {
+            console.error('Invalid circuit IO index', index);
+            return false;
+        }
+        const pointers = this.getFunctionDataMap(id, circHeader);
+        
+        this.bytes[pointers.flags + index] = flags;
+        this.floats[pointers.inputs + index] = value;
+        return true;
     }
 
     // Adds function call to circuit
@@ -225,7 +304,7 @@ export default class SoftController
 
         const ioCount = inputCount + outputCount
 
-        let byteLength = sizeOfStruct(FunctionHeaderStruct)             // Function header
+        let byteLength = functionHeaderByteLength                       // Function header
         byteLength += alignBytes(ioCount)                               // IO flags
         byteLength += inputCount * BYTES_PER_REF                        // Input references
         byteLength += (ioCount + func.staticCount) * BYTES_PER_VALUE    // IO and static values
@@ -297,11 +376,11 @@ export default class SoftController
     // Adds data block to controller memory and reference to data block table
     addDatablock(type: DatablockType, data: ArrayBuffer): ID {
         
-        const totalByteLength = sizeOfStruct(DatablockHeaderStruct) + data.byteLength;
+        const totalByteLength = datablockHeaderByteLength + data.byteLength;
 
         const dataBlockHeader: IDatablockHeader = {
             byteLength: totalByteLength,
-            type: DatablockType.FUNCTION,
+            type,
             flags: 0,
             reserve: 0
         }
@@ -386,11 +465,24 @@ export default class SoftController
         return pointers.inputRefs + inputRefNum;        
     }
 
+    getCircuitOutputRefPointer(id: ID, outputRefNum: number) {
+        const header = this.getFunctionHeader(id);
+        const pointers = this.getFunctionDataMap(id, header);
+        return pointers.statics + header.staticCount + outputRefNum;        
+    }
+
     connectFunctionInput(funcId: ID, inputNum: number, sourceFuncId: ID, sourceIONum: number) {
         const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
         const inputRefPointer = this.getFunctionInputRefPointer(funcId, inputNum);
 
         this.ints[inputRefPointer] = sourceIOPointer;
+    }
+
+    connectCircuitOutput(circuitId: ID, outputNum: number, sourceFuncId: ID, sourceIONum: number) {
+        const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
+        const outputRefPointer = this.getCircuitOutputRefPointer(circuitId, outputNum);
+
+        this.ints[outputRefPointer] = sourceIOPointer;
     }
 
     runFunction(id: ID, dt: number) {
