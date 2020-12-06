@@ -110,6 +110,9 @@ export const LogicLib = {
         NOT,
         EDGE_UP,
         EDGE_DOWN,
-        RS
+        RS //      6
+    },
+    getFunction(opcode) {
+        return Object.values(this.functions)[opcode];
     }
 };

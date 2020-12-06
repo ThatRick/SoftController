@@ -1,6 +1,9 @@
-import { sizeOfStruct, readStruct, writeStruct } from './TypedStructs';
-import { DatablockType, DatablockHeaderStruct, FunctionHeaderStruct, datablockHeaderByteLength, functionHeaderByteLength } from './SoftTypes';
-import { LogicLib } from './SoftFuncLib';
+import { readStruct, writeStruct } from './TypedStructs.js';
+import { DatablockType } from './SoftTypes.js';
+import { FunctionHeaderStruct, functionHeaderByteLength } from './SoftTypes.js';
+import { DatablockHeaderStruct, datablockHeaderByteLength } from './SoftTypes.js';
+import { TaskStruct, taskStructByteLength } from './SoftTypes.js';
+import { LogicLib } from './SoftFuncLib.js';
 const BYTES_PER_VALUE = 4;
 const BYTES_PER_REF = 4;
 /*
@@ -24,10 +27,16 @@ const systemSectorLength = 9;
 //      Soft Controller
 //////////////////////////////////
 export default class SoftController {
-    constructor(arg, datablockTableLength = 1024, taskListLength = 16, id = 1) {
-        // If memory size is given create new ArrayBuffer for controller memory data
-        // else existing ArrayBuffer is given as controller memory data
-        this.mem = (typeof arg === 'number') ? new ArrayBuffer(arg) : arg;
+    constructor(arg, datablockTableLength = 256, taskListLength = 16, id = 1) {
+        // arg = ArrayBuffer: Use existing ArrayBuffer as controller memory data
+        if (typeof arg === 'object') {
+            this.mem = arg;
+        }
+        // arg = data memory size: Create new ArrayBuffer for controller memory data
+        else if (typeof arg === 'number') {
+            const totalMemSize = arg + (systemSectorLength + datablockTableLength + taskListLength) * Uint32Array.BYTES_PER_ELEMENT;
+            this.mem = new ArrayBuffer(totalMemSize);
+        }
         this.bytes = new Uint8Array(this.mem);
         this.words = new Uint16Array(this.mem);
         this.ints = new Uint32Array(this.mem);
@@ -49,20 +58,22 @@ export default class SoftController {
             const freeDataMemPtr = dataSectorByteOffset;
             this.id = id;
             this.version = SoftController.version;
-            this.totalMemSize = memSize;
+            this.totalMemSize = this.mem.byteLength;
             this.freeDataMemPtr = freeDataMemPtr;
             this.datablockTablePtr = datablockTableOffset;
             this.datablockTableLength = datablockTableLength;
             this.datablockTableVersion = 0;
             this.taskListPtr = taskListOffset;
             this.taskListLength = taskListLength;
+            // prevent using zero index of data block table by adding dummy block
+            this.addDatablock(DatablockType.DATA, new ArrayBuffer(0));
         }
         // Load function libraries
         this.functionLibraries = [
             LogicLib
         ];
     }
-    logLine(line) { console.log(line); }
+    logLine(...args) { console.log(args); }
     ;
     set id(value) { this.systemSector[0 /* id */] = value; }
     set version(value) { this.systemSector[1 /* version */] = value; }
@@ -85,14 +96,89 @@ export default class SoftController {
     get totalDataMemSize() { return this.totalMemSize - this.bytes.byteOffset; }
     get freeMem() { return this.totalDataMemSize - this.freeDataMemPtr; }
     // Process controller tasks
-    tick() {
-        Date.now();
+    tick(dt) {
+        for (const taskID of this.taskList) {
+            if (taskID == 0)
+                break;
+            // read task data
+            let taskByteOffset = this.datablockTable[taskID] + datablockHeaderByteLength;
+            const task = readStruct(this.mem, taskByteOffset, TaskStruct);
+            // add delta time to accumulator
+            task.timeAccu += dt;
+            if (task.timeAccu > task.interval) {
+                task.timeAccu -= task.interval;
+                // run target function / circuit
+                const taskStartTime = performance.now();
+                this.runFunction(task.targetID, task.interval);
+                const elapsedTime = performance.now() - taskStartTime;
+                // save performance data
+                // console.log('Task cpu time (ms):', elapsedTime);
+                task.cpuTime += elapsedTime;
+                if (task.cpuTime > 1.0) {
+                    task.cpuTime--;
+                    task.cpuTimeInt++;
+                }
+                task.runCount++;
+            }
+            writeStruct(this.mem, taskByteOffset, TaskStruct, task);
+        }
     }
+    createTask(targetID, interval, offset = 0, index) {
+        // check last 
+        const vacantIndex = this.taskList.findIndex(value => (value == 0));
+        if (vacantIndex == -1) {
+            console.error('Task list is full');
+            return -1;
+        }
+        const task = {
+            targetID,
+            interval,
+            offset,
+            timeAccu: offset,
+            cpuTime: 0,
+            cpuTimeInt: 0,
+            runCount: 0,
+        };
+        const buffer = new ArrayBuffer(taskStructByteLength);
+        writeStruct(buffer, 0, TaskStruct, task);
+        const taskID = this.addDatablock(DatablockType.TASK, buffer);
+        if (taskID == -1) {
+            console.error('Fault creating task');
+            return -1;
+        }
+        if (index === undefined) {
+            this.taskList[vacantIndex] = taskID; // append new task
+        }
+        else {
+            this.taskList.copyWithin(index + 1, index, vacantIndex - 1); // shift existing tasks
+            this.taskList[index] = taskID; // set new task to specified index
+        }
+        return taskID;
+    }
+    getTask(id) {
+        let taskByteOffset = this.datablockTable[id] + datablockHeaderByteLength;
+        return readStruct(this.mem, taskByteOffset, TaskStruct);
+    }
+    // Optimized version of reading task data (for benchmarking)
+    // getTask(id: ID): ITask {
+    //     let byteOffset = this.datablockTable[id] + datablockHeaderByteLength;
+    //     assert(byteOffset % BYTES_PER_VALUE == 0);
+    //     let pointer = byteOffset / BYTES_PER_VALUE;
+    //     return {
+    //         targetID:     this.ints[pointer + 0],
+    //         interval:   this.floats[pointer + 1],
+    //         offset:     this.floats[pointer + 2],
+    //         timeAccu:   this.floats[pointer + 3],
+    //         cpuTime:    this.floats[pointer + 4],
+    //         cpuTimeInt:   this.ints[pointer + 5],
+    //         runCount:     this.ints[pointer + 6],
+    //     }
+    // }
     // Creates a new circuit data block
-    createCircuitBlock(inputCount, outputCount, functionCount) {
+    createCircuit(inputCount, outputCount, functionCount) {
         const ioCount = inputCount + outputCount;
-        let byteLength = sizeOfStruct(FunctionHeaderStruct); // Function header
-        byteLength += alignBytes(ioCount); // IO flags
+        let byteLength = functionHeaderByteLength; // Function header
+        byteLength = alignBytes(byteLength + ioCount); // IO flags
         byteLength += inputCount * BYTES_PER_REF; // Input references
         byteLength += ioCount * BYTES_PER_VALUE; // IO values
         byteLength += functionCount * BYTES_PER_VALUE; // function calls
@@ -111,6 +197,17 @@ export default class SoftController {
         let offset = writeStruct(buffer, 0, FunctionHeaderStruct, funcHeader); // Write function header
         bytes.fill(16 /* HIDDEN */, offset, offset + ioCount); // Write IO flags (hidden by default)
         return this.addDatablock(DatablockType.CIRCUIT, buffer);
+    }
+    defineCircuitIO(id, index, flags, value = 0) {
+        const circHeader = this.getFunctionHeader(id);
+        if (index < 0 || index >= circHeader.inputCount + circHeader.outputCount) {
+            console.error('Invalid circuit IO index', index);
+            return false;
+        }
+        const pointers = this.getFunctionDataMap(id, circHeader);
+        this.bytes[pointers.flags + index] = flags;
+        this.floats[pointers.inputs + index] = value;
+        return true;
     }
     // Adds function call to circuit
     addFunctionCall(circuitID, functionID, index) {
@@ -143,25 +240,24 @@ export default class SoftController {
             console.error('Invalid function opcode', opcode);
             return null;
         }
-        const func = lib.functions[opcode];
-        console.log('Creating function', Object.keys(lib)[opcode]);
+        const func = lib.getFunction(opcode);
         inputCount = (func.variableInputCount && inputCount
             && (inputCount <= func.variableInputCount.max) && (inputCount >= func.variableInputCount.min)) ? inputCount : func.inputs.length;
         outputCount = (func.variableOutputCount && outputCount
             && (outputCount <= func.variableOutputCount.max) && (outputCount >= func.variableOutputCount.min)) ? outputCount : func.outputs.length;
         staticCount = (func.variableStaticCount && staticCount
-            && (staticCount <= func.variableStaticCount.max) && (staticCount >= func.variableStaticCount.min)) ? staticCount : func.staticCount;
+            && (staticCount <= func.variableStaticCount.max) && (staticCount >= func.variableStaticCount.min)) ? staticCount : func.staticCount || 0;
         const ioCount = inputCount + outputCount;
-        let byteLength = sizeOfStruct(FunctionHeaderStruct); // Function header
+        let byteLength = functionHeaderByteLength; // Function header
         byteLength += alignBytes(ioCount); // IO flags
         byteLength += inputCount * BYTES_PER_REF; // Input references
-        byteLength += (ioCount + func.staticCount) * BYTES_PER_VALUE; // IO and static values
+        byteLength += (ioCount + staticCount) * BYTES_PER_VALUE; // IO and static values
         const funcHeader = {
             library,
             opcode,
             inputCount,
             outputCount,
-            staticCount: func.staticCount,
+            staticCount,
             funcFlags: 0,
             reserve: 0
         };
@@ -208,14 +304,16 @@ export default class SoftController {
                 offset += BYTES_PER_VALUE;
             }
         }
-        return this.addDatablock(DatablockType.FUNCTION, buffer);
+        const id = this.addDatablock(DatablockType.FUNCTION, buffer);
+        console.log(`for function ${Object.keys(lib.functions)[opcode]} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        return id;
     }
     // Adds data block to controller memory and reference to data block table
     addDatablock(type, data) {
-        const totalByteLength = sizeOfStruct(DatablockHeaderStruct) + data.byteLength;
+        const totalByteLength = datablockHeaderByteLength + data.byteLength;
         const dataBlockHeader = {
             byteLength: totalByteLength,
-            type: DatablockType.FUNCTION,
+            type,
             flags: 0,
             reserve: 0
         };
@@ -229,11 +327,12 @@ export default class SoftController {
             return -1;
         }
         const dataBytes = new Uint8Array(data);
-        let offset = this.freeDataMemPtr;
-        offset += writeStruct(this.bytes, offset, DatablockHeaderStruct, dataBlockHeader); // Write data block header
+        const insertionOffset = this.freeDataMemPtr;
+        console.log(`Created data block id ${id}, size ${totalByteLength} bytes, offset ${insertionOffset}`);
+        const offset = writeStruct(this.mem, insertionOffset, DatablockHeaderStruct, dataBlockHeader); // Write data block header
         this.bytes.set(dataBytes, offset); // Write data block body
         this.freeDataMemPtr += totalByteLength;
-        this.datablockTable[id] = offset;
+        this.datablockTable[id] = insertionOffset;
         this.datablockTableVersion++;
         return id;
     }
@@ -283,10 +382,20 @@ export default class SoftController {
         const pointers = this.getFunctionDataMap(id);
         return pointers.inputRefs + inputRefNum;
     }
+    getCircuitOutputRefPointer(id, outputRefNum) {
+        const header = this.getFunctionHeader(id);
+        const pointers = this.getFunctionDataMap(id, header);
+        return pointers.statics + header.staticCount + outputRefNum;
+    }
     connectFunctionInput(funcId, inputNum, sourceFuncId, sourceIONum) {
         const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
         const inputRefPointer = this.getFunctionInputRefPointer(funcId, inputNum);
         this.ints[inputRefPointer] = sourceIOPointer;
+    }
+    connectCircuitOutput(circuitId, outputNum, sourceFuncId, sourceIONum) {
+        const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
+        const outputRefPointer = this.getCircuitOutputRefPointer(circuitId, outputNum);
+        this.ints[outputRefPointer] = sourceIOPointer;
     }
     runFunction(id, dt) {
         const dataBlockHeader = this.getDatablockHeader(id);
@@ -308,7 +417,7 @@ export default class SoftController {
         }
         if (dataBlockHeader.type == DatablockType.FUNCTION) // Run function
          {
-            const func = this.functionLibraries[functionHeader.library].functions[functionHeader.opcode];
+            const func = this.functionLibraries[functionHeader.library].getFunction(functionHeader.opcode);
             const params = {
                 inputCount: functionHeader.inputCount,
                 outputCount: functionHeader.outputCount,

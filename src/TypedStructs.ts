@@ -97,12 +97,12 @@ export function writeStruct(buffer: ArrayBuffer, startByteOffset: number, struct
     // Iterate all structure elements
     for (const variable in struct) {
         const type = struct[variable];
-        const value = values[variable] | 0;
+        const value = values[variable] || 0;
        
         writeValue(type, value);
     };
-    // return number of bytes written
-    return offset - startByteOffset;
+    // return new offset
+    return offset;
 }
 
 

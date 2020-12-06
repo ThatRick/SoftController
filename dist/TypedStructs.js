@@ -2,7 +2,7 @@
 export function readStruct(buffer, startByteOffset, struct) {
     let offset = startByteOffset;
     const view = new DataView(buffer);
-    const obj = { _size: undefined };
+    const obj = {};
     const readValue = (type) => {
         let value;
         switch (type) {
@@ -48,21 +48,20 @@ export function readStruct(buffer, startByteOffset, struct) {
         obj[variable] = readValue(type);
     }
     ;
-    obj._size = offset - startByteOffset;
     return obj;
 }
 // Read an array of structs from buffer
 export function readStructArray(buffer, startByteOffset, struct) {
     let offset = startByteOffset;
-    const view = new DataView(buffer);
-    const len = Math.floor((buffer.byteLength - startByteOffset) / sizeOfStruct(struct));
+    const structByteLength = sizeOfStruct(struct);
+    const len = Math.floor((buffer.byteLength - startByteOffset) / structByteLength);
     const array = new Array(len);
     console.log('Read Struct Array: len = %d / %d = %d\n', (buffer.byteLength - startByteOffset), sizeOfStruct(struct), len);
     // Iterate all array elements
     for (let i = 0; i < len; i++) {
-        const obj = readStruct(buffer, offset, struct);
-        offset += obj._size;
-        array.push(obj);
+        const elem = readStruct(buffer, offset, struct);
+        offset += structByteLength;
+        array.push(elem);
     }
     return array;
 }
@@ -111,12 +110,12 @@ export function writeStruct(buffer, startByteOffset, struct, values) {
     // Iterate all structure elements
     for (const variable in struct) {
         const type = struct[variable];
-        const value = values[variable] | 0;
+        const value = values[variable] || 0;
         writeValue(type, value);
     }
     ;
-    // return number of bytes written
-    return offset - startByteOffset;
+    // return new offset
+    return offset;
 }
 // Get struct size in bytes
 export function sizeOfStruct(struct) {

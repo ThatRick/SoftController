@@ -1,4 +1,4 @@
-import {IFunction, IO_FLAG, IFunctionLibrary} from './SoftTypes'
+import {IFunction, IO_FLAG, IFunctionLibrary} from './SoftTypes.js'
 
 const AND: IFunction =
 {
@@ -118,13 +118,16 @@ const RS: IFunction =
 export const LogicLib: IFunctionLibrary =
 {
     name: 'Boolean Logic',
-    functions: {
-        AND,
-        OR,
-        XOR,
-        NOT,
-        EDGE_UP,
-        EDGE_DOWN,
-        RS
+    functions: {    //   opcode
+        AND,        //      0
+        OR,         //      1
+        XOR,        //      2
+        NOT,        //      3
+        EDGE_UP,    //      4
+        EDGE_DOWN,  //      5
+        RS          //      6
+    },
+    getFunction(opcode: number) {
+        return Object.values(this.functions)[opcode] as IFunction;
     }
 }

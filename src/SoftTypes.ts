@@ -1,4 +1,4 @@
-import {DataType, StructType, sizeOfStruct, sizeOfType, readStruct, writeStruct} from './TypedStructs'
+import {DataType, StructType, sizeOfStruct, sizeOfType, readStruct, writeStruct} from './TypedStructs.js'
 
 export interface IORef {
     datablockId: number,
@@ -67,9 +67,9 @@ export interface ITask
     interval:       number              // time interval between calls (ms)
     offset:         number              // time offset to spread cpu load between tasks with same interval (ms)
     timeAccu:       number              // time accumulator (ms)
-    runCount:       number              // counts number of calls
-    cpuTimeInt:     number              // counts whole number of cpu milliseconds
     cpuTime:        number              // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt
+    cpuTimeInt:     number              // counts whole number of cpu milliseconds
+    runCount:       number              // counts number of calls
 }
 export const TaskStruct: StructType =
 {
@@ -130,7 +130,8 @@ export interface IFunction
 // FUNCTION LIBRARY
 export interface IFunctionLibrary
 {
-    name: string,
+    name: string
     functions: {[index: string]: IFunction}
+    getFunction: (opcode: number) => IFunction
 }
 

@@ -1,4 +1,4 @@
-import { sizeOfStruct } from './TypedStructs';
+import { sizeOfStruct } from './TypedStructs.js';
 export var DatablockType;
 (function (DatablockType) {
     DatablockType[DatablockType["TASKLIST"] = 0] = "TASKLIST";
@@ -25,12 +25,12 @@ export const FunctionHeaderStruct = {
 };
 export const functionHeaderByteLength = sizeOfStruct(FunctionHeaderStruct);
 export const TaskStruct = {
-    blockID: 5 /* uint32 */,
+    targetID: 5 /* uint32 */,
     interval: 6 /* float */,
     offset: 6 /* float */,
     timeAccu: 6 /* float */,
-    runCount: 5 /* uint32 */,
+    cpuTime: 6 /* float */,
     cpuTimeInt: 5 /* uint32 */,
-    cpuTime: 6 /* float */ // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt
+    runCount: 5 /* uint32 */ // counts number of calls
 };
 export const taskStructByteLength = sizeOfStruct(TaskStruct);
