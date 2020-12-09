@@ -1,11 +1,12 @@
 import { sizeOfStruct } from './TypedStructs.js';
 export var DatablockType;
 (function (DatablockType) {
-    DatablockType[DatablockType["TASKLIST"] = 0] = "TASKLIST";
-    DatablockType[DatablockType["TASK"] = 1] = "TASK";
-    DatablockType[DatablockType["CIRCUIT"] = 2] = "CIRCUIT";
-    DatablockType[DatablockType["FUNCTION"] = 3] = "FUNCTION";
-    DatablockType[DatablockType["DATA"] = 4] = "DATA";
+    DatablockType[DatablockType["UNDEFINED"] = 0] = "UNDEFINED";
+    DatablockType[DatablockType["UNALLOCATED"] = 1] = "UNALLOCATED";
+    DatablockType[DatablockType["TASK"] = 2] = "TASK";
+    DatablockType[DatablockType["CIRCUIT"] = 3] = "CIRCUIT";
+    DatablockType[DatablockType["FUNCTION"] = 4] = "FUNCTION";
+    DatablockType[DatablockType["DATA"] = 5] = "DATA";
 })(DatablockType || (DatablockType = {}));
 export const DatablockHeaderStruct = {
     byteLength: 5 /* uint32 */,
@@ -25,7 +26,7 @@ export const FunctionHeaderStruct = {
 };
 export const functionHeaderByteLength = sizeOfStruct(FunctionHeaderStruct);
 export const TaskStruct = {
-    targetID: 5 /* uint32 */,
+    targetRef: 5 /* uint32 */,
     interval: 6 /* float */,
     offset: 6 /* float */,
     timeAccu: 6 /* float */,

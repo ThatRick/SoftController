@@ -1,20 +1,22 @@
 import {DataType, StructType, sizeOfStruct, sizeOfType, readStruct, writeStruct} from './TypedStructs.js'
 
-export interface IORef {
-    datablockId: number,
-    ioNum: number
-}
-
 export type pointer = number
 export type bytesize = number
 export type ID = number
 
 export enum DatablockType {
-    TASKLIST,
+    UNDEFINED,
+    UNALLOCATED,
     TASK,
     CIRCUIT,
     FUNCTION,
     DATA
+}
+
+// IO REFERENCE
+export interface IORef {
+    id: number,
+    ioNum: number
 }
 
 // DATA BLOCK HEADER
@@ -63,7 +65,7 @@ export const functionHeaderByteLength = sizeOfStruct(FunctionHeaderStruct);
 // TASK DATA
 export interface ITask
 {
-    targetID:       number              // ID of callable circuit or function 
+    targetRef:      number              // Reference of callable circuit or function 
     interval:       number              // time interval between calls (ms)
     offset:         number              // time offset to spread cpu load between tasks with same interval (ms)
     timeAccu:       number              // time accumulator (ms)
@@ -73,7 +75,7 @@ export interface ITask
 }
 export const TaskStruct: StructType =
 {
-    targetID:       DataType.uint32,    // ID of callable circuit or function 
+    targetRef:      DataType.uint32,    // Reference of callable circuit or function 
     interval:       DataType.float,     // time interval between calls (ms)
     offset:         DataType.float,     // time offset to spread cpu load between tasks with same interval (ms)
     timeAccu:       DataType.float,     // time accumulator

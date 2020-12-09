@@ -47,7 +47,8 @@ const XOR: IFunction =
         { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
 
     run(params, values) {
-        const [a, b] = values;
+        const a = values[params.input + 0];
+        const b = values[params.input + 1];
 
         values[params.output] = ((a && !b) || (a! && b)) ? 1 : 0;
     }
@@ -106,11 +107,11 @@ const RS: IFunction =
     staticCount: 1,
 
     run(params, values) {
-        const [R, S] = values.slice(params.input);
-        let out = values[params.static];
-        if (R) out = 0;
-        else if (S) out = 1;
-        values[params.output] = out;
+        const R = values[params.input + 0]
+        const S = values[params.input + 1]
+
+        if (R) values[params.output] = 0;
+        else if (S) values[params.output] = 1;
     }
 }
 

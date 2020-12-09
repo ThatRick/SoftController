@@ -1,0 +1,13 @@
+div {
+    background-color: #020;
+/*     background-image: radial-gradient(
+      rgba(0, 150, 0, 0.75), black 120%
+    ); */
+    color: #CFA;
+    font-family:Consolas;
+    white-space:pre
+}
+
+pre {
+    margin: 4px;
+}

@@ -1,0 +1,6 @@
+
+- cpu.setIOValue(id, ioNum, value): number
+- cpu.setIOFlags(id, ioNum, value): number
+- cpu.getIOValues(id): Float32Array
+- cpu.getInputRefs(id): IORef[]
+

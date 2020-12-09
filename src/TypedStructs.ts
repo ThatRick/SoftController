@@ -74,7 +74,7 @@ export function readStructArray<T>(buffer: ArrayBuffer, startByteOffset: number,
 }
 
 
-// Write a struct to buffer. Return number of bytes written.
+// Write a struct to buffer. Returns new offset (startByteOffset + bytes written)
 export function writeStruct(buffer: ArrayBuffer, startByteOffset: number, struct: StructType, values: Object): number
 {
     // console.log('write struct: ', {buffer, startOffset}, struct, values);

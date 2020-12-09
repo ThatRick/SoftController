@@ -41,7 +41,8 @@ const XOR = {
         { initValue: 0, flags: 2 /* BOOLEAN */ }
     ],
     run(params, values) {
-        const [a, b] = values;
+        const a = values[params.input + 0];
+        const b = values[params.input + 1];
         values[params.output] = ((a && !b) || (a && b)) ? 1 : 0;
     }
 };
@@ -92,13 +93,12 @@ const RS = {
     ],
     staticCount: 1,
     run(params, values) {
-        const [R, S] = values.slice(params.input);
-        let out = values[params.static];
+        const R = values[params.input + 0];
+        const S = values[params.input + 1];
         if (R)
-            out = 0;
+            values[params.output] = 0;
         else if (S)
-            out = 1;
-        values[params.output] = out;
+            values[params.output] = 1;
     }
 };
 export const LogicLib = {
