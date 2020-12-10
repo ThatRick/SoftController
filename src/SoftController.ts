@@ -1,6 +1,6 @@
 
 import {readStruct, writeStruct} from './TypedStructs.js'
-import {ID, IO_FLAG, DatablockType} from './SoftTypes.js'
+import {ID, IORef, IO_FLAG, DatablockType} from './SoftTypes.js'
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionParams} from './SoftTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from './SoftTypes.js'
 import {ITask, TaskStruct, taskStructByteLength} from './SoftTypes.js'
@@ -60,7 +60,33 @@ export default class SoftController
 
     logLine(...args: any[]) { console.log(args) };
 
-    // Constructors
+    set id(value: number)                           { this.systemSector[SystemSector.id] = value }
+    set version(value: number)                      { this.systemSector[SystemSector.version] = value }
+    set totalMemSize(value: number)                 { this.systemSector[SystemSector.totalMemSize] = value }
+    set datablockTablePtr(value: number)            { this.systemSector[SystemSector.datablockTablePtr] = value }
+    set datablockTableLength(value: number)         { this.systemSector[SystemSector.datablockTableLength] = value }
+    set datablockTableVersion(value: number)        { this.systemSector[SystemSector.datablockTableVersion] = value }
+    set datablockTableLastUsedID(value: number)     { this.systemSector[SystemSector.dataBlockTableLastUsedID] = value }
+    set taskListPtr(value: number)                  { this.systemSector[SystemSector.taskListPtr] = value }
+    set taskListLength(value: number)               { this.systemSector[SystemSector.taskListLength] = value }
+
+    get id()                                        { return this.systemSector[SystemSector.id] }
+    get version()                                   { return this.systemSector[SystemSector.version] }
+    get totalMemSize()                              { return this.systemSector[SystemSector.totalMemSize] }
+    get datablockTablePtr()                         { return this.systemSector[SystemSector.datablockTablePtr] }
+    get datablockTableLength()                      { return this.systemSector[SystemSector.datablockTableLength] }
+    get datablockTableVersion()                     { return this.systemSector[SystemSector.datablockTableVersion] }
+    get datablockTableLastUsedID()                  { return this.systemSector[SystemSector.dataBlockTableLastUsedID] }
+    get taskListPtr()                               { return this.systemSector[SystemSector.taskListPtr] }
+    get taskListLength()                            { return this.systemSector[SystemSector.taskListLength] }
+
+    get freeMem() { return undefined } // must sum unallocated datablocks
+
+
+/**********************
+ *    CONSTRUCTORS    *
+ **********************/
+
     constructor(existingMem: ArrayBuffer);
     constructor(dataMemSize: number, datablockTableLength?: number, taskListLength?: number, id?: number);
     constructor(arg: number | ArrayBuffer, datablockTableLength: number = 1024, taskListLength: number = 16, id: number = 1)
@@ -111,6 +137,9 @@ export default class SoftController
 
             // Write initial data block for unallocated data memory
             this.markUnallocatedMemory(dataSectorByteOffset, dataMemSize)
+
+            // Reserve data block id 0 for undefined
+            this.addDatablock(new ArrayBuffer(0), DatablockType.UNDEFINED);
         }
 
         // Load function libraries
@@ -119,28 +148,10 @@ export default class SoftController
         ]
     }
 
-    set id(value: number)                           { this.systemSector[SystemSector.id] = value }
-    set version(value: number)                      { this.systemSector[SystemSector.version] = value }
-    set totalMemSize(value: number)                 { this.systemSector[SystemSector.totalMemSize] = value }
-    set datablockTablePtr(value: number)            { this.systemSector[SystemSector.datablockTablePtr] = value }
-    set datablockTableLength(value: number)         { this.systemSector[SystemSector.datablockTableLength] = value }
-    set datablockTableVersion(value: number)        { this.systemSector[SystemSector.datablockTableVersion] = value }
-    set datablockTableLastUsedID(value: number)  { this.systemSector[SystemSector.dataBlockTableLastUsedID] = value }
-    set taskListPtr(value: number)                  { this.systemSector[SystemSector.taskListPtr] = value }
-    set taskListLength(value: number)               { this.systemSector[SystemSector.taskListLength] = value }
 
-    get id()                                        { return this.systemSector[SystemSector.id] }
-    get version()                                   { return this.systemSector[SystemSector.version] }
-    get totalMemSize()                              { return this.systemSector[SystemSector.totalMemSize] }
-    get datablockTablePtr()                         { return this.systemSector[SystemSector.datablockTablePtr] }
-    get datablockTableLength()                      { return this.systemSector[SystemSector.datablockTableLength] }
-    get datablockTableVersion()                     { return this.systemSector[SystemSector.datablockTableVersion] }
-    get datablockTableLastUsedID()               { return this.systemSector[SystemSector.dataBlockTableLastUsedID] }
-    get taskListPtr()                               { return this.systemSector[SystemSector.taskListPtr] }
-    get taskListLength()                            { return this.systemSector[SystemSector.taskListLength] }
-
-    get freeMem() { return undefined } // must sum unallocated datablocks
-
+/**************
+ *    TICK    *
+ **************/
 
     // Process controller tasks
     tick(dt: number)
@@ -171,6 +182,10 @@ export default class SoftController
         }
     }
 
+/*************************
+ *    TASK PROCEDURES    *
+ *************************/
+
     createTask(targetID: ID, interval: number, offset = 0, index?: number) {
         // check last 
         const vacantIndex = this.taskList.findIndex(value => (value == 0));
@@ -192,7 +207,7 @@ export default class SoftController
         const buffer = new ArrayBuffer(taskStructByteLength);
         writeStruct(buffer, 0, TaskStruct, task);
 
-        const taskID = this.addDatablock(DatablockType.TASK, buffer);
+        const taskID = this.addDatablock(buffer, DatablockType.TASK);
         if (taskID == -1) {
             console.error('Fault creating task');
             return -1;
@@ -219,6 +234,11 @@ export default class SoftController
         let taskByteOffset = taskRef + datablockHeaderByteLength;
         return readStruct<ITask>(this.mem, taskByteOffset, TaskStruct);        
     }
+
+
+/****************************
+ *    CIRCUIT PROCEDURES    *
+ ****************************/
 
     calcCircuitSize(inputCount: number, outputCount: number, functionCount: number): number {
         const ioCount = inputCount + outputCount
@@ -253,7 +273,23 @@ export default class SoftController
         
         bytes.fill(IO_FLAG.HIDDEN, offset, offset+inputCount+outputCount)           // Write IO flags (hidden by default)
 
-        return this.addDatablock(DatablockType.CIRCUIT, buffer)
+        return this.addDatablock(buffer, DatablockType.CIRCUIT)
+    }
+
+    deleteCircuit(id: ID) {
+        const blockRef = this.datablockTable[id];
+        const circHeader = this.getFunctionHeader(blockRef);
+        const pointers = this.getFunctionDataMap(blockRef);
+        const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);    
+        
+        funcCallList.forEach(ref => {                                               // Remove all functions in call list
+            const callID = this.getDatablockIDbyRef(ref);
+            if (callID > 0) this.unallocateDatablock(callID);
+        })
+
+        // TODO: remove task
+
+        this.deleteFunctionBlock(id);
     }
 
     defineCircuitIO(id: ID, ioNum: number, flags: number, value: number = 0) {
@@ -271,14 +307,13 @@ export default class SoftController
     }
 
     // Adds function call to circuit
-    addFunctionCall(circuitID: ID, functionID: ID, index?: number): boolean {
+    addFunctionCall(circuitID: ID, functionID: ID, callIndex?: number): boolean {
         const circHeader = this.getFunctionHeaderByID(circuitID);
         const pointers = this.getFunctionDataMapByID(circuitID, circHeader);
 
         const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);
 
-        // check last 
-        const vacantIndex = funcCallList.findIndex(value => (value == 0));
+        const vacantIndex = funcCallList.indexOf(0);                            // find first vacant call index
         if (vacantIndex == -1) {
             console.error('Circuit function call list is full');
             return false;
@@ -286,18 +321,85 @@ export default class SoftController
 
         const functionRef = this.datablockTable[functionID];
 
-        if (index === undefined) {
-            funcCallList[vacantIndex] = functionRef;                    // append new function call
+        if (callIndex === undefined) {
+            funcCallList[vacantIndex] = functionRef;                            // append new function call
         }
         else {
-            funcCallList.copyWithin(index+1, index, vacantIndex-1);     // shift existing function calls
-            funcCallList[index] = functionRef;                          // set new function call to specified index
+            funcCallList.copyWithin(callIndex+1, callIndex, vacantIndex-1);     // shift existing function calls
+            funcCallList[callIndex] = functionRef;                              // set new function call to specified index
         }
         return true;
     }
 
+    removeFunctionCall(circuitID: ID, functionID: ID): boolean {
+        const circuitHeader = this.getFunctionHeaderByID(circuitID);
+        const circuitDataMap = this.getFunctionDataMapByID(circuitID, circuitHeader);
+        const funcCallList = this.ints.subarray(circuitDataMap.statics, circuitDataMap.statics + circuitHeader.staticCount);
+        
+        const functionRef = this.datablockTable[functionID];
+
+        const callIndex = funcCallList.indexOf(functionRef);                    // find function call index
+        if (callIndex == -1) {
+            console.error('Tried to remove invalid function call reference', functionRef);
+            return false;
+        }
+        if (callIndex < funcCallList.length - 1) {
+            funcCallList.copyWithin(callIndex, callIndex+1);                    // shift function calls to fill up removed index
+        }
+        funcCallList[funcCallList.length - 1] = 0;                              // remove last index from call list
+
+        const functionDataMap = this.getFunctionDataMap(functionRef);           
+        const ioRefRangeStart = functionDataMap.inputs;                         // calculate function IO values reference range
+        const ioRefRangeEnd = functionDataMap.statics - 1;
+
+        for (let i = 0; i < funcCallList.length; i++) {                         // remove references to deleted function block from other functions
+            const ref = funcCallList[i];
+            if (ref == 0) break;
+            this.udpdateFunctionInputRefs(ref, ioRefRangeStart, ioRefRangeEnd);
+        }
+
+        console.log(`Circuit id ${circuitID} removed function call ${callIndex} for function id ${functionID}`)
+
+        return true;
+    }
+
+    getCircuitOutputRefPointer(id: ID, outputRefNum: number) {
+        const header = this.getFunctionHeaderByID(id);
+        const pointers = this.getFunctionDataMapByID(id, header);
+        return pointers.statics + header.staticCount + outputRefNum;        
+    }
+
+    connectCircuitOutput(circuitId: ID, outputNum: number, sourceFuncId: ID, sourceIONum: number) {
+        const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
+        const outputRefPointer = this.getCircuitOutputRefPointer(circuitId, outputNum);
+
+        this.ints[outputRefPointer] = sourceIOPointer;
+    }
+
+/****************************
+ *    FUNCTION PROCEDURES   *
+ ****************************/
+
+    // Remove or offset all references to given function or circuit to be deleted or moved
+    udpdateFunctionInputRefs(blockRef: number, ioRefRangeStart: number, ioRefRangeEnd: number, offset?: number) {
+        const funcDataMap = this.getFunctionDataMap(blockRef);
+        const inputReferences = this.ints.subarray(funcDataMap.inputRefs, funcDataMap.inputs);
+        inputReferences.forEach((ioRef, i) => {
+            if (ioRef >= ioRefRangeStart && ioRef <= ioRefRangeEnd) {
+                inputReferences[i] = (offset) ? ioRef + offset : 0;
+            }
+        });
+    }
+
+    connectFunctionInput(funcId: ID, inputNum: number, sourceFuncId: ID, sourceIONum: number) {
+        const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
+        const inputRefPointer = this.getFunctionInputRefPointer(funcId, inputNum);
+
+        this.ints[inputRefPointer] = sourceIOPointer;
+    }
+
     // Creates new function data block
-    createFunctionBlock(library: number, opcode: number, inputCount?: number, outputCount?: number, staticCount?: number): ID
+    createFunctionBlock(library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number): ID
     {
         if (library >= this.functionLibraries.length) {
             console.error('Invalid function library id', library); return null;
@@ -321,7 +423,6 @@ export default class SoftController
             ? staticCount : func.staticCount || 0;
 
         const ioCount = inputCount + outputCount
-
 
         let byteLength = functionHeaderByteLength                   // Function header
         byteLength += alignBytes(ioCount)                           // IO flags
@@ -373,207 +474,24 @@ export default class SoftController
             }
         }
 
-        const id = this.addDatablock(DatablockType.FUNCTION, buffer)
+        const id = this.addDatablock(buffer, DatablockType.FUNCTION, circuitID || 0)
+
+        // Add function call to circuit
+        if (circuitID) {
+            this.addFunctionCall(circuitID, id, callIndex);
+        }
 
         console.log(`for function ${Object.keys(lib.functions)[opcode]} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
 
         return id;
     }
-    
-    findPreviousDatablock(ref: number, type?: DatablockType): ID | undefined {
-        let candidateID: ID
-        let candidateOffset = Number.MAX_SAFE_INTEGER
 
-        for (let id = 0; id < this.datablockTableLastUsedID; id++) {
-            const candidateRef = this.datablockTable[id];
-            const candidateType = this.getDatablockHeader(candidateRef).type;
-            const offset = ref - candidateRef;
-            if ((type == undefined || candidateType == type) && offset > 0 && offset < candidateOffset) {
-                candidateOffset = offset;
-                candidateID = id;
-            }
+    deleteFunctionBlock(id: ID) {
+        const blockHeader = this.getDatablockHeaderByID(id);
+        const parentID = blockHeader.parentID;
+        if (parentID) {
+            this.removeFunctionCall(parentID, id);
         }
-        return candidateID
-    }
-
-    findNextDatablock(ref: number, type?: DatablockType): ID | undefined {
-        let candidateID: ID
-        let candidateOffset = Number.MAX_SAFE_INTEGER
-
-        for (let id = 0; id < this.datablockTableLastUsedID; id++) {
-            const candidateRef = this.datablockTable[id];
-            const candidateType = this.getDatablockHeader(candidateRef).type;
-            const offset = candidateRef - ref;
-            if ((type == undefined || candidateType == type) && offset > 0 && offset < candidateOffset) {
-                candidateOffset = offset;
-                candidateID = id;
-            } 
-        }
-        return candidateID
-    }
-
-    getNewDatablockID() {
-        const id = this.datablockTable.findIndex(ptr => ptr == 0);
-        if (id == -1) {
-            console.error('Controller data block table full');
-        }
-        this.datablockTableVersion++;
-        this.datablockTableLastUsedID = Math.max(this.datablockTableLastUsedID, id);
-        return id;
-    }
-
-    allocateDatablock(dataByteLength: number) {
-        const candidates: {id: number, excessMem: number}[] = []
-        const allocationByteLength = alignBytes(datablockHeaderByteLength + dataByteLength);
-        for (let id = 0; id < this.datablockTable.length; id++) {
-            const datablockRef = this.datablockTable[id];
-            if (datablockRef == 0) break;
-            const datablockHeader = this.getDatablockHeader(datablockRef);
-            if (datablockHeader.type == DatablockType.UNALLOCATED && datablockHeader.byteLength >= allocationByteLength) {
-                candidates.push({ id, excessMem: datablockHeader.byteLength - allocationByteLength });
-            }
-        }
-        if (candidates.length == 0) {
-            console.error('Controller out of memory');
-            return null;
-        }
-        candidates.sort((a, b) => a.excessMem - b.excessMem);
-        const target = candidates[0];
-        
-        const targetStartOffset = this.datablockTable[target.id];
-        const unallocatedStartOffset = targetStartOffset + allocationByteLength;
-        this.markUnallocatedMemory(unallocatedStartOffset, target.excessMem);
-
-        return {
-            id: target.id,
-            startByteOffset: targetStartOffset,
-            byteLength: allocationByteLength
-        }
-    }
-
-    markUnallocatedMemory(startByteOffset: number, byteLength: number) {
-        let id: ID
-        const nextBlockID = this.findNextDatablock(startByteOffset, DatablockType.UNALLOCATED);
-        // If next data block in memory is unallocated then merge blocks
-        if (nextBlockID) {
-            id = nextBlockID;
-            const nextBlockRef = this.datablockTable[nextBlockID];
-            const nextBlockHeader = this.getDatablockHeader(nextBlockRef);
-            byteLength = (nextBlockRef - startByteOffset) + nextBlockHeader.byteLength;
-        }
-        else {
-            if (byteLength <= datablockHeaderByteLength) return;
-            const id = this.getNewDatablockID();
-            if (id == -1) return;
-        }
-
-        this.datablockTable[id] = startByteOffset;
-
-        writeStruct(this.mem, startByteOffset, DatablockHeaderStruct, {
-            byteLength,
-            type: DatablockType.UNALLOCATED,
-            flags: 0,
-            reserve: 0
-        } as IDatablockHeader)
-    }
-    
-    unallocateDatablock(id: number) {
-        const ref = this.datablockTable[id];
-        const nextBlock = this.findNextDatablock(ref, DatablockType.UNALLOCATED);
-        const prevBlock = this.findPreviousDatablock(ref, DatablockType.UNALLOCATED);
-        
-    }
-
-    getIDforDatablockRef(ref: number) {
-        const id = this.datablockTable.findIndex(ptr => ptr == ref);
-        if (id == -1) {
-            console.error('Invalid data block reference', ref);
-        }
-        return id;
-    }
-
-    // Remove or offset all references to given function or circuit
-    udpdateReferencesToFunction(blockRef: number, offset?: number) {
-        const funcHeader = this.getFunctionHeader(blockRef);
-        const funcMap = this.getFunctionDataMap(blockRef, funcHeader);
-
-        const ioRefStart = funcMap.inputs;
-        const ioRefEnd = funcMap.statics - 1;
-
-        for (let id = 0; id < this.datablockTableLastUsedID; id++) {
-            const blockHeader = this.getDatablockHeaderByID(id);
-            if (blockHeader.type == DatablockType.CIRCUIT) {            // Check if referenced in call list
-
-            }
-        }
-    }
-
-    deleteDatablock(id: ID) {
-        // set data block type to UNALLOCATED
-        const blockRef = this.datablockTableVersion[id];
-        const blockHeader = this.getDatablockHeader(blockRef);
-
-        if (blockHeader.type == DatablockType.CIRCUIT) {                // Delete circuit
-            const circHeader = this.getFunctionHeader(blockRef);
-            const circPointers = this.getFunctionDataMap(blockRef);
-            const funcCallCount = circHeader.staticCount;
-            const funcCalls = circPointers.statics;
-            
-            for (let i = 0; i < funcCallCount; i++)                     // Delete all functions in circuit call list
-            {
-                const callRef = this.ints[funcCalls + i];
-                const callID = this.getIDforDatablockRef(callRef);
-                if (callID == -1) continue;
-                this.deleteDatablock(callID);
-            }
-        }
-        if (blockHeader.type == DatablockType.FUNCTION || blockHeader.type == DatablockType.CIRCUIT) {
-
-        }
-
-        
-        // zero fill after header
-        
-        // find data block references and set null
-        // should function blocks have parent circuit id to narrow down search?
-
-        // find IO value references and set null
-        // calculate IO values start and end range and compare to siblings' input refs and parent circuit output refs
-    }
-
-    // Adds data block to controller memory and reference to data block table
-    addDatablock(type: DatablockType, data: ArrayBuffer): ID {
-    
-        const allocation = this.allocateDatablock(data.byteLength);
-        if (!allocation) {
-            console.error('Could not create new data block');
-            return -1;
-        }
-
-        const dataBlockHeader: IDatablockHeader = {
-            byteLength: allocation.byteLength,
-            type,
-            flags: 0,
-            reserve: 0
-        }
-
-        const dataBytes = new Uint8Array(data);
-        
-        const offset = writeStruct(this.mem, allocation.startByteOffset, DatablockHeaderStruct, dataBlockHeader)     // Write data block header
-        
-        this.bytes.set(dataBytes, offset);      // Write data block body
-        
-        console.log(`Created data block id ${allocation.id}, size ${allocation.byteLength} bytes, offset ${allocation.startByteOffset}`)
-
-        return allocation.id;
-    }
-
-    getDatablockHeaderByID(id: ID): IDatablockHeader {
-        let datablockRef = this.datablockTable[id];
-        return this.getDatablockHeader(datablockRef);
-    }
-    getDatablockHeader(datablockRef: number): IDatablockHeader {
-        return readStruct(this.mem, datablockRef, DatablockHeaderStruct) as unknown as IDatablockHeader;
     }
 
     getFunctionHeaderByID(id: ID): IFunctionHeader {
@@ -618,6 +536,32 @@ export default class SoftController
         }  
     }
 
+    solveIOReference(ioRef: number): IORef | null {
+        if (!ioRef) return null;
+        
+        const byteOffset = ioRef * BYTES_PER_REF;
+
+        let solved: IORef = null;
+        
+        for (let id = 0; id < this.datablockTableLastUsedID; id++) {
+            const blockRef = this.datablockTable[id];
+            const blockHeader = this.getDatablockHeader(blockRef);
+            
+            if (byteOffset > blockRef && byteOffset < blockRef + blockHeader.byteLength
+                && (blockHeader.type == DatablockType.FUNCTION || blockHeader.type == DatablockType.CIRCUIT)) {
+                    const pointers = this.getFunctionDataMap(blockRef);
+                    if (ioRef >= pointers.inputs && ioRef < pointers.statics) {
+                        const ioNum = ioRef - pointers.inputs;
+                        solved = {id, ioNum};
+                    }
+                }
+            }
+        
+        if (!solved) console.error('Trying to solve invalid IO reference', ioRef);
+
+        return solved;
+    }
+
     getFunctionIOPointer(id: ID, ioNum: number) {
         const pointers = this.getFunctionDataMapByID(id);
         return pointers.inputs + ioNum;
@@ -628,24 +572,22 @@ export default class SoftController
         return pointers.inputRefs + inputRefNum;        
     }
 
-    getCircuitOutputRefPointer(id: ID, outputRefNum: number) {
-        const header = this.getFunctionHeaderByID(id);
-        const pointers = this.getFunctionDataMapByID(id, header);
-        return pointers.statics + header.staticCount + outputRefNum;        
+    getFunctionIOValues(id: ID) {
+        const pointers = this.getFunctionDataMapByID(id);
+        const ioValues = this.floats.slice(pointers.inputs, pointers.statics);
+        return ioValues  
     }
-
-    connectFunctionInput(funcId: ID, inputNum: number, sourceFuncId: ID, sourceIONum: number) {
-        const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
-        const inputRefPointer = this.getFunctionInputRefPointer(funcId, inputNum);
-
-        this.ints[inputRefPointer] = sourceIOPointer;
+    getFunctionInputRefs(id: ID) {
+        const pointers = this.getFunctionDataMapByID(id);
+        const inputRefs = this.ints.slice(pointers.inputRefs, pointers.inputs);
+        return inputRefs
     }
-
-    connectCircuitOutput(circuitId: ID, outputNum: number, sourceFuncId: ID, sourceIONum: number) {
-        const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
-        const outputRefPointer = this.getCircuitOutputRefPointer(circuitId, outputNum);
-
-        this.ints[outputRefPointer] = sourceIOPointer;
+    getFunctionIOFlags(id: ID) {
+        const pointers = this.getFunctionDataMapByID(id);
+        const funcHeader = this.getFunctionHeaderByID(id);
+        const ioCount = funcHeader.inputCount + funcHeader.outputCount;
+        const ioFlags = this.bytes.slice(pointers.flags, pointers.flags + ioCount);
+        return ioFlags  
     }
 
     runFunction(datablockRef: ID, dt: number) {
@@ -717,6 +659,209 @@ export default class SoftController
             }
         }
 
+    }
+
+/******************************
+ *    DATA BLOCK PROCEDURES   *
+ ******************************/
+
+     // Adds data block to controller memory and reference to data block table
+     addDatablock(data: ArrayBuffer, type: DatablockType, parentID = 0, flags = 0): ID {
+    
+        const allocation = this.allocateDatablock(data.byteLength);
+        if (!allocation) {
+            console.error('Could not create new data block');
+            return -1;
+        }
+
+        const dataBlockHeader: IDatablockHeader = {
+            byteLength: allocation.byteLength,
+            type,
+            flags,
+            parentID
+        }
+
+        const dataBytes = new Uint8Array(data);
+        
+        const offset = writeStruct(this.mem, allocation.startByteOffset, DatablockHeaderStruct, dataBlockHeader)     // Write data block header
+        
+        this.bytes.set(dataBytes, offset);      // Write data block body
+        
+        console.log(`Created data block id ${allocation.id}, size ${allocation.byteLength} bytes, offset ${allocation.startByteOffset}`)
+
+        return allocation.id;
+    }
+
+    allocateDatablock(dataByteLength: number) {
+        const candidates: {id: number, excessMem: number}[] = []
+        const allocationByteLength = alignBytes(datablockHeaderByteLength + dataByteLength);
+        for (let id = 0; id < this.datablockTable.length; id++) {
+            const datablockRef = this.datablockTable[id];
+            if (datablockRef == 0) break;
+            const datablockHeader = this.getDatablockHeader(datablockRef);
+            if (datablockHeader.type == DatablockType.UNALLOCATED && datablockHeader.byteLength >= allocationByteLength) {
+                candidates.push({ id, excessMem: datablockHeader.byteLength - allocationByteLength });
+            }
+        }
+        if (candidates.length == 0) {
+            console.error('Controller out of memory');
+            return null;
+        }
+        candidates.sort((a, b) => a.excessMem - b.excessMem);
+        const target = candidates[0];
+        
+        const targetStartOffset = this.datablockTable[target.id];
+        const unallocatedStartOffset = targetStartOffset + allocationByteLength;
+        this.markUnallocatedMemory(unallocatedStartOffset, target.excessMem);
+
+        return {
+            id: target.id,
+            startByteOffset: targetStartOffset,
+            byteLength: allocationByteLength
+        }
+    }
+
+    deleteDatablock(id: ID) {
+        // set data block type to UNALLOCATED
+        const blockRef = this.datablockTable[id];
+        const blockHeader = this.getDatablockHeader(blockRef);
+
+        if (blockHeader.type == DatablockType.CIRCUIT) {                // Delete circuit
+            this.deleteCircuit(id);
+        }
+        else if (blockHeader.type == DatablockType.FUNCTION) {
+            this.deleteFunctionBlock(id);
+        }
+
+        this.unallocateDatablock(id);
+    }
+
+    unallocateDatablock(id: number) {
+        let ref = this.datablockTable[id];
+        let byteLength = this.getDatablockHeader(ref).byteLength;
+        
+        // If previous block is unallocated then merge with this
+        const prevBlockID = this.findPreviousDatablock(ref, DatablockType.UNALLOCATED);
+        if (prevBlockID) {
+            ref = this.datablockTable[prevBlockID];
+            byteLength += this.getDatablockHeader(ref).byteLength;
+            this.deleteDatablockID(prevBlockID);
+        }
+        // If next block is unallocated then merge with this
+        const nextBlockID = this.findNextDatablock(ref, DatablockType.UNALLOCATED);
+        if (nextBlockID) {
+            byteLength += this.getDatablockHeaderByID(nextBlockID).byteLength;
+            this.deleteDatablockID(nextBlockID);
+        }
+        const header: IDatablockHeader = {
+            byteLength,
+            type: DatablockType.UNALLOCATED,
+            flags: 0,
+            parentID: 0
+        }
+        writeStruct(this.mem, ref, DatablockHeaderStruct, header)
+        this.datablockTable[id] = ref;
+        
+        console.log(`Unallocated block ${id}. prev: ${prevBlockID}, next: ${nextBlockID}, offset: ${ref.toString(16)}`, header);
+    }
+
+    markUnallocatedMemory(startByteOffset: number, byteLength: number) {
+        let id: ID
+        const nextBlockID = this.findNextDatablock(startByteOffset, DatablockType.UNALLOCATED);
+        // If next data block in memory is unallocated then merge blocks
+        if (nextBlockID) {
+            id = nextBlockID;
+            const nextBlockRef = this.datablockTable[nextBlockID];
+            const nextBlockHeader = this.getDatablockHeader(nextBlockRef);
+            byteLength = (nextBlockRef - startByteOffset) + nextBlockHeader.byteLength;
+        }
+        else {
+            if (byteLength <= datablockHeaderByteLength) return;
+            id = this.getNewDatablockID();
+            if (id == -1) return;
+        }
+
+        this.datablockTable[id] = startByteOffset;
+
+        const header: IDatablockHeader = {
+            byteLength,
+            type: DatablockType.UNALLOCATED,
+            flags: 0,
+            parentID: 0
+        }
+
+        writeStruct(this.mem, startByteOffset, DatablockHeaderStruct, header)
+
+        console.log(header, id, startByteOffset);
+    }
+
+    getDatablockHeaderByID(id: ID): IDatablockHeader {
+        let datablockRef = this.datablockTable[id];
+        return this.getDatablockHeader(datablockRef);
+    }
+    getDatablockHeader(datablockRef: number): IDatablockHeader {
+        return readStruct(this.mem, datablockRef, DatablockHeaderStruct) as unknown as IDatablockHeader;
+    }
+
+    getNewDatablockID() {
+        const id = this.datablockTable.findIndex(ptr => ptr == 0);
+        if (id == -1) {
+            console.error('Controller data block table full');
+        }
+        this.datablockTableVersion++;
+        this.datablockTableLastUsedID = Math.max(this.datablockTableLastUsedID, id);
+        return id;
+    }
+
+    deleteDatablockID(id: ID) {
+        this.datablockTable[id] = 0;
+        if (id == this.datablockTableLastUsedID) {
+            let lastID = this.datablockTable.length;
+            while (lastID--) {
+                if (this.datablockTable[lastID] > 0) break;
+            }
+            this.datablockTableLastUsedID = lastID;
+        }
+    }
+
+    getDatablockIDbyRef(ref: number) {
+        const id = this.datablockTable.lastIndexOf(ref, this.datablockTableLastUsedID);
+        if (id == -1) {
+            console.error('Invalid data block reference', ref);
+        }
+        return id;
+    }
+
+    findPreviousDatablock(ref: number, type?: DatablockType): ID | undefined {
+        let candidateID: ID
+        let candidateOffset = Number.MAX_SAFE_INTEGER
+
+        for (let id = 0; id < this.datablockTableLastUsedID; id++) {
+            const candidateRef = this.datablockTable[id];
+            const candidateType = this.getDatablockHeader(candidateRef).type;
+            const offset = ref - candidateRef;
+            if ((type == undefined || candidateType == type) && offset > 0 && offset < candidateOffset) {
+                candidateOffset = offset;
+                candidateID = id;
+            }
+        }
+        return candidateID
+    }
+
+    findNextDatablock(ref: number, type?: DatablockType): ID | undefined {
+        let candidateID: ID
+        let candidateOffset = Number.MAX_SAFE_INTEGER
+
+        for (let id = 0; id < this.datablockTableLastUsedID; id++) {
+            const candidateRef = this.datablockTable[id];
+            const candidateType = this.getDatablockHeader(candidateRef).type;
+            const offset = candidateRef - ref;
+            if ((type == undefined || candidateType == type) && offset > 0 && offset < candidateOffset) {
+                candidateOffset = offset;
+                candidateID = id;
+            } 
+        }
+        return candidateID
     }
 
 }

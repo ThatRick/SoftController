@@ -130,5 +130,8 @@ export const LogicLib: IFunctionLibrary =
     },
     getFunction(opcode: number) {
         return Object.values(this.functions)[opcode] as IFunction;
+    },
+    getFunctionName(opcode: number) {
+        return Object.keys(this.functions)[opcode]
     }
 }

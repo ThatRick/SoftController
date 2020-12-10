@@ -25,7 +25,7 @@ export interface IDatablockHeader
     byteLength: bytesize
     type:       DatablockType
     flags:      number
-    reserve:    number
+    parentID:   number
 
 }
 export const DatablockHeaderStruct: StructType =
@@ -33,7 +33,7 @@ export const DatablockHeaderStruct: StructType =
     byteLength: DataType.uint32,
     type:       DataType.uint8,
     flags:      DataType.uint8,
-    reserve:    DataType.uint16
+    parentID:   DataType.uint16
 }
 export const datablockHeaderByteLength = sizeOfStruct(DatablockHeaderStruct);
 
@@ -135,5 +135,6 @@ export interface IFunctionLibrary
     name: string
     functions: {[index: string]: IFunction}
     getFunction: (opcode: number) => IFunction
+    getFunctionName: (opcode: number) => string
 }
 

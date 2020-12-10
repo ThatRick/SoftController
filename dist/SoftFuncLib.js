@@ -114,5 +114,8 @@ export const LogicLib = {
     },
     getFunction(opcode) {
         return Object.values(this.functions)[opcode];
+    },
+    getFunctionName(opcode) {
+        return Object.keys(this.functions)[opcode];
     }
 };
