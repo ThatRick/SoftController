@@ -219,17 +219,21 @@ export default class SoftController {
         this.floats[pointers.inputs + ioNum] = value;
         return true;
     }
+    getCircuitCallList(id) {
+        const circHeader = this.getFunctionHeaderByID(id);
+        const pointers = this.getFunctionDataMapByID(id, circHeader);
+        const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);
+        return funcCallList;
+    }
     // Adds function call to circuit
     addFunctionCall(circuitID, functionID, callIndex) {
-        const circHeader = this.getFunctionHeaderByID(circuitID);
-        const pointers = this.getFunctionDataMapByID(circuitID, circHeader);
-        const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);
+        const funcCallList = this.getCircuitCallList(circuitID);
+        const functionRef = this.datablockTable[functionID];
         const vacantIndex = funcCallList.indexOf(0); // find first vacant call index
         if (vacantIndex == -1) {
             console.error('Circuit function call list is full');
             return false;
         }
-        const functionRef = this.datablockTable[functionID];
         if (callIndex === undefined) {
             funcCallList[vacantIndex] = functionRef; // append new function call
         }
@@ -240,9 +244,7 @@ export default class SoftController {
         return true;
     }
     removeFunctionCall(circuitID, functionID) {
-        const circuitHeader = this.getFunctionHeaderByID(circuitID);
-        const circuitDataMap = this.getFunctionDataMapByID(circuitID, circuitHeader);
-        const funcCallList = this.ints.subarray(circuitDataMap.statics, circuitDataMap.statics + circuitHeader.staticCount);
+        const funcCallList = this.getCircuitCallList(circuitID);
         const functionRef = this.datablockTable[functionID];
         const callIndex = funcCallList.indexOf(functionRef); // find function call index
         if (callIndex == -1) {
@@ -278,6 +280,12 @@ export default class SoftController {
     /****************************
      *    FUNCTION PROCEDURES   *
      ****************************/
+    setFunctionIOValue(id, ioNum, value) {
+        const pointers = this.getFunctionDataMapByID(id);
+        if (ioNum < (pointers.statics - pointers.inputs)) {
+            this.floats[pointers.inputs + ioNum] = value;
+        }
+    }
     // Remove or offset all references to given function or circuit to be deleted or moved
     udpdateFunctionInputRefs(blockRef, ioRefRangeStart, ioRefRangeEnd, offset) {
         const funcDataMap = this.getFunctionDataMap(blockRef);
@@ -455,11 +463,11 @@ export default class SoftController {
         const ioFlags = this.bytes.slice(pointers.flags, pointers.flags + ioCount);
         return ioFlags;
     }
-    runFunction(datablockRef, dt) {
-        const datablockHeader = this.getDatablockHeader(datablockRef);
-        const functionHeader = this.getFunctionHeader(datablockRef);
-        const pointers = this.getFunctionDataMap(datablockRef, functionHeader);
-        for (let i = 0; i < functionHeader.inputCount; i++) { // update input values from input references
+    runFunction(blockRef, dt) {
+        const blockHeader = this.getDatablockHeader(blockRef);
+        const funcHeader = this.getFunctionHeader(blockRef);
+        const pointers = this.getFunctionDataMap(blockRef, funcHeader);
+        for (let i = 0; i < funcHeader.inputCount; i++) { // update input values from input references
             const inputRef = this.ints[pointers.inputRefs + i];
             const ioFlag = this.bytes[pointers.flags + i];
             if (inputRef > 0) {
@@ -473,14 +481,14 @@ export default class SoftController {
                 this.floats[pointers.inputs + i] = value;
             }
         }
-        if (datablockHeader.type == DatablockType.FUNCTION) // Run function
+        if (blockHeader.type == DatablockType.FUNCTION) // Run function
          {
-            const lib = this.functionLibraries[functionHeader.library];
-            const func = lib.getFunction(functionHeader.opcode);
+            const lib = this.functionLibraries[funcHeader.library];
+            const func = lib.getFunction(funcHeader.opcode);
             const params = {
-                inputCount: functionHeader.inputCount,
-                outputCount: functionHeader.outputCount,
-                staticCount: functionHeader.staticCount,
+                inputCount: funcHeader.inputCount,
+                outputCount: funcHeader.outputCount,
+                staticCount: funcHeader.staticCount,
                 input: pointers.inputs,
                 output: pointers.outputs,
                 static: pointers.statics,
@@ -489,18 +497,18 @@ export default class SoftController {
             // TESTING
             func.run(params, this.floats);
         }
-        else if (datablockHeader.type == DatablockType.CIRCUIT) // Run circuit
+        else if (blockHeader.type == DatablockType.CIRCUIT) // Run circuit
          {
-            const funcCallCount = functionHeader.staticCount;
+            const funcCallCount = funcHeader.staticCount;
             const funcCalls = pointers.statics;
-            const outputRefs = funcCalls + functionHeader.staticCount;
+            const outputRefs = funcCalls + funcHeader.staticCount;
             for (let i = 0; i < funcCallCount; i++) // Call functions in circuit call list
              {
                 const callRef = this.ints[funcCalls + i];
                 this.runFunction(callRef, dt);
             }
-            const outputFlags = pointers.flags + functionHeader.inputCount;
-            for (let i = 0; i < functionHeader.outputCount; i++) // Update circuit outputs from output references
+            const outputFlags = pointers.flags + funcHeader.inputCount;
+            for (let i = 0; i < funcHeader.outputCount; i++) // Update circuit outputs from output references
              {
                 const outputRef = this.ints[outputRefs + i];
                 const ioFlag = this.bytes[outputFlags + i];

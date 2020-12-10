@@ -1,5 +1,5 @@
 import SoftController from './SoftController.js'
-import { DatablockType } from './SoftTypes.js';
+import { DatablockType, IO_FLAG, ITask } from './SoftTypes.js';
 
 function makeLogger(div: HTMLElement) {
     return function logLine(text: string) {
@@ -14,20 +14,39 @@ function makeLogger(div: HTMLElement) {
 //
 window.onload = () =>
 {
-    const logLine = makeLogger(document.getElementById('main'));
+    const print = makeLogger(document.getElementById('main'));
 
     const memSize = 16 * 1024;
     const cpu = new SoftController(memSize);
     window['cpu'] = cpu;
     
-    logLine(systemSectorToString(cpu));
+    print(systemSectorToString(cpu));
 
-    const funcs = createTestBlocks(cpu, 10);
+    const funcs = createTestBlocks(cpu, 100);
+    const circId = funcs[0];
 
-    funcs.forEach(func => logLine(functionToString(cpu, func)));
+    const taskId = cpu.createTask(circId, 20, 5);
+    print(taskToString(cpu, taskId))
 
-    logLine(systemSectorToString(cpu));
-    logLine(datablockTableToString(cpu));
+    const interval = 10 // ms
+    let ticks = 100
+
+    print('*** RUNNING TEST... ***')
+
+    const loop = setInterval(() => {
+        cpu.tick(interval);
+        if (ticks-- == 0) stop();
+    }, interval)
+    
+    function stop() {
+        clearTimeout(loop);
+        const task = cpu.getTaskByID(taskId);
+        print(taskToString(cpu, taskId))
+        print(systemSectorToString(cpu));
+        print(datablockTableToString(cpu));
+        funcs.forEach(func => print(functionToString(cpu, func)));
+    }
+
 }
 
 
@@ -47,35 +66,32 @@ function createTestBlocks(cpu: SoftController, blockCount = 10) {
         const funcInfo = cpu.getFunctionHeaderByID(funcId);
         const sourceId = funcs[i-1];
         const sourceInfo = cpu.getFunctionHeaderByID(sourceId);
-        const inputNum = i % (funcInfo.inputCount-1);
+        const inputNum = i % funcInfo.inputCount;
         const sourceIONum = sourceInfo.inputCount;
         cpu.connectFunctionInput(funcId, inputNum, sourceId, sourceIONum);
     }
-    const taskId = cpu.createTask(circId, 20, 5);
-    console.log(cpu.getTaskByID(taskId));
-
-    // cpu.deleteDatablock(funcs[2]);
-    // cpu.deleteDatablock(funcs[3]);
-
-    const interval = 10 // ms
-    const ticks = 200
-    const loop = setInterval(() => cpu.tick(interval), interval)
-    
-    setTimeout(() => {
-        clearTimeout(loop);
-        const task = cpu.getTaskByID(taskId);
-        const totalCPUtime = task.cpuTimeInt + task.cpuTime;
-        const avgCPUtime = totalCPUtime / task.runCount;
-        console.log(`Total cpu time ${totalCPUtime.toPrecision(5)} ms. Average time ${avgCPUtime.toPrecision(5)} ms (${task.runCount} runs)`);
-        console.dir(task);
-    }, interval * ticks)
-
-    return funcs;
+    cpu.setFunctionIOValue(2, 0, 1);
+    return funcs
 }
 
 
 const breakLine = '='.repeat(80)
 
+/////////////////////////////////////
+//  Align value by desimal point
+//
+function alignValue(value: number, integerPart = 9, desimalPart = 7) {
+    let [ints, decs] = value.toString().split('.');
+    let str = ints.padStart(integerPart);
+    if (decs) {
+        if (decs.length > desimalPart) {
+            let [, fixed] = value.toFixed(desimalPart).split('.');
+            decs = fixed.slice(0, desimalPart-1) + '~';
+        }
+        str += '.' + decs;
+    }
+    return str;
+}
 
 /////////////////////////////////////
 //  Print function block to string
@@ -102,27 +118,50 @@ function functionToString(cpu: SoftController, funcID: number): string {
     const outputNameLen = 6;
     const rows = Math.max(funcHeader.inputCount, funcHeader.outputCount);
 
+    function solveRef(ref: number): string {
+        const solved = cpu.solveIOReference(ref);
+        return (solved) ? solved.id+':'+solved.ioNum : ref.toString(16)
+    }
+
+    function ioValue(i: number): string {
+        const flags = ioFlags[i];
+        const value = (flags & (IO_FLAG.BOOLEAN | IO_FLAG.INTEGER))
+                    ? ioValues[i].toFixed(0)
+                    : ioValues[i].toPrecision(precision);
+        
+        return (i < funcHeader.inputCount) ? value.padStart(valueLen) : value.padEnd(valueLen);
+    }
+
     addLine(breakLine);
-    addLine(`${funcName} (ID: ${funcID})`)
+    addLine(`${funcID.toString().padStart(3, '0')}:  ${funcName}`)
     addLine('');
-    addLine(`${' '.repeat(inputRefLen+3)} ${' '.repeat(valueLen)}   _${'_'.repeat(inputNameLen)}${'_'.repeat(outputNameLen)}_`);
+    addLine(`${' '.repeat(inputRefLen)}    ${' '.repeat(valueLen)}   _${'_'.repeat(inputNameLen)}${'_'.repeat(outputNameLen)}_`);
 
     for (let i = 0; i < rows; i++) {
-        const inputRef = (i < inputRefs.length && inputRefs[i] != 0) ? inputRefs[i].toString().padStart(inputRefLen)+' ->' : ' '.repeat(inputRefLen+3);
-        const inputValue = (i < funcHeader.inputCount) ? ioValues[i].toPrecision(precision).padStart(valueLen) : ' '.repeat(valueLen);
-        const inputName = (func && i < func.inputs.length) ? ((func.inputs[i].name) ? func.inputs[i].name.padEnd(inputNameLen)
-                                                                                    : ((i == 0) ? funcName.padEnd(inputNameLen)
-                                                                                                : ' '.repeat(inputNameLen)))
-                                                           : ' '.repeat(inputNameLen);
+        let hasInput, hasOutput: boolean;
+        const connector = (i < inputRefs.length && inputRefs[i] != 0) ? ((ioFlags[i] & IO_FLAG.INVERTED) ? '―o' : '―>') : '  '
+        const inputRef = (i < inputRefs.length && inputRefs[i] != 0) ? solveRef(inputRefs[i]).padStart(inputRefLen) : ' '.repeat(inputRefLen);
+        const inputValue = (i < funcHeader.inputCount && (hasInput=true)) ? ioValue(i) : ' '.repeat(valueLen);
+        const inputName = (i < funcHeader.inputCount) ? (func ? ((i < func.inputs.length && func.inputs[i].name) ? func.inputs[i].name.padEnd(inputNameLen)
+                                                                                                                 : ((i == 0) ? funcName.padEnd(inputNameLen)
+                                                                                                                             : ' '.repeat(inputNameLen)))
+                                                              : i.toString().padEnd(inputNameLen))
+                                                      : ' '.repeat(inputNameLen);
 
         const outNum = i + funcHeader.inputCount;
-        const outputName = (func && i < func.outputs.length && func.outputs[i].name) ? func.outputs[i].name.padStart(outputNameLen) : ' '.repeat(outputNameLen);
-        const outputValue = (i < funcHeader.outputCount) ? ioValues[outNum].toPrecision(precision).padStart(valueLen) : ' '.repeat(valueLen);
+        const outputName = (i < funcHeader.outputCount) ? (func ? ((i < func.outputs.length && func.outputs[i].name) ? func.outputs[i].name.padStart(outputNameLen)
+                                                                                                                     : ' '.repeat(outputNameLen))
+                                                                : i.toString().padStart(outputNameLen))
+                                                        : ' '.repeat(outputNameLen);
 
-        const line = `${inputRef} ${inputValue} -| ${inputName}${outputName} |- ${outputValue}`
+        const outputValue = (i < funcHeader.outputCount && (hasOutput=true)) ? ioValue(outNum) : ' '.repeat(valueLen);
+
+        const line = `${inputRef} ${connector} ${inputValue} ${hasInput?'–':' '}| ${inputName}${outputName} |${hasOutput?'–':' '} ${outputValue}`
         addLine(line);
     }
-    addLine(`${' '.repeat(inputRefLen+3)} ${' '.repeat(valueLen)}   -${'-'.repeat(inputNameLen)}${'-'.repeat(outputNameLen)}-`);
+    addLine(`${' '.repeat(inputRefLen)}    ${' '.repeat(valueLen)}   ‾${'‾'.repeat(inputNameLen)}${'‾'.repeat(outputNameLen)}‾`);
+
+    if (!func) text += '\n' + circuitToString(cpu, funcID);
 
     return text;
 }
@@ -133,8 +172,16 @@ function functionToString(cpu: SoftController, funcID: number): string {
 function circuitToString(cpu: SoftController, circuitID: number): string {
     let text = ''
     const addLine = (line: string) => text += (line + '\n');
-    const blockHeader = cpu.getDatablockHeaderByID(circuitID);
-    const funcHeader = cpu.getFunctionHeaderByID(circuitID);
+    const callList = cpu.getCircuitCallList(circuitID);
+
+    addLine(`CALL LIST (size: ${callList.length})`)
+    addLine('')
+    for (let i = 0; i < callList.length; i++) {
+        const callRef = callList[i];
+        if (callRef == 0) break;
+        const funcID = cpu.getDatablockIDbyRef(callRef);
+        addLine(`${i.toString().padStart(3)}:  ${funcID.toString().padStart(3, '0')}  [${callRef.toString(16).toUpperCase()}]`)
+    }
 
     return text;
 }
@@ -150,7 +197,7 @@ function datablockTableToString(cpu: SoftController): string {
     const addLine = (line: string) => text += (line + '\n');
 
     addLine(breakLine)
-    addLine(`Data block table listing (size: ${cpu.datablockTable.length})`)
+    addLine(`DATA BLOCK TABLE (size: ${cpu.datablockTable.length})`)
     addLine('')
 
     cpu.datablockTable.forEach((offset, id) => {
@@ -170,27 +217,67 @@ ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  
 //
 function systemSectorToString(cpu: SoftController): string {
     const systemParameterNames = [
-        'id',
-        'version',
-        'total memory (bytes)',
-        'data block table ref',
-        'data block table length',
-        'data block table last used ID',
-        'data block table version',
-        'task list ref',
-        'task list length'
+        'ID',
+        'Version',
+        'Total Memory (bytes)',
+        'Data Block Table Ref',
+        'Data Block Table Length',
+        'Data Block Table Last Used ID',
+        'Data Block Table Version',
+        'Task List Ref',
+        'Task List Length'
     ]
     const maxParamNameLength = (systemParameterNames.reduce((a, b) => (a.length > b.length) ? a : b)).length;
     let text = ''
     const addLine = (line: string) => text += (line + '\n');
     
     addLine(breakLine);
-    addLine(`System sector parmeters`)
+    addLine(`SYSTEM SECTOR`)
     addLine('')
 
     for (let i = 0; i < cpu.systemSector.length; i++) {
-        addLine(`${i}:  ${systemParameterNames[i].padEnd(maxParamNameLength)}  ${cpu.systemSector[i].toString().padStart(6)}`);
+        addLine(`${i.toString().padStart(3)}:  ${systemParameterNames[i].padEnd(maxParamNameLength)}  ${cpu.systemSector[i].toString().padStart(6)}`);
     }
     addLine('');
+    return text
+}
+
+///////////////////////////
+//  Print task to string
+//
+function taskToString(cpu: SoftController, taskID: number): string {
+    const nameLength = 22
+    const names: {[index: string]: [string, (value: number) => string]} =
+    {
+        targetRef:   ['Target Ref',             (value) => alignValue(cpu.getDatablockIDbyRef(value)) + `  [${value.toString(16).toUpperCase()}]`],
+        interval:    ['Interval (ms)',          (value) => alignValue(value)],
+        offset:      ['Offset (ms)',            (value) => alignValue(value)],
+        timeAccu:    ['Time Accumulator (ms)',  (value) => alignValue(value)],
+        cpuTime:     ['CPU Time (ms)',          (value) => alignValue(value)],
+        cpuTimeInt:  ['CPU Time Integer (ms)',  (value) => alignValue(value)],
+        runCount:    ['Run Count',              (value) => alignValue(value)],
+    }
+    
+    const task = cpu.getTaskByID(taskID);
+    let text = ''
+    const addLine = (line: string) => text += (line + '\n');
+    
+    addLine(breakLine);
+    addLine(`${taskID.toString().padStart(3, '0')}:  TASK DATA`)
+    addLine('');
+
+    for (const [key, value] of Object.entries(task)) {
+        const [name, func] = names[key];
+        addLine(`      ${name.padEnd(nameLength)}  ${func(value)}`);
+    }
+
+    const totalCPUtime = task.cpuTimeInt + task.cpuTime;
+    const avgCPUtime = totalCPUtime / task.runCount;
+    
+    addLine('');
+    addLine('Calculated:');
+    addLine('');
+    addLine(`      ${'Total CPU Time (ms)'.padEnd(nameLength)}  ${alignValue(totalCPUtime)}`);
+    addLine(`      ${'Average CPU Time (ms)'.padEnd(nameLength)}  ${alignValue(avgCPUtime)}`);
     return text
 }
