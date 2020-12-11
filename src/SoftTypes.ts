@@ -137,4 +137,3 @@ export interface IFunctionLibrary
     getFunction: (opcode: number) => IFunction
     getFunctionName: (opcode: number) => string
 }
-

@@ -109,9 +109,10 @@ export default class SoftController {
                 // save performance data
                 // console.log('Task cpu time (ms):', elapsedTime);
                 task.cpuTime += elapsedTime;
-                if (task.cpuTime > 1.0) {
-                    task.cpuTime--;
-                    task.cpuTimeInt++;
+                if (task.cpuTime > 1) {
+                    const overflow = Math.trunc(task.cpuTime);
+                    task.cpuTime -= overflow;
+                    task.cpuTimeInt += overflow;
                 }
                 task.runCount++;
             }
@@ -197,8 +198,8 @@ export default class SoftController {
     }
     deleteCircuit(id) {
         const blockRef = this.datablockTable[id];
-        const circHeader = this.getFunctionHeader(blockRef);
-        const pointers = this.getFunctionDataMap(blockRef);
+        const circHeader = this.readFunctionHeader(blockRef);
+        const pointers = this.functionDataMap(blockRef);
         const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);
         funcCallList.forEach(ref => {
             const callID = this.getDatablockIDbyRef(ref);
@@ -209,25 +210,26 @@ export default class SoftController {
         this.deleteFunctionBlock(id);
     }
     defineCircuitIO(id, ioNum, flags, value = 0) {
-        const circHeader = this.getFunctionHeaderByID(id);
+        const circHeader = this.readFunctionHeaderByID(id);
         if (ioNum < 0 || ioNum >= circHeader.inputCount + circHeader.outputCount) {
             console.error('Invalid circuit IO index', ioNum);
             return false;
         }
-        const pointers = this.getFunctionDataMapByID(id, circHeader);
+        const pointers = this.functionDataMapByID(id, circHeader);
         this.bytes[pointers.flags + ioNum] = flags;
         this.floats[pointers.inputs + ioNum] = value;
         return true;
     }
-    getCircuitCallList(id) {
-        const circHeader = this.getFunctionHeaderByID(id);
-        const pointers = this.getFunctionDataMapByID(id, circHeader);
+    getCircuitCallList(ref) {
+        const circHeader = this.readFunctionHeader(ref);
+        const pointers = this.functionDataMap(ref, circHeader);
         const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);
         return funcCallList;
     }
     // Adds function call to circuit
     addFunctionCall(circuitID, functionID, callIndex) {
-        const funcCallList = this.getCircuitCallList(circuitID);
+        const circRef = this.datablockTable[circuitID];
+        const funcCallList = this.getCircuitCallList(circRef);
         const functionRef = this.datablockTable[functionID];
         const vacantIndex = funcCallList.indexOf(0); // find first vacant call index
         if (vacantIndex == -1) {
@@ -244,7 +246,8 @@ export default class SoftController {
         return true;
     }
     removeFunctionCall(circuitID, functionID) {
-        const funcCallList = this.getCircuitCallList(circuitID);
+        const circRef = this.datablockTable[circuitID];
+        const funcCallList = this.getCircuitCallList(circRef);
         const functionRef = this.datablockTable[functionID];
         const callIndex = funcCallList.indexOf(functionRef); // find function call index
         if (callIndex == -1) {
@@ -255,7 +258,7 @@ export default class SoftController {
             funcCallList.copyWithin(callIndex, callIndex + 1); // shift function calls to fill up removed index
         }
         funcCallList[funcCallList.length - 1] = 0; // remove last index from call list
-        const functionDataMap = this.getFunctionDataMap(functionRef);
+        const functionDataMap = this.functionDataMap(functionRef);
         const ioRefRangeStart = functionDataMap.inputs; // calculate function IO values reference range
         const ioRefRangeEnd = functionDataMap.statics - 1;
         for (let i = 0; i < funcCallList.length; i++) { // remove references to deleted function block from other functions
@@ -268,8 +271,8 @@ export default class SoftController {
         return true;
     }
     getCircuitOutputRefPointer(id, outputRefNum) {
-        const header = this.getFunctionHeaderByID(id);
-        const pointers = this.getFunctionDataMapByID(id, header);
+        const header = this.readFunctionHeaderByID(id);
+        const pointers = this.functionDataMapByID(id, header);
         return pointers.statics + header.staticCount + outputRefNum;
     }
     connectCircuitOutput(circuitId, outputNum, sourceFuncId, sourceIONum) {
@@ -277,29 +280,40 @@ export default class SoftController {
         const outputRefPointer = this.getCircuitOutputRefPointer(circuitId, outputNum);
         this.ints[outputRefPointer] = sourceIOPointer;
     }
+    readCircuitOutputRefs(ref) {
+        const header = this.readFunctionHeader(ref);
+        const pointers = this.functionDataMap(ref, header);
+        const start = pointers.statics + header.staticCount;
+        const outputRefs = this.ints.slice(start, start + header.outputCount);
+        return outputRefs;
+    }
+    readCircuitCallList(ref) {
+        return this.getCircuitCallList(ref).slice();
+    }
     /****************************
      *    FUNCTION PROCEDURES   *
      ****************************/
     setFunctionIOValue(id, ioNum, value) {
-        const pointers = this.getFunctionDataMapByID(id);
+        const pointers = this.functionDataMapByID(id);
         if (ioNum < (pointers.statics - pointers.inputs)) {
             this.floats[pointers.inputs + ioNum] = value;
         }
     }
-    // Remove or offset all references to given function or circuit to be deleted or moved
-    udpdateFunctionInputRefs(blockRef, ioRefRangeStart, ioRefRangeEnd, offset) {
-        const funcDataMap = this.getFunctionDataMap(blockRef);
-        const inputReferences = this.ints.subarray(funcDataMap.inputRefs, funcDataMap.inputs);
-        inputReferences.forEach((ioRef, i) => {
-            if (ioRef >= ioRefRangeStart && ioRef <= ioRefRangeEnd) {
-                inputReferences[i] = (offset) ? ioRef + offset : 0;
-            }
-        });
+    setFunctionIOFlag(id, ioNum, flag) {
+        const pointers = this.functionDataMapByID(id);
+        this.bytes[pointers.flags + ioNum] |= flag;
     }
-    connectFunctionInput(funcId, inputNum, sourceFuncId, sourceIONum) {
+    clearFunctionIOFlag(id, ioNum, flag) {
+        const pointers = this.functionDataMapByID(id);
+        this.bytes[pointers.flags + ioNum] &= ~flag;
+    }
+    connectFunctionInput(funcId, inputNum, sourceFuncId, sourceIONum, inverted = false) {
         const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
         const inputRefPointer = this.getFunctionInputRefPointer(funcId, inputNum);
         this.ints[inputRefPointer] = sourceIOPointer;
+        if (inverted)
+            this.setFunctionIOFlag(funcId, inputNum, 8 /* INVERTED */);
+        console.log('inputFlag', this.readFunctionIOFlags(funcId)[inputNum]);
     }
     // Creates new function data block
     createFunctionBlock(library, opcode, circuitID, callIndex, inputCount, outputCount, staticCount) {
@@ -381,12 +395,12 @@ export default class SoftController {
             this.removeFunctionCall(parentID, id);
         }
     }
-    getFunctionHeaderByID(id) {
+    readFunctionHeaderByID(id) {
         let datablockRef = this.datablockTable[id];
-        return this.getFunctionHeader(datablockRef);
+        return this.readFunctionHeader(datablockRef);
     }
     // Optimized version! Any struct change will break this
-    getFunctionHeader(datablockRef) {
+    readFunctionHeader(datablockRef) {
         const byteOffset = datablockRef + datablockHeaderByteLength;
         return {
             library: this.bytes[byteOffset + 0],
@@ -398,12 +412,12 @@ export default class SoftController {
             reserve: 0
         };
     }
-    getFunctionDataMapByID(id, header) {
+    functionDataMapByID(id, header) {
         const datablockRef = this.datablockTable[id];
-        return this.getFunctionDataMap(datablockRef, header);
+        return this.functionDataMap(datablockRef, header);
     }
-    getFunctionDataMap(datablockRef, header) {
-        header = header || this.getFunctionHeader(datablockRef);
+    functionDataMap(datablockRef, header) {
+        header = header || this.readFunctionHeader(datablockRef);
         const flags = datablockRef + datablockHeaderByteLength + functionHeaderByteLength;
         const inputRefs = alignBytes(flags + header.inputCount + header.outputCount) / BYTES_PER_VALUE;
         const inputs = inputRefs + header.inputCount;
@@ -417,6 +431,31 @@ export default class SoftController {
             statics
         };
     }
+    getFunctionIOPointer(id, ioNum) {
+        const pointers = this.functionDataMapByID(id);
+        return pointers.inputs + ioNum;
+    }
+    getFunctionInputRefPointer(id, inputRefNum) {
+        const pointers = this.functionDataMapByID(id);
+        return pointers.inputRefs + inputRefNum;
+    }
+    readFunctionIOValues(ref) {
+        const pointers = this.functionDataMap(ref);
+        const ioValues = this.floats.slice(pointers.inputs, pointers.statics);
+        return ioValues;
+    }
+    readFunctionInputRefs(ref) {
+        const pointers = this.functionDataMap(ref);
+        const inputRefs = this.ints.slice(pointers.inputRefs, pointers.inputs);
+        return inputRefs;
+    }
+    readFunctionIOFlags(ref) {
+        const funcHeader = this.readFunctionHeader(ref);
+        const pointers = this.functionDataMap(ref, funcHeader);
+        const ioCount = funcHeader.inputCount + funcHeader.outputCount;
+        const ioFlags = this.bytes.slice(pointers.flags, pointers.flags + ioCount);
+        return ioFlags;
+    }
     solveIOReference(ioRef) {
         if (!ioRef)
             return null;
@@ -427,7 +466,7 @@ export default class SoftController {
             const blockHeader = this.getDatablockHeader(blockRef);
             if (byteOffset > blockRef && byteOffset < blockRef + blockHeader.byteLength
                 && (blockHeader.type == DatablockType.FUNCTION || blockHeader.type == DatablockType.CIRCUIT)) {
-                const pointers = this.getFunctionDataMap(blockRef);
+                const pointers = this.functionDataMap(blockRef);
                 if (ioRef >= pointers.inputs && ioRef < pointers.statics) {
                     const ioNum = ioRef - pointers.inputs;
                     solved = { id, ioNum };
@@ -438,42 +477,27 @@ export default class SoftController {
             console.error('Trying to solve invalid IO reference', ioRef);
         return solved;
     }
-    getFunctionIOPointer(id, ioNum) {
-        const pointers = this.getFunctionDataMapByID(id);
-        return pointers.inputs + ioNum;
-    }
-    getFunctionInputRefPointer(id, inputRefNum) {
-        const pointers = this.getFunctionDataMapByID(id);
-        return pointers.inputRefs + inputRefNum;
-    }
-    getFunctionIOValues(id) {
-        const pointers = this.getFunctionDataMapByID(id);
-        const ioValues = this.floats.slice(pointers.inputs, pointers.statics);
-        return ioValues;
-    }
-    getFunctionInputRefs(id) {
-        const pointers = this.getFunctionDataMapByID(id);
-        const inputRefs = this.ints.slice(pointers.inputRefs, pointers.inputs);
-        return inputRefs;
-    }
-    getFunctionIOFlags(id) {
-        const pointers = this.getFunctionDataMapByID(id);
-        const funcHeader = this.getFunctionHeaderByID(id);
-        const ioCount = funcHeader.inputCount + funcHeader.outputCount;
-        const ioFlags = this.bytes.slice(pointers.flags, pointers.flags + ioCount);
-        return ioFlags;
+    // Remove or offset all references to given function or circuit to be deleted or moved
+    udpdateFunctionInputRefs(blockRef, ioRefRangeStart, ioRefRangeEnd, offset) {
+        const funcDataMap = this.functionDataMap(blockRef);
+        const inputReferences = this.ints.subarray(funcDataMap.inputRefs, funcDataMap.inputs);
+        inputReferences.forEach((ioRef, i) => {
+            if (ioRef >= ioRefRangeStart && ioRef <= ioRefRangeEnd) {
+                inputReferences[i] = (offset) ? ioRef + offset : 0;
+            }
+        });
     }
     runFunction(blockRef, dt) {
         const blockHeader = this.getDatablockHeader(blockRef);
-        const funcHeader = this.getFunctionHeader(blockRef);
-        const pointers = this.getFunctionDataMap(blockRef, funcHeader);
+        const funcHeader = this.readFunctionHeader(blockRef);
+        const pointers = this.functionDataMap(blockRef, funcHeader);
         for (let i = 0; i < funcHeader.inputCount; i++) { // update input values from input references
             const inputRef = this.ints[pointers.inputRefs + i];
             const ioFlag = this.bytes[pointers.flags + i];
             if (inputRef > 0) {
                 let value = this.floats[inputRef];
                 if (ioFlag & 2 /* BOOLEAN */) {
-                    value = ((value) ? 1 : 0) ^ (ioFlag & 8 /* INVERTED */);
+                    value = (value && 1) ^ (ioFlag & 8 /* INVERTED */ && 1);
                 }
                 else if (ioFlag & 4 /* INTEGER */) {
                     value = Math.floor(value);

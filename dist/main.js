@@ -1,5 +1,6 @@
 import SoftController from './SoftController.js';
 import { DatablockType } from './SoftTypes.js';
+import { createControllerBlueprint } from './SoftSerializer.js';
 function makeLogger(div) {
     return function logLine(text) {
         const pre = document.createElement('pre');
@@ -12,17 +13,20 @@ function makeLogger(div) {
 //
 window.onload = () => {
     const print = makeLogger(document.getElementById('main'));
-    const memSize = 16 * 1024;
+    const memSize = 64 * 1024;
     const cpu = new SoftController(memSize);
     window['cpu'] = cpu;
-    print(systemSectorToString(cpu));
-    const funcs = createTestBlocks(cpu, 100);
+    const funcs = createTestBlocks(cpu, 10);
     const circId = funcs[0];
     const taskId = cpu.createTask(circId, 20, 5);
-    print(taskToString(cpu, taskId));
     const interval = 10; // ms
     let ticks = 100;
-    print('*** RUNNING TEST... ***');
+    const blueprint = createControllerBlueprint(cpu);
+    print(JSON.stringify(blueprint, null, 2));
+    print(systemSectorToString(cpu));
+    print(breakLine);
+    print('');
+    print('      RUNNING TEST...');
     const loop = setInterval(() => {
         cpu.tick(interval);
         if (ticks-- == 0)
@@ -32,8 +36,8 @@ window.onload = () => {
         clearTimeout(loop);
         const task = cpu.getTaskByID(taskId);
         print(taskToString(cpu, taskId));
-        print(systemSectorToString(cpu));
-        print(datablockTableToString(cpu));
+        // print(systemSectorToString(cpu));
+        // print(datablockTableToString(cpu));
         funcs.forEach(func => print(functionToString(cpu, func)));
     }
 };
@@ -42,7 +46,7 @@ window.onload = () => {
 //
 function createTestBlocks(cpu, blockCount = 10) {
     // test
-    const circId = cpu.createCircuit(4, 2, 256);
+    const circId = cpu.createCircuit(4, 2, blockCount);
     const funcs = [circId];
     const maxOpcode = 7;
     const logicLib = 0;
@@ -50,12 +54,13 @@ function createTestBlocks(cpu, blockCount = 10) {
         const opcode = i % maxOpcode;
         const funcId = cpu.createFunctionBlock(logicLib, opcode, circId);
         funcs.push(funcId);
-        const funcInfo = cpu.getFunctionHeaderByID(funcId);
+        const funcInfo = cpu.readFunctionHeaderByID(funcId);
         const sourceId = funcs[i - 1];
-        const sourceInfo = cpu.getFunctionHeaderByID(sourceId);
+        const sourceInfo = cpu.readFunctionHeaderByID(sourceId);
         const inputNum = i % funcInfo.inputCount;
         const sourceIONum = sourceInfo.inputCount;
-        cpu.connectFunctionInput(funcId, inputNum, sourceId, sourceIONum);
+        const inverted = !(i % 2);
+        cpu.connectFunctionInput(funcId, inputNum, sourceId, sourceIONum, inverted);
     }
     cpu.setFunctionIOValue(2, 0, 1);
     return funcs;
@@ -64,7 +69,8 @@ const breakLine = '='.repeat(80);
 /////////////////////////////////////
 //  Align value by desimal point
 //
-function alignValue(value, integerPart = 9, desimalPart = 7) {
+const defaultIntegerPadding = 9;
+function alignValue(value, integerPart = defaultIntegerPadding, desimalPart = 7) {
     let [ints, decs] = value.toString().split('.');
     let str = ints.padStart(integerPart);
     if (decs) {
@@ -85,10 +91,11 @@ function functionToString(cpu, funcID) {
         return 'Invalid function ID: ' + funcID;
     let text = '';
     const addLine = (line) => text += (line + '\n');
-    const funcHeader = cpu.getFunctionHeaderByID(funcID);
-    const ioValues = cpu.getFunctionIOValues(funcID);
-    const ioFlags = cpu.getFunctionIOFlags(funcID);
-    const inputRefs = cpu.getFunctionInputRefs(funcID);
+    const funcRef = cpu.datablockTable[funcID];
+    const funcHeader = cpu.readFunctionHeader(funcRef);
+    const ioValues = cpu.readFunctionIOValues(funcRef);
+    const ioFlags = cpu.readFunctionIOFlags(funcRef);
+    const inputRefs = cpu.readFunctionInputRefs(funcRef);
     const func = (type == DatablockType.FUNCTION) ? cpu.functionLibraries[funcHeader.library].getFunction(funcHeader.opcode) : null;
     const funcName = (func) ? cpu.functionLibraries[funcHeader.library].getFunctionName(funcHeader.opcode) : 'CIRCUIT';
     const inputRefLen = 6;
@@ -114,7 +121,7 @@ function functionToString(cpu, funcID) {
     addLine(`${' '.repeat(inputRefLen)}    ${' '.repeat(valueLen)}   _${'_'.repeat(inputNameLen)}${'_'.repeat(outputNameLen)}_`);
     for (let i = 0; i < rows; i++) {
         let hasInput, hasOutput;
-        const connector = (i < inputRefs.length && inputRefs[i] != 0) ? ((ioFlags[i] & 8 /* INVERTED */) ? '―o' : '―>') : '  ';
+        const connector = (i < inputRefs.length && inputRefs[i] != 0) ? '―>' : '  ';
         const inputRef = (i < inputRefs.length && inputRefs[i] != 0) ? solveRef(inputRefs[i]).padStart(inputRefLen) : ' '.repeat(inputRefLen);
         const inputValue = (i < funcHeader.inputCount && (hasInput = true)) ? ioValue(i) : ' '.repeat(valueLen);
         const inputName = (i < funcHeader.inputCount) ? (func ? ((i < func.inputs.length && func.inputs[i].name) ? func.inputs[i].name.padEnd(inputNameLen)
@@ -128,7 +135,9 @@ function functionToString(cpu, funcID) {
             : i.toString().padStart(outputNameLen))
             : ' '.repeat(outputNameLen);
         const outputValue = (i < funcHeader.outputCount && (hasOutput = true)) ? ioValue(outNum) : ' '.repeat(valueLen);
-        const line = `${inputRef} ${connector} ${inputValue} ${hasInput ? '–' : ' '}| ${inputName}${outputName} |${hasOutput ? '–' : ' '} ${outputValue}`;
+        const inputPin = hasInput ? (ioFlags[i] & 8 /* INVERTED */ ? 'o' : '-') : ' ';
+        const outputPin = hasOutput ? '-' : ' ';
+        const line = `${inputRef} ${connector} ${inputValue} ${inputPin}| ${inputName}${outputName} |${outputPin} ${outputValue}`;
         addLine(line);
     }
     addLine(`${' '.repeat(inputRefLen)}    ${' '.repeat(valueLen)}   ‾${'‾'.repeat(inputNameLen)}${'‾'.repeat(outputNameLen)}‾`);
@@ -209,11 +218,11 @@ function systemSectorToString(cpu) {
 function taskToString(cpu, taskID) {
     const nameLength = 22;
     const names = {
-        targetRef: ['Target Ref', (value) => alignValue(cpu.getDatablockIDbyRef(value)) + `  [${value.toString(16).toUpperCase()}]`],
+        targetRef: ['Target Ref', (value) => `${('0x' + value.toString(16).toUpperCase()).padStart(defaultIntegerPadding)}  (ID: ${cpu.getDatablockIDbyRef(value)})`],
         interval: ['Interval (ms)', (value) => alignValue(value)],
         offset: ['Offset (ms)', (value) => alignValue(value)],
         timeAccu: ['Time Accumulator (ms)', (value) => alignValue(value)],
-        cpuTime: ['CPU Time (ms)', (value) => alignValue(value)],
+        cpuTime: ['CPU Time desimal (ms)', (value) => alignValue(value)],
         cpuTimeInt: ['CPU Time Integer (ms)', (value) => alignValue(value)],
         runCount: ['Run Count', (value) => alignValue(value)],
     };
@@ -233,6 +242,6 @@ function taskToString(cpu, taskID) {
     addLine('Calculated:');
     addLine('');
     addLine(`      ${'Total CPU Time (ms)'.padEnd(nameLength)}  ${alignValue(totalCPUtime)}`);
-    addLine(`      ${'Average CPU Time (ms)'.padEnd(nameLength)}  ${alignValue(avgCPUtime)}`);
+    addLine(`      ${'Average CPU Load (ms)'.padEnd(nameLength)}  ${alignValue(avgCPUtime)}`);
     return text;
 }
