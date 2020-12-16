@@ -16,7 +16,7 @@ const BYTES_PER_REF = 4;
 function alignBytes(addr, bytes = BYTES_PER_VALUE) {
     return Math.ceil(addr / bytes) * bytes;
 }
-const systemSectorLength = 9;
+const systemSectorLength = 10;
 //////////////////////////////////
 //      Soft Controller
 //////////////////////////////////
@@ -52,6 +52,7 @@ export default class SoftController {
             this.id = id;
             this.version = SoftController.version;
             this.totalMemSize = this.mem.byteLength;
+            this.dataMemSize = arg;
             this.datablockTablePtr = datablockTableOffset;
             this.datablockTableLength = datablockTableLength;
             this.datablockTableVersion = 0;
@@ -64,29 +65,33 @@ export default class SoftController {
         }
         // Load function libraries
         this.functionLibraries = [
+            null,
             LogicLib
         ];
+        console.log(`Created a new Soft Controller. total mem: ${this.totalMemSize}, table size: ${this.datablockTableLength}`);
     }
     logLine(...args) { console.log(args); }
     ;
     set id(value) { this.systemSector[0 /* id */] = value; }
     set version(value) { this.systemSector[1 /* version */] = value; }
     set totalMemSize(value) { this.systemSector[2 /* totalMemSize */] = value; }
-    set datablockTablePtr(value) { this.systemSector[3 /* datablockTablePtr */] = value; }
-    set datablockTableLength(value) { this.systemSector[4 /* datablockTableLength */] = value; }
-    set datablockTableVersion(value) { this.systemSector[6 /* datablockTableVersion */] = value; }
-    set datablockTableLastUsedID(value) { this.systemSector[5 /* dataBlockTableLastUsedID */] = value; }
-    set taskListPtr(value) { this.systemSector[7 /* taskListPtr */] = value; }
-    set taskListLength(value) { this.systemSector[8 /* taskListLength */] = value; }
+    set dataMemSize(value) { this.systemSector[3 /* dataMemSize */] = value; }
+    set datablockTablePtr(value) { this.systemSector[4 /* datablockTablePtr */] = value; }
+    set datablockTableLength(value) { this.systemSector[5 /* datablockTableLength */] = value; }
+    set datablockTableVersion(value) { this.systemSector[7 /* datablockTableVersion */] = value; }
+    set datablockTableLastUsedID(value) { this.systemSector[6 /* dataBlockTableLastUsedID */] = value; }
+    set taskListPtr(value) { this.systemSector[8 /* taskListPtr */] = value; }
+    set taskListLength(value) { this.systemSector[9 /* taskListLength */] = value; }
     get id() { return this.systemSector[0 /* id */]; }
     get version() { return this.systemSector[1 /* version */]; }
     get totalMemSize() { return this.systemSector[2 /* totalMemSize */]; }
-    get datablockTablePtr() { return this.systemSector[3 /* datablockTablePtr */]; }
-    get datablockTableLength() { return this.systemSector[4 /* datablockTableLength */]; }
-    get datablockTableVersion() { return this.systemSector[6 /* datablockTableVersion */]; }
-    get datablockTableLastUsedID() { return this.systemSector[5 /* dataBlockTableLastUsedID */]; }
-    get taskListPtr() { return this.systemSector[7 /* taskListPtr */]; }
-    get taskListLength() { return this.systemSector[8 /* taskListLength */]; }
+    get dataMemSize() { return this.systemSector[3 /* dataMemSize */]; }
+    get datablockTablePtr() { return this.systemSector[4 /* datablockTablePtr */]; }
+    get datablockTableLength() { return this.systemSector[5 /* datablockTableLength */]; }
+    get datablockTableVersion() { return this.systemSector[7 /* datablockTableVersion */]; }
+    get datablockTableLastUsedID() { return this.systemSector[6 /* dataBlockTableLastUsedID */]; }
+    get taskListPtr() { return this.systemSector[8 /* taskListPtr */]; }
+    get taskListLength() { return this.systemSector[9 /* taskListLength */]; }
     get freeMem() { return undefined; } // must sum unallocated datablocks
     /**************
      *    TICK    *
@@ -317,16 +322,9 @@ export default class SoftController {
     }
     // Creates new function data block
     createFunctionBlock(library, opcode, circuitID, callIndex, inputCount, outputCount, staticCount) {
-        if (library >= this.functionLibraries.length) {
-            console.error('Invalid function library id', library);
+        const func = this.getFunction(library, opcode);
+        if (!func)
             return null;
-        }
-        const lib = this.functionLibraries[library];
-        if (opcode >= Object.keys(lib.functions).length) {
-            console.error('Invalid function opcode', opcode);
-            return null;
-        }
-        const func = lib.getFunction(opcode);
         inputCount = (func.variableInputCount && inputCount != undefined
             && (inputCount <= func.variableInputCount.max) && (inputCount >= func.variableInputCount.min))
             ? inputCount : func.inputs.length;
@@ -385,7 +383,7 @@ export default class SoftController {
         if (circuitID) {
             this.addFunctionCall(circuitID, id, callIndex);
         }
-        console.log(`for function ${Object.keys(lib.functions)[opcode]} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        console.log(`for function ${this.functionLibraries[library].getFunctionName(opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
         return id;
     }
     deleteFunctionBlock(id) {
@@ -487,6 +485,19 @@ export default class SoftController {
             }
         });
     }
+    getFunction(libraryID, opcode) {
+        if (libraryID < 1 || libraryID >= this.functionLibraries.length) {
+            console.error('Invalid function library id', libraryID);
+            return null;
+        }
+        const library = this.functionLibraries[libraryID];
+        if (opcode >= Object.keys(library.functions).length) {
+            console.error('Invalid function opcode', opcode);
+            return null;
+        }
+        const func = library.getFunction(opcode);
+        return func;
+    }
     runFunction(blockRef, dt) {
         const blockHeader = this.getDatablockHeader(blockRef);
         const funcHeader = this.readFunctionHeader(blockRef);
@@ -507,8 +518,7 @@ export default class SoftController {
         }
         if (blockHeader.type == DatablockType.FUNCTION) // Run function
          {
-            const lib = this.functionLibraries[funcHeader.library];
-            const func = lib.getFunction(funcHeader.opcode);
+            const func = this.getFunction(funcHeader.library, funcHeader.opcode);
             const params = {
                 inputCount: funcHeader.inputCount,
                 outputCount: funcHeader.outputCount,

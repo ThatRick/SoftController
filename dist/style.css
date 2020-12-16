@@ -1,11 +1,31 @@
-div {
+body {
+    color: #CFA;
+}
+
+nav {
+    padding: 4px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2em;
+    background-color: #040;
+}
+
+button {
+    background-color: #020;
+    color: #CFA;
+    font-family: monospace;
+    font-size: 1.25em;
+}
+
+#main {
+    top: 2em;
     background-color: #020;
 /*     background-image: radial-gradient(
       rgba(0, 150, 0, 0.75), black 120%
     ); */
-    color: #CFA;
-    font-family:Consolas;
-    white-space:pre
+    white-space: pre;
 }
 
 pre {

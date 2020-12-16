@@ -1,6 +1,6 @@
 
 import {readStruct, writeStruct} from './TypedStructs.js'
-import {ID, IORef, IO_FLAG, DatablockType} from './SoftTypes.js'
+import {ID, IORef, IO_FLAG, DatablockType, IFunction} from './SoftTypes.js'
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionParams} from './SoftTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from './SoftTypes.js'
 import {ITask, TaskStruct, taskStructByteLength} from './SoftTypes.js'
@@ -27,6 +27,7 @@ const enum SystemSector {
     id,
     version,
     totalMemSize,
+    dataMemSize,
     datablockTablePtr,
     datablockTableLength,
     dataBlockTableLastUsedID,
@@ -34,7 +35,7 @@ const enum SystemSector {
     taskListPtr,
     taskListLength,
 }
-const systemSectorLength = 9
+const systemSectorLength = 10
 
 
 //////////////////////////////////
@@ -63,6 +64,7 @@ export default class SoftController
     set id(value: number)                           { this.systemSector[SystemSector.id] = value }
     set version(value: number)                      { this.systemSector[SystemSector.version] = value }
     set totalMemSize(value: number)                 { this.systemSector[SystemSector.totalMemSize] = value }
+    set dataMemSize(value: number)                  { this.systemSector[SystemSector.dataMemSize] = value }
     set datablockTablePtr(value: number)            { this.systemSector[SystemSector.datablockTablePtr] = value }
     set datablockTableLength(value: number)         { this.systemSector[SystemSector.datablockTableLength] = value }
     set datablockTableVersion(value: number)        { this.systemSector[SystemSector.datablockTableVersion] = value }
@@ -73,6 +75,7 @@ export default class SoftController
     get id()                                        { return this.systemSector[SystemSector.id] }
     get version()                                   { return this.systemSector[SystemSector.version] }
     get totalMemSize()                              { return this.systemSector[SystemSector.totalMemSize] }
+    get dataMemSize()                               { return this.systemSector[SystemSector.dataMemSize] }
     get datablockTablePtr()                         { return this.systemSector[SystemSector.datablockTablePtr] }
     get datablockTableLength()                      { return this.systemSector[SystemSector.datablockTableLength] }
     get datablockTableVersion()                     { return this.systemSector[SystemSector.datablockTableVersion] }
@@ -129,6 +132,7 @@ export default class SoftController
             this.id = id;
             this.version = SoftController.version;
             this.totalMemSize = this.mem.byteLength;
+            this.dataMemSize = arg;
             this.datablockTablePtr = datablockTableOffset;
             this.datablockTableLength = datablockTableLength;
             this.datablockTableVersion = 0;
@@ -144,8 +148,11 @@ export default class SoftController
 
         // Load function libraries
         this.functionLibraries = [
+            null,
             LogicLib
         ]
+
+        console.log(`Created a new Soft Controller. total mem: ${this.totalMemSize}, table size: ${this.datablockTableLength}`)
     }
 
 
@@ -423,14 +430,8 @@ export default class SoftController
     // Creates new function data block
     createFunctionBlock(library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number): ID
     {
-        if (library >= this.functionLibraries.length) {
-            console.error('Invalid function library id', library); return null;
-        }
-        const lib = this.functionLibraries[library];
-        if (opcode >= Object.keys(lib.functions).length) {
-            console.error('Invalid function opcode', opcode); return null;
-        }
-        const func = lib.getFunction(opcode);
+        const func = this.getFunction(library, opcode);
+        if (!func) return null;
 
         inputCount = (func.variableInputCount && inputCount != undefined
             && (inputCount <= func.variableInputCount.max) && (inputCount >= func.variableInputCount.min))
@@ -503,7 +504,7 @@ export default class SoftController
             this.addFunctionCall(circuitID, id, callIndex);
         }
 
-        console.log(`for function ${Object.keys(lib.functions)[opcode]} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        console.log(`for function ${this.functionLibraries[library].getFunctionName(opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
 
         return id;
     }
@@ -622,6 +623,20 @@ export default class SoftController
         });
     }
 
+    getFunction(libraryID: number, opcode: number): IFunction
+    {
+        if (libraryID < 1 || libraryID >= this.functionLibraries.length) {
+            console.error('Invalid function library id', libraryID); return null;
+        }
+        const library = this.functionLibraries[libraryID];
+
+        if (opcode >= Object.keys(library.functions).length) {
+            console.error('Invalid function opcode', opcode); return null;
+        }
+        const func = library.getFunction(opcode); 
+        return func;
+    }
+
     runFunction(blockRef: number, dt: number) {
         const blockHeader = this.getDatablockHeader(blockRef);
         const funcHeader = this.readFunctionHeader(blockRef);
@@ -644,8 +659,7 @@ export default class SoftController
         
         if (blockHeader.type == DatablockType.FUNCTION)             // Run function
         {
-            const lib = this.functionLibraries[funcHeader.library];
-            const func = lib.getFunction(funcHeader.opcode);
+            const func = this.getFunction(funcHeader.library, funcHeader.opcode);
 
             const params: IFunctionParams = {
                 inputCount:     funcHeader.inputCount,

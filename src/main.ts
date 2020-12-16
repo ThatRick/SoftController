@@ -1,6 +1,6 @@
 import SoftController from './SoftController.js'
 import { DatablockType, IO_FLAG, ITask } from './SoftTypes.js';
-import { createControllerBlueprint } from './SoftSerializer.js'
+import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js'
 
 function makeLogger(div: HTMLElement) {
     return function logLine(text: string) {
@@ -8,6 +8,16 @@ function makeLogger(div: HTMLElement) {
         pre.textContent = text;
         div.appendChild(pre);
     }
+}
+
+function createControlBar(buttons: {name: string, fn: () => void}[]) {
+    const nav = document.getElementById('navi');
+    buttons.forEach(btn => {
+        const elem = document.createElement('button') as HTMLButtonElement;
+        elem.textContent = btn.name;
+        elem.onclick = btn.fn;
+        nav.appendChild(elem)
+    })
 }
 
 //////////////////////////
@@ -30,7 +40,7 @@ window.onload = () =>
     let ticks = 100
     
     const blueprint = createControllerBlueprint(cpu);
-    print(JSON.stringify(blueprint, null, 2))
+    // saveAsJSON(blueprint, 'cpu.json');
 
     print(systemSectorToString(cpu));
     print(breakLine);
@@ -51,8 +61,60 @@ window.onload = () =>
         // print(datablockTableToString(cpu));
         funcs.forEach(func => print(functionToString(cpu, func)));
     }
+
+    createControlBar([
+        {name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json')},
+        {name: 'Load', fn: () => loadFromJSON(obj => {
+            print(breakLine); print(''); print('      LOADED A CONTROLLER FROM FILE:');
+            console.log(obj)
+            const cpu2 = loadControllerBlueprint(obj);
+            console.log('system sector:', cpu2.systemSector);
+            print(systemSectorToString(cpu2));
+        })},
+    ])
 }
 
+///////////////////////
+//  SAVE / LOAD JSON
+//
+function loadFromJSON(fn: (obj: Object) => void) {
+    const input = document.createElement('input') as HTMLInputElement;
+    input.style.display = 'none';
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = () => {
+        if (input.files.length > 0) {
+            const file = input.files[0];
+            const reader = new FileReader()
+            reader.onload = () => {
+                const result = reader.result;
+                if (typeof result == 'string') {
+                    const obj = JSON.parse(result);
+                    fn(obj);
+                }
+                else console.error('File is not in valid format')
+            }
+            reader.readAsText(file);
+        }
+        else console.error('No file uploaded!');
+        document.body.removeChild(input);
+    }
+    document.body.appendChild(input);
+    input.click();
+}
+
+function saveAsJSON(obj, fileName) {
+    const data = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'});
+
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.href = URL.createObjectURL(data);
+    a.setAttribute('download', fileName);
+    a.click();
+    URL.revokeObjectURL(a.href);
+    document.body.removeChild(a);
+}
 
 ////////////////////
 //  CREATE A TEST
@@ -62,7 +124,7 @@ function createTestBlocks(cpu: SoftController, blockCount = 10) {
     const circId = cpu.createCircuit(4, 2, blockCount);
     const funcs: number[] = [circId]
     const maxOpcode = 7
-    const logicLib = 0;
+    const logicLib = 1;
     for (let i = 1; i < blockCount+1; i++) {
         const opcode = i % maxOpcode
         const funcId = cpu.createFunctionBlock(logicLib, opcode, circId);
@@ -229,6 +291,7 @@ function systemSectorToString(cpu: SoftController): string {
         'ID',
         'Version',
         'Total Memory (bytes)',
+        'Data Memory (bytes)',
         'Data Block Table Ref',
         'Data Block Table Length',
         'Data Block Table Last Used ID',
