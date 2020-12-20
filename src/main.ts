@@ -1,4 +1,4 @@
-import SoftController from './SoftController.js'
+import SoftController, {getFunction, getFunctionName} from './SoftController.js'
 import { DatablockType, IO_FLAG, ITask } from './SoftTypes.js';
 import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js'
 
@@ -50,12 +50,11 @@ window.onload = () =>
 
     const loop = setInterval(() => {
         cpu.tick(interval);
-        if (ticks-- == 0) stop();
+        if (--ticks == 0) stop();
     }, interval)
     
     function stop() {
         clearTimeout(loop);
-        const task = cpu.getTaskByID(taskId);
         print(taskToString(cpu, taskId))
         // print(systemSectorToString(cpu));
         // print(datablockTableToString(cpu));
@@ -63,20 +62,48 @@ window.onload = () =>
     }
 
     createControlBar([
-        {name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json')},
+        {name: 'Save', fn: () => {
+            saveAsJSON(blueprint, 'cpu.json')
+        }},
         {name: 'Load', fn: () => loadFromJSON(obj => {
             print(breakLine); print(''); print('      LOADED A CONTROLLER FROM FILE:');
-            console.log(obj)
+            console.log('Loaded controller blueprint:', obj)
             const cpu2 = loadControllerBlueprint(obj);
-            console.log('system sector:', cpu2.systemSector);
             print(systemSectorToString(cpu2));
+            print(datablockTableToString(cpu2));
         })},
-    ])
+    ]) 
+}
+
+////////////////////
+//  CREATE A TEST
+//
+function createTestBlocks(cpu: SoftController, blockCount = 10) {
+    // test
+    const circId = cpu.createCircuit(4, 2, blockCount);
+    const funcs: number[] = [circId]
+    const maxOpcode = 7
+    const logicLib = 1;
+    for (let i = 1; i < blockCount+1; i++) {
+        const opcode = i % maxOpcode
+        const funcId = cpu.createFunctionBlock(logicLib, opcode, circId);
+        funcs.push(funcId);
+        const funcInfo = cpu.readFunctionHeaderByID(funcId);
+        const sourceId = funcs[i-1];
+        const sourceInfo = cpu.readFunctionHeaderByID(sourceId);
+        const inputNum = i % funcInfo.inputCount;
+        const sourceIONum = sourceInfo.inputCount;
+        const inverted = !(i % 2);
+        cpu.connectFunctionInput(funcId, inputNum, sourceId, sourceIONum, inverted);
+    }
+    cpu.setFunctionIOValue(1, 0, 1);
+    return funcs
 }
 
 ///////////////////////
-//  SAVE / LOAD JSON
+//  JSON DATA
 //
+// Load from file
 function loadFromJSON(fn: (obj: Object) => void) {
     const input = document.createElement('input') as HTMLInputElement;
     input.style.display = 'none';
@@ -102,7 +129,7 @@ function loadFromJSON(fn: (obj: Object) => void) {
     document.body.appendChild(input);
     input.click();
 }
-
+// Write to file
 function saveAsJSON(obj, fileName) {
     const data = new Blob([JSON.stringify(obj, null, 2)], {type: 'application/json'});
 
@@ -115,33 +142,6 @@ function saveAsJSON(obj, fileName) {
     URL.revokeObjectURL(a.href);
     document.body.removeChild(a);
 }
-
-////////////////////
-//  CREATE A TEST
-//
-function createTestBlocks(cpu: SoftController, blockCount = 10) {
-    // test
-    const circId = cpu.createCircuit(4, 2, blockCount);
-    const funcs: number[] = [circId]
-    const maxOpcode = 7
-    const logicLib = 1;
-    for (let i = 1; i < blockCount+1; i++) {
-        const opcode = i % maxOpcode
-        const funcId = cpu.createFunctionBlock(logicLib, opcode, circId);
-        funcs.push(funcId);
-        const funcInfo = cpu.readFunctionHeaderByID(funcId);
-        const sourceId = funcs[i-1];
-        const sourceInfo = cpu.readFunctionHeaderByID(sourceId);
-        const inputNum = i % funcInfo.inputCount;
-        const sourceIONum = sourceInfo.inputCount;
-        const inverted = !(i % 2);
-        cpu.connectFunctionInput(funcId, inputNum, sourceId, sourceIONum, inverted);
-    }
-    cpu.setFunctionIOValue(2, 0, 1);
-    return funcs
-}
-
-
 const breakLine = '='.repeat(80)
 
 /////////////////////////////////////
@@ -177,8 +177,8 @@ function functionToString(cpu: SoftController, funcID: number): string {
     const ioFlags = cpu.readFunctionIOFlags(funcRef);
     const inputRefs = cpu.readFunctionInputRefs(funcRef);
     
-    const func = (type == DatablockType.FUNCTION) ? cpu.functionLibraries[funcHeader.library].getFunction(funcHeader.opcode) : null;
-    const funcName = (func) ? cpu.functionLibraries[funcHeader.library].getFunctionName(funcHeader.opcode) : 'CIRCUIT';
+    const func = (type == DatablockType.FUNCTION) ? getFunction(funcHeader.library, funcHeader.opcode) : null;
+    const funcName = (func) ? getFunctionName(funcHeader.library, funcHeader.opcode) : 'CIRCUIT';
 
     const inputRefLen = 6;
     const valueLen = 8;
@@ -243,7 +243,8 @@ function functionToString(cpu: SoftController, funcID: number): string {
 function circuitToString(cpu: SoftController, circuitID: number): string {
     let text = ''
     const addLine = (line: string) => text += (line + '\n');
-    const callList = cpu.getCircuitCallList(circuitID);
+    const circRef = cpu.datablockTable[circuitID];
+    const callList = cpu.readCircuitCallList(circRef);
 
     addLine(`CALL LIST (size: ${callList.length})`)
     addLine('')

@@ -1,45 +1,226 @@
-import SoftController from './SoftController.js';
-import { DatablockType } from './SoftTypes.js';
-export function loadControllerBlueprint(obj) {
+import SoftController, { getFunction } from './SoftController.js';
+import { DatablockType, datablockHeaderByteLength, taskStructByteLength } from './SoftTypes.js';
+export function loadControllerBlueprint(obj, spareDataMemSize = 0, spareDatablockCount = 0, spareTaskCount = 0) {
     const blueprint = obj;
-    const memSize = 32 * 1024;
-    const sys = blueprint.systemSector;
-    console.log(sys);
-    const cpu = new SoftController(sys.dataMemSize, sys.datablockTableLength, sys.taskListLength);
+    // Calculate needed data memory for data blocks
+    let neededDataMemSize = datablockHeaderByteLength; // ID 0 is always an undefined data block
+    neededDataMemSize += datablockHeaderByteLength; // last index is for unallocated memory data block
+    Object.keys(blueprint.datablocks).forEach(id => {
+        const block = blueprint.datablocks[id];
+        neededDataMemSize += datablockSize(block);
+    });
+    const dataMemSize = neededDataMemSize + spareDataMemSize;
+    const datablockTableLength = 2 + Object.keys(blueprint.datablocks).length + spareDatablockCount;
+    const taskListLength = blueprint.taskList.length + spareTaskCount;
+    console.log(`Loading controller (needed mem: ${dataMemSize} bytes, table size: ${datablockTableLength}, task list size: ${taskListLength})`);
+    const cpu = new SoftController(dataMemSize, datablockTableLength, taskListLength);
+    blueprint.taskList.forEach(taskID => {
+        const block = blueprint.datablocks[taskID];
+        const task = block.body;
+        const taskOnlineID = cpu.createTask(0, task.interval, task.offset);
+        const circOnlineID = loadCircuit(cpu, blueprint.datablocks, task.targetID);
+        cpu.setTaskTarget(taskOnlineID, circOnlineID);
+    });
     return cpu;
+}
+export function datablockSize(block) {
+    let size = datablockHeaderByteLength;
+    switch (block.type) {
+        case DatablockType.TASK: {
+            size += taskStructByteLength;
+            break;
+        }
+        case DatablockType.CIRCUIT: {
+            const circuitDef = block.body;
+            size += SoftController.calcCircuitSize(circuitDef.inputCount, circuitDef.inputCount, circuitDef.staticCount);
+            break;
+        }
+        case DatablockType.FUNCTION: {
+            const funcDef = block.body;
+            const funcTyp = getFunction(funcDef.library, funcDef.opcode);
+            const inputCount = funcDef.inputCount || funcTyp.inputs.length;
+            const outputCount = funcDef.outputCount || funcTyp.inputs.length;
+            const staticCount = funcDef.staticCount || funcTyp.staticCount || 0;
+            size += SoftController.calcFunctionSize(inputCount, outputCount, staticCount);
+            break;
+        }
+    }
+    return size;
+}
+export function loadCircuit(cpu, datablocks, circDefID, spareInputs = 0, spareOutputs = 0, spareFuncCalls = 0) {
+    const block = datablocks[circDefID];
+    if (block.type != DatablockType.CIRCUIT) {
+        console.error('Load Circuit: Data block type invalid.');
+        return;
+    }
+    const renumMap = new Map();
+    const circDef = block.body;
+    const inputCount = circDef.inputCount + spareInputs;
+    const outputCount = circDef.outputCount + spareOutputs;
+    const funcCallCount = circDef.staticCount + spareFuncCalls;
+    const circOnlineID = cpu.createCircuit(inputCount, outputCount, funcCallCount);
+    renumMap.set(circDefID, circOnlineID);
+    // Create function calls
+    circDef.callList.forEach(funcDefID => {
+        const funcBlock = datablocks[funcDefID];
+        if (funcBlock.type == DatablockType.FUNCTION) {
+            const funcDef = funcBlock.body;
+            const funcOnlineID = cpu.createFunctionBlock(funcDef.library, funcDef.opcode, circOnlineID, undefined, funcDef.inputCount, funcDef.outputCount, funcDef.staticCount);
+            funcDef.ioValues && Object.keys(funcDef.ioValues).forEach(key => {
+                const ioNum = Number(key);
+                cpu.setFunctionIOValue(funcOnlineID, ioNum, funcDef.ioValues[key]);
+            });
+            funcDef.ioFlags && Object.keys(funcDef.ioFlags).forEach(key => {
+                const ioNum = Number(key);
+                cpu.setFunctionIOFlags(funcOnlineID, ioNum, funcDef.ioFlags[key]);
+            });
+            renumMap.set(funcDefID, funcOnlineID);
+        }
+        else if (funcBlock.type == DatablockType.CIRCUIT) {
+            const circOnlineID = loadCircuit(cpu, datablocks, funcDefID);
+            renumMap.set(funcDefID, circOnlineID);
+        }
+    });
+    // Set function input references with renumbered IDs
+    circDef.callList.forEach(funcDefID => {
+        const onlineID = renumMap.get(funcDefID);
+        const funcBlock = datablocks[funcDefID];
+        const funcDef = funcBlock.body;
+        funcDef.inputRefs && Object.keys(funcDef.inputRefs).forEach(key => {
+            const inputNum = Number(key);
+            const ioRef = funcDef.inputRefs[inputNum];
+            const sourceOnlineID = renumMap.get(ioRef.id);
+            cpu.connectFunctionInput(onlineID, inputNum, sourceOnlineID, ioRef.ioNum);
+        });
+    });
+    // Create circuit output references with renumbered IDs
+    circDef.outputRefs && Object.keys(circDef.outputRefs).forEach(key => {
+        const outputNum = Number(key);
+        const ioRef = circDef.outputRefs[outputNum];
+        const sourceOnlineID = renumMap.get(ioRef.id);
+        cpu.connectCircuitOutput(circOnlineID, outputNum, sourceOnlineID, ioRef.ioNum);
+    });
+    return circOnlineID;
 }
 export function createControllerBlueprint(cpu) {
     const datablocks = {};
     const taskCount = cpu.taskList.indexOf(0);
     const taskRefs = Array.from(cpu.taskList.slice(0, taskCount));
-    const taskList = taskRefs.map(ref => createTaskDefinition(cpu, ref));
+    const taskList = taskRefs.map(ref => cpu.getDatablockIDbyRef(ref));
     for (let id = 0; id < cpu.datablockTableLastUsedID; id++) {
         const blockRef = cpu.datablockTable[id];
         if (blockRef) {
             const blockHeader = cpu.getDatablockHeader(blockRef);
-            if (blockHeader.type == DatablockType.FUNCTION || blockHeader.type == DatablockType.CIRCUIT) {
-                const body = (blockHeader.type == DatablockType.CIRCUIT) ? createCircuitDefinition(cpu, blockRef)
-                    : createFunctionDefinition(cpu, blockRef);
-                datablocks[id] = {
-                    type: blockHeader.type,
-                    body
-                };
+            let body;
+            switch (blockHeader.type) {
+                case DatablockType.TASK: {
+                    body = createTaskDefinition(cpu, blockRef);
+                    break;
+                }
+                case DatablockType.CIRCUIT: {
+                    body = createCircuitDefinition(cpu, blockRef);
+                    break;
+                }
+                case DatablockType.FUNCTION: {
+                    body = createFunctionDefinition(cpu, blockRef);
+                    break;
+                }
             }
+            datablocks[id] = {
+                type: blockHeader.type,
+                body
+            };
         }
     }
     const blueprint = {
-        systemSector: {
-            id: cpu.id,
-            version: SoftController.version,
-            totalMemSize: cpu.totalMemSize,
-            dataMemSize: cpu.dataMemSize,
-            datablockTableLength: cpu.datablockTableLength,
-            taskListLength: cpu.taskListLength
-        },
+        version: SoftController.version,
         taskList,
         datablocks
     };
-    return blueprint;
+    console.log(blueprint);
+    const refactored = refactorIDs(blueprint);
+    console.log(refactored);
+    return refactored;
+}
+function refactorIDs(plan) {
+    const renumMap = new Map();
+    const renum = (id) => renumMap.set(id, renumMap.size).size - 1;
+    renum(0);
+    function refactorCircuit(circID) {
+        const circBlock = plan.datablocks[circID];
+        if (circBlock.type != DatablockType.CIRCUIT) {
+            console.error('Refactor: Invalid circuit data block type');
+            return null;
+        }
+        const circ = circBlock.body;
+        renum(circID);
+        circ.callList.forEach(callID => {
+            const funcBlock = plan.datablocks[callID];
+            if (funcBlock.type == DatablockType.FUNCTION)
+                renum(callID);
+            else if (funcBlock.type == DatablockType.CIRCUIT)
+                refactorCircuit(callID);
+            else {
+                console.error('Refactor: Invalid function call data block type');
+                return null;
+            }
+        });
+    }
+    plan.taskList.forEach(taskID => {
+        const taskBlock = plan.datablocks[taskID];
+        if (taskBlock.type != DatablockType.TASK) {
+            console.error('Refactor: Invalid task data block type');
+            return;
+        }
+        const task = taskBlock.body;
+        renum(taskID);
+        const circID = task.targetID;
+        refactorCircuit(circID);
+    });
+    const datablocks = {}; // Create a new data block table with refactored IDs
+    console.log(renumMap);
+    Object.keys(plan.datablocks).forEach(key => {
+        const oldID = Number(key);
+        console.log('Refactor: checking old id', oldID);
+        if (oldID > 0 && renumMap.has(oldID)) { // If old ID is not found in renum map, then it's not called and is therefore discarded
+            const block = plan.datablocks[oldID];
+            const newID = renumMap.get(oldID);
+            console.log(`Refactor: change ID ${oldID} -> ${newID}`);
+            switch (block.type) {
+                case DatablockType.TASK: {
+                    datablocks[newID] = block;
+                    const task = block.body;
+                    task.targetID = renumMap.get(task.targetID);
+                    break;
+                }
+                case DatablockType.CIRCUIT: {
+                    const circ = block.body;
+                    circ.callList = circ.callList.map(callID => renumMap.get(callID));
+                    if (circ.outputRefs) {
+                        Object.keys(circ.outputRefs).forEach(key => {
+                            const ioRef = circ.outputRefs[key];
+                            ioRef.id = renumMap.get(ioRef.id);
+                        });
+                    }
+                }
+                case DatablockType.FUNCTION: {
+                    datablocks[newID] = block;
+                    const func = block.body;
+                    if (func.inputRefs) {
+                        Object.keys(func.inputRefs).forEach(key => {
+                            const ioRef = func.inputRefs[key];
+                            ioRef.id = renumMap.get(ioRef.id);
+                        });
+                    }
+                }
+            }
+        }
+    });
+    return {
+        version: plan.version,
+        taskList: plan.taskList.map(oldID => renumMap.get(oldID)),
+        datablocks
+    };
 }
 // TASK
 function createTaskDefinition(cpu, taskRef) {
@@ -90,7 +271,7 @@ function createFunctionDefinition(cpu, ref) {
     const modifiedFlags = {};
     const modifiedValues = {};
     const modifiedInputRefs = {};
-    const func = cpu.getFunction(funcHeader.library, funcHeader.opcode);
+    const func = getFunction(funcHeader.library, funcHeader.opcode);
     // Modified inputs
     for (let i = 0; i < funcHeader.inputCount; i++) {
         const k = Math.min(i, func.inputs.length - 1);

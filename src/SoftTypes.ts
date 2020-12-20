@@ -1,4 +1,4 @@
-import {DataType, StructType, sizeOfStruct, sizeOfType, readStruct, writeStruct} from './TypedStructs.js'
+import {DataType, StructDataTypes, StructValues, sizeOfStruct, sizeOfType, readStruct, writeStruct} from './TypedStructs.js'
 
 export type pointer = number
 export type bytesize = number
@@ -20,26 +20,25 @@ export interface IORef {
 }
 
 // DATA BLOCK HEADER
-export interface IDatablockHeader
+export type IDatablockHeader =
 {
     byteLength: bytesize
     type:       DatablockType
     flags:      number
     parentID:   number
-
 }
-export const DatablockHeaderStruct: StructType =
+export const DatablockHeaderStruct: StructDataTypes<IDatablockHeader> =
 {
     byteLength: DataType.uint32,
     type:       DataType.uint8,
     flags:      DataType.uint8,
-    parentID:   DataType.uint16
+    parentID:   DataType.uint16,
 }
 export const datablockHeaderByteLength = sizeOfStruct(DatablockHeaderStruct);
 
 
 // FUNCTION DATA HEADER
-export interface IFunctionHeader
+export type IFunctionHeader =
 {
     library:        number,
     opcode:         number,
@@ -49,7 +48,8 @@ export interface IFunctionHeader
     funcFlags:      number,
     reserve:        number
 }
-export const FunctionHeaderStruct: StructType =
+
+export const FunctionHeaderStruct: StructDataTypes<IFunctionHeader> =
 {
     library:        DataType.uint8,
     opcode:         DataType.uint8,
@@ -63,7 +63,7 @@ export const functionHeaderByteLength = sizeOfStruct(FunctionHeaderStruct);
 
 
 // TASK DATA
-export interface ITask
+export type ITask =
 {
     targetRef:      number              // Reference of callable circuit or function 
     interval:       number              // time interval between calls (ms)
@@ -73,7 +73,7 @@ export interface ITask
     cpuTimeInt:     number              // counts whole number of cpu milliseconds
     runCount:       number              // counts number of calls
 }
-export const TaskStruct: StructType =
+export const TaskStruct: StructDataTypes<ITask> =
 {
     targetRef:      DataType.uint32,    // Reference of callable circuit or function 
     interval:       DataType.float,     // time interval between calls (ms)

@@ -12,7 +12,7 @@ export const DatablockHeaderStruct = {
     byteLength: 5 /* uint32 */,
     type: 1 /* uint8 */,
     flags: 1 /* uint8 */,
-    parentID: 3 /* uint16 */
+    parentID: 3 /* uint16 */,
 };
 export const datablockHeaderByteLength = sizeOfStruct(DatablockHeaderStruct);
 export const FunctionHeaderStruct = {
