@@ -1,13 +1,4 @@
 import { sizeOfStruct } from './TypedStructs.js';
-export var DatablockType;
-(function (DatablockType) {
-    DatablockType[DatablockType["UNDEFINED"] = 0] = "UNDEFINED";
-    DatablockType[DatablockType["UNALLOCATED"] = 1] = "UNALLOCATED";
-    DatablockType[DatablockType["TASK"] = 2] = "TASK";
-    DatablockType[DatablockType["CIRCUIT"] = 3] = "CIRCUIT";
-    DatablockType[DatablockType["FUNCTION"] = 4] = "FUNCTION";
-    DatablockType[DatablockType["DATA"] = 5] = "DATA";
-})(DatablockType || (DatablockType = {}));
 export const DatablockHeaderStruct = {
     byteLength: 5 /* uint32 */,
     type: 1 /* uint8 */,

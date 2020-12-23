@@ -1,5 +1,4 @@
 import { readStruct, writeStruct } from './TypedStructs.js';
-import { DatablockType } from './SoftTypes.js';
 import { FunctionHeaderStruct, functionHeaderByteLength } from './SoftTypes.js';
 import { DatablockHeaderStruct, datablockHeaderByteLength } from './SoftTypes.js';
 import { TaskStruct, taskStructByteLength } from './SoftTypes.js';
@@ -92,7 +91,7 @@ export default class SoftController {
             // Write initial data block for unallocated data memory
             this.markUnallocatedMemory(dataSectorByteOffset, dataMemSize);
             // Reserve data block id 0 for undefined
-            this.addDatablock(new ArrayBuffer(0), DatablockType.UNDEFINED);
+            this.addDatablock(new ArrayBuffer(0), 0 /* UNDEFINED */);
         }
     }
     logLine(...args) { console.log(args); }
@@ -171,7 +170,7 @@ export default class SoftController {
         };
         const buffer = new ArrayBuffer(taskStructByteLength);
         writeStruct(buffer, 0, TaskStruct, task);
-        const taskID = this.addDatablock(buffer, DatablockType.TASK);
+        const taskID = this.addDatablock(buffer, 2 /* TASK */);
         if (taskID == -1) {
             console.error('Fault creating task');
             return -1;
@@ -225,7 +224,7 @@ export default class SoftController {
         const bytes = new Uint8Array(buffer);
         let offset = writeStruct(buffer, 0, FunctionHeaderStruct, funcHeader); // Write function header
         bytes.fill(16 /* HIDDEN */, offset, offset + inputCount + outputCount); // Write IO flags (hidden by default)
-        return this.addDatablock(buffer, DatablockType.CIRCUIT);
+        return this.addDatablock(buffer, 3 /* CIRCUIT */);
     }
     deleteCircuit(id) {
         const blockRef = this.datablockTable[id];
@@ -412,7 +411,7 @@ export default class SoftController {
                 ioValues[firstOutput + i] = lastOutput.initValue;
             }
         }
-        const id = this.addDatablock(buffer, DatablockType.FUNCTION, circuitID || 0);
+        const id = this.addDatablock(buffer, 4 /* FUNCTION */, circuitID || 0);
         // Add function call to circuit
         if (circuitID) {
             this.addFunctionCall(circuitID, id, callIndex);
@@ -497,7 +496,7 @@ export default class SoftController {
             const blockRef = this.datablockTable[id];
             const blockHeader = this.getDatablockHeader(blockRef);
             if (byteOffset > blockRef && byteOffset < blockRef + blockHeader.byteLength
-                && (blockHeader.type == DatablockType.FUNCTION || blockHeader.type == DatablockType.CIRCUIT)) {
+                && (blockHeader.type == 4 /* FUNCTION */ || blockHeader.type == 3 /* CIRCUIT */)) {
                 const pointers = this.functionDataMap(blockRef);
                 if (ioRef >= pointers.inputs && ioRef < pointers.statics) {
                     const ioNum = ioRef - pointers.inputs;
@@ -537,7 +536,7 @@ export default class SoftController {
                 this.floats[pointers.inputs + i] = value;
             }
         }
-        if (blockHeader.type == DatablockType.FUNCTION) // Run function
+        if (blockHeader.type == 4 /* FUNCTION */) // Run function
          {
             const func = getFunction(funcHeader.library, funcHeader.opcode);
             const params = {
@@ -552,7 +551,7 @@ export default class SoftController {
             // TESTING
             func.run(params, this.floats);
         }
-        else if (blockHeader.type == DatablockType.CIRCUIT) // Run circuit
+        else if (blockHeader.type == 3 /* CIRCUIT */) // Run circuit
          {
             const funcCallCount = funcHeader.staticCount;
             const funcCalls = pointers.statics;
@@ -610,7 +609,7 @@ export default class SoftController {
             if (datablockRef == 0)
                 break;
             const datablockHeader = this.getDatablockHeader(datablockRef);
-            if (datablockHeader.type == DatablockType.UNALLOCATED && datablockHeader.byteLength >= allocationByteLength) {
+            if (datablockHeader.type == 1 /* UNALLOCATED */ && datablockHeader.byteLength >= allocationByteLength) {
                 candidates.push({ id, excessMem: datablockHeader.byteLength - allocationByteLength });
             }
         }
@@ -633,10 +632,10 @@ export default class SoftController {
         // set data block type to UNALLOCATED
         const blockRef = this.datablockTable[id];
         const blockHeader = this.getDatablockHeader(blockRef);
-        if (blockHeader.type == DatablockType.CIRCUIT) { // Delete circuit
+        if (blockHeader.type == 3 /* CIRCUIT */) { // Delete circuit
             this.deleteCircuit(id);
         }
-        else if (blockHeader.type == DatablockType.FUNCTION) {
+        else if (blockHeader.type == 4 /* FUNCTION */) {
             this.deleteFunctionBlock(id);
         }
         this.unallocateDatablock(id);
@@ -645,21 +644,21 @@ export default class SoftController {
         let ref = this.datablockTable[id];
         let byteLength = this.getDatablockHeader(ref).byteLength;
         // If previous block is unallocated then merge with this
-        const prevBlockID = this.findPreviousDatablock(ref, DatablockType.UNALLOCATED);
+        const prevBlockID = this.findPreviousDatablock(ref, 1 /* UNALLOCATED */);
         if (prevBlockID) {
             ref = this.datablockTable[prevBlockID];
             byteLength += this.getDatablockHeader(ref).byteLength;
             this.deleteDatablockID(prevBlockID);
         }
         // If next block is unallocated then merge with this
-        const nextBlockID = this.findNextDatablock(ref, DatablockType.UNALLOCATED);
+        const nextBlockID = this.findNextDatablock(ref, 1 /* UNALLOCATED */);
         if (nextBlockID) {
             byteLength += this.getDatablockHeaderByID(nextBlockID).byteLength;
             this.deleteDatablockID(nextBlockID);
         }
         const header = {
             byteLength,
-            type: DatablockType.UNALLOCATED,
+            type: 1 /* UNALLOCATED */,
             flags: 0,
             parentID: 0
         };
@@ -669,7 +668,7 @@ export default class SoftController {
     }
     markUnallocatedMemory(startByteOffset, byteLength) {
         let id;
-        const nextBlockID = this.findNextDatablock(startByteOffset, DatablockType.UNALLOCATED);
+        const nextBlockID = this.findNextDatablock(startByteOffset, 1 /* UNALLOCATED */);
         // If next data block in memory is unallocated then merge blocks
         if (nextBlockID) {
             id = nextBlockID;
@@ -687,7 +686,7 @@ export default class SoftController {
         this.datablockTable[id] = startByteOffset;
         const header = {
             byteLength,
-            type: DatablockType.UNALLOCATED,
+            type: 1 /* UNALLOCATED */,
             flags: 0,
             parentID: 0
         };

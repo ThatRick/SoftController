@@ -1,31 +1,83 @@
+:root {
+    --rowHeight: 32px;
+    --barColor: #333;
+    --buttonColor: #555;
+
+    --guiBG:  #113;
+
+    --terminalBG: #021;
+    --terminalColor: #5E8;
+    --scrollbarColor: #888;
+}
+
 body {
-    color: #CFA;
+    color: #F00;
+    overflow: hidden;
+    margin: 0px;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: var(--rowHeight) 50vh 6px auto;
+    grid-template-areas:
+        'header'
+        'gui'
+        'splitBar'
+        'terminal';
 }
-
-nav {
-    padding: 4px;
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 2em;
-    background-color: #040;
-}
-
 button {
-    background-color: #020;
-    color: #CFA;
+    margin: 1px;
+    background-color: var(--buttonColor);
+    height: 100%;
     font-family: monospace;
-    font-size: 1.25em;
+    font-size: 1.2em;
+}
+button:hover {
+    background: #458;
 }
 
-#main {
-    top: 2em;
-    background-color: #020;
-/*     background-image: radial-gradient(
-      rgba(0, 150, 0, 0.75), black 120%
-    ); */
+button:active {
+    background: #0044aa;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.5);
+}
+::-webkit-scrollbar-corner {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+#navi {
+    grid-area: header;
+    padding: 4px;
+    background-color: var(--barColor)
+}
+
+#gui {
+    grid-area: gui;
+    background-color: var(--guiBG);
+}
+
+#splitBar {
+    grid-area: splitBar;
+    background-color: #333;
+    cursor: row-resize;
+}
+
+#terminal {
+    grid-area: terminal;
+    overflow-y: scroll;
+    background-color: var(--terminalBG);
+    color: var(--terminalColor);
     white-space: pre;
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--thumbBG) var(--scrollbarBG);
 }
 
 pre {

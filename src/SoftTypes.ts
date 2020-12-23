@@ -4,7 +4,7 @@ export type pointer = number
 export type bytesize = number
 export type ID = number
 
-export enum DatablockType {
+export const enum DatablockType {
     UNDEFINED,
     UNALLOCATED,
     TASK,

@@ -5,9 +5,15 @@ export default class Vec2 {
         this.x = x;
         this.y = y;
     }
-    set(v) {
-        this.x = v.x;
-        this.y = v.y;
+    set(vx, y) {
+        if (typeof vx == 'object') {
+            this.x = vx.x;
+            this.y = vx.y;
+        }
+        else {
+            this.x = vx;
+            this.y = y || vx;
+        }
         return this;
     }
     copy() {
@@ -16,6 +22,11 @@ export default class Vec2 {
     floor() {
         this.x = Math.floor(this.x);
         this.y = Math.floor(this.y);
+        return this;
+    }
+    round() {
+        this.x = Math.round(this.x);
+        this.y = Math.round(this.y);
         return this;
     }
     add(v) {
@@ -66,6 +77,9 @@ export default class Vec2 {
     }
     static floor(v) {
         return new Vec2(Math.floor(v.x), Math.floor(v.y));
+    }
+    static round(v) {
+        return new Vec2(Math.round(v.x), Math.round(v.y));
     }
     static add(a, b) {
         return new Vec2(a.x + b.x, a.y + b.y);

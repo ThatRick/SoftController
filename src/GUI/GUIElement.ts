@@ -1,169 +1,116 @@
-import { GUIContainer } from './GUITypes.js'
-import GUI from './GUI.js'
-import Vec2, {vec2} from './Vector2.js'
+import {IDOMElement, IGUIElement, IGUIContainer, IGUIView, GUIPointerState, Vec2} from './GUITypes.js'
 
-interface IPointerInfo {
-    isDown: boolean,
-    isOver: boolean,
-    isDragging: boolean,
-    downPosDOM: Vec2 | undefined,
-}
+export default class GUIElement implements IGUIElement{
+    DOMElement: HTMLElement
 
-export default class GUIElement implements GUIContainer
-{
-    DOMElement = document.createElement('div')
-    elements = new Set<GUIElement>()
-    unattachedElements = new Set<GUIElement>()
-    gui: GUI | undefined
+    parent?: IGUIContainer
+    children?: IGUIContainer
 
-    isConstantlyUpdated = false
-    isDraggable = true
-    moveTargetElement: GUIElement | undefined = this
+    isMovable: boolean
 
-    private _updatedPos = false
-    private _updatedSize = false
+    protected gui: IGUIView
 
-    private _domPos: Vec2
-    private _domSize: Vec2
 
+    ////////////////////////////
+    //      Constructor
+    ////////////////////////////
     constructor(
-        private _pos: Vec2,
-        private _size: Vec2,
-        public style?: Partial<CSSStyleDeclaration>,
-        public container?: GUIContainer, 
+        parent: IGUIContainer | undefined,
+        elem:   HTMLElement | 'div',
+        pos:    Vec2,
+        size?:  Vec2,
+        style?: Partial<CSSStyleDeclaration>
     ) {
-        if (container) container.attachElement(this)
-    }
+        this._pos = pos
+        this._size = size
 
-    set pos(p: Vec2) {
-        if (this._pos.equal(p)) return
-        this._pos.set(p)
-        this._updatedPos = true
-        this.requestUpdate()
-    }
-    get pos() { return this._pos.copy() }
-
-    set size(s: Vec2) {
-        if (this._size.equal(s)) return
-        this._size.set(s)
-        this._updatedSize = true
-        this.requestUpdate()
-    }
-    get size() { return this._size.copy() }
-    
-    attached() {
-
-        const pos = Vec2.mul(this._pos, this.gui.scale)
-        const size = Vec2.mul(this._size, this.gui.scale)
-
-        const defaultStyle: Partial<CSSStyleDeclaration> = {
-            position:   'absolute',
-            left:       pos.x + 'px',
-            top:        pos.y + 'px',
-            width:      size.x + 'px',
-            height:     size.y + 'px'
+        if (typeof elem == 'object') {
+            this.DOMElement = elem
+        } else {
+            this.DOMElement = document.createElement(elem)
         }
+        
+        const defaultStyle: Partial<CSSStyleDeclaration> = {
+            position: 'absolute'
+        }
+        if (style) Object.assign(this.DOMElement.style, defaultStyle, style)
 
-        if (this.style) Object.assign(this.DOMElement.style, defaultStyle, this.style)
+        this.parent = parent
+        if (this.parent) this.parent.attachChildElement(this)
+        
 
-        this.unattachedElements.forEach(elem => this.attachElement(elem))
-        this.unattachedElements.clear()
+    }
+
+    init(gui: IGUIView): void
+    {
+        this.gui = gui
+        console.log('GUIElement init')
+        this.children?.init(gui)
+        this.update(gui, true)
+    }
+
+    update(gui: IGUIView, force?: boolean)
+    {
+        if (this._posHasChanged || force) {
+            this._posHasChanged = false;
+            this._posScaled = Vec2.mul(this._pos, gui.scale)
+            this.DOMElement.style.left =    this._posScaled.x + 'px'
+            this.DOMElement.style.top =     this._posScaled.y + 'px'
+        }
+        if (this._size && this._sizeHasChanged || force) {
+            this._sizeHasChanged = false;
+            this._sizeScaled = Vec2.mul(this._size, gui.scale)
+            this.DOMElement.style.width =   this._sizeScaled.x + 'px'
+            this.DOMElement.style.height =  this._sizeScaled.y + 'px'
+        }
+        return false
     }
 
     requestUpdate() {
         if (this.gui) this.gui.requestElementUpdate(this)
     }
 
-    update(): boolean {
-        if (this._updatedPos) {
-            this._updatedPos = false;
-            this._domPos = Vec2.mul(this._pos, this.gui.scale)
-            this.DOMElement.style.left =    this._domPos.x + 'px'
-            this.DOMElement.style.top =     this._domPos.y + 'px'
-        }
-        if (this._updatedSize) {
-            this._updatedSize = false;
-            this._domSize = Vec2.mul(this._size, this.gui.scale)
-            this.DOMElement.style.width =   this._domSize.x + 'px'
-            this.DOMElement.style.height =  this._domSize.y + 'px'
-        }
-        
-        return this.isConstantlyUpdated        
+    // Position
+    private _pos: Vec2
+    private _posScaled: Vec2
+    private _posHasChanged = false
+
+    set pos(p: Vec2) {
+        if (this._pos.equal(p)) return
+        this._pos.set(p)
+        this._posHasChanged = true
+        this.requestUpdate()
+    }
+    get pos() { return this._pos.copy() }
+
+    // Absolute position
+    get absPos() {
+        const absPos = this.pos
+        this.parent && absPos.add(this.parent.pos)
+        return absPos
     }
 
-    attachElement(elem: GUIElement) {
-        if (!this.gui) {
-            this.unattachedElements.add(elem)  
-            return
-        }
+    // Size
+    private _size: Vec2
+    private _sizeScaled: Vec2
+    private _sizeHasChanged = false
 
-        this.DOMElement.appendChild(elem.DOMElement)
-        this.elements.add(elem)
-        elem.container = this
-        this.gui.registerElement(elem)
+    set size(s: Vec2) {
+        if (this._size.equal(s)) return
+        this._size.set(s)
+        this._sizeHasChanged = true
+        this.requestUpdate()
     }
+    get size() { return this._size?.copy() }
 
-    removeElement(elem: GUIElement) {
-        if (!this.gui) {
-            this.unattachedElements.delete(elem)            
-            return
-        }
-
-        this.DOMElement.removeChild(elem.DOMElement)
-        this.elements.delete(elem)
-        elem.container = undefined
-        this.gui.unregisterElement(elem)
-    }
-
-    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
-    //   Pointer events
-    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
-
-    pointer: IPointerInfo = {
-        isDown: false,
-        isOver: false,
-        isDragging: false,
-        downPosDOM: undefined,
-    }
-
-    onPointerEnter?: (ev: PointerEvent) => void
-    onPointerLeave?: (ev: PointerEvent) => void
-    onPointerDown?:  (ev: PointerEvent) => void
-    onPointerMove?:  (ev: PointerEvent) => void
-    onPointerUp?:    (ev: PointerEvent) => void
-    onClicked?:      (ev: PointerEvent) => void
-
-    setupInputHandlers() {
-
-        this.DOMElement.onpointerenter = ev => {
-            this.pointer.isOver = true
-            this.onPointerEnter && this.onPointerEnter(ev)
-        }
-        
-        this.DOMElement.onpointerleave = ev => {
-            this.pointer.isOver = false
-            this.onPointerLeave && this.onPointerLeave(ev)
-        }
-
-        this.DOMElement.onpointerdown = ev => {
-            this.pointer.isDown = true
-            this.onPointerDown && this.onPointerDown(ev)
-            this.gui.onPointerDown(this, ev)
-        }
-
-        this.DOMElement.onpointermove = ev => {
-            this.onPointerMove && this.onPointerMove(ev)
-            this.gui.onPointerMove(this, ev)
-        }
-
-        this.DOMElement.onpointerup = ev => {
-            const wasDown = this.pointer.isDown
-            this.pointer.isDown = false
-            this.onPointerUp && this.onPointerUp(ev)
-            if (wasDown) {
-                this.onClicked && this.onClicked(ev);
-            }
-            this.gui.onPointerUp(this, ev)
-        }
-    }
+    // Event receivers
+    onPointerEnter?: (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onPointerLeave?: (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onPointerDown?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onPointerMove?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onPointerUp?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onClicked?:      (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onDragStarted?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onDragging?:     (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onDragEnded?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
 }

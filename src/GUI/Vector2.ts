@@ -9,9 +9,16 @@ export default class Vec2
     public y: number
   ) {}
 
-  set(v: Vec2): Vec2 {
-    this.x = v.x
-    this.y = v.y
+  set(x: number, y: number): Vec2
+  set(v: Vec2): Vec2
+  set(vx: Vec2|number, y?: number): Vec2 {
+    if (typeof vx == 'object') {
+      this.x = vx.x
+      this.y = vx.y
+    } else {
+      this.x = vx
+      this.y = y || vx
+    }
     return this
   }
 
@@ -22,6 +29,12 @@ export default class Vec2
   floor(): Vec2 {
     this.x = Math.floor(this.x)
     this.y = Math.floor(this.y)
+    return this
+  }
+
+  round(): Vec2 {
+    this.x = Math.round(this.x)
+    this.y = Math.round(this.y)
     return this
   }
   
@@ -84,6 +97,10 @@ export default class Vec2
 
   static floor(v: Vec2) {
     return new Vec2(Math.floor(v.x), Math.floor(v.y))
+  }
+
+  static round(v: Vec2) {
+    return new Vec2(Math.round(v.x), Math.round(v.y))
   }
   
   static add(a: Vec2, b: Vec2): Vec2 {

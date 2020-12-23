@@ -1,27 +1,60 @@
 import SoftController, { getFunction, getFunctionName } from './SoftController.js';
-import { DatablockType } from './SoftTypes.js';
 import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js';
-function makeLogger(div) {
+import GUIView from './GUI/GUIView.js';
+import GUIRectElement from './GUI/GUIRectElement.js';
+import { vec2 } from './GUI/Vector2.js';
+function createTerminal(div) {
     return function logLine(text) {
         const pre = document.createElement('pre');
         pre.textContent = text;
         div.appendChild(pre);
     };
 }
-function createControlBar(buttons) {
+function createControlButtonBar(buttons) {
     const nav = document.getElementById('navi');
     buttons.forEach(btn => {
         const elem = document.createElement('button');
         elem.textContent = btn.name;
-        elem.onclick = btn.fn;
+        elem.onclick = ev => {
+            ev.preventDefault();
+            btn.fn();
+        };
         nav.appendChild(elem);
     });
 }
+function setGridTemplateRows(gridContainer, rows) {
+    const template = Object.values(rows).map(rowHeight => (rowHeight > 0) ? rowHeight + 'px' : 'auto').join(' ');
+    gridContainer.style.gridTemplateRows = template;
+}
+const CSSGridRowHeights = {
+    header: 32,
+    gui: 480,
+    splitBar: 10,
+    terminal: 0
+};
 //////////////////////////
 //  PROGRAM ENTRY POINT
 //
 window.onload = () => {
-    const print = makeLogger(document.getElementById('main'));
+    /////////////////////////
+    //  GUI Testing
+    const guiDiv = document.getElementById('gui');
+    const view = new GUIView(guiDiv);
+    view.scale = vec2(16, 24);
+    const gridSize = vec2(200, 200);
+    const blockSize = vec2(6, 6);
+    for (let i = 0; i < 20; i++) {
+        const x = Math.random() * (gridSize.x - blockSize.x);
+        const y = Math.random() * (gridSize.y - blockSize.y);
+        const col = (Math.round(Math.random() * 8) + 7).toString(16);
+        const block = new GUIRectElement(view.children, 'div', vec2(x, y).round(), blockSize, {
+            backgroundColor: '#44' + col,
+            border: '2px solid white',
+            boxSizing: 'border-box'
+        });
+    }
+    //////////////////////////
+    const terminal = createTerminal(document.getElementById('terminal'));
     const memSize = 64 * 1024;
     const cpu = new SoftController(memSize);
     window['cpu'] = cpu;
@@ -32,10 +65,10 @@ window.onload = () => {
     let ticks = 100;
     const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
-    print(systemSectorToString(cpu));
-    print(breakLine);
-    print('');
-    print('      RUNNING TEST...');
+    terminal(systemSectorToString(cpu));
+    terminal(breakLine);
+    terminal('');
+    terminal('      RUNNING TEST...');
     const loop = setInterval(() => {
         cpu.tick(interval);
         if (--ticks == 0)
@@ -43,24 +76,24 @@ window.onload = () => {
     }, interval);
     function stop() {
         clearTimeout(loop);
-        print(taskToString(cpu, taskId));
+        terminal(taskToString(cpu, taskId));
         // print(systemSectorToString(cpu));
         // print(datablockTableToString(cpu));
-        funcs.forEach(func => print(functionToString(cpu, func)));
+        funcs.forEach(func => terminal(functionToString(cpu, func)));
     }
-    createControlBar([
-        { name: 'Save', fn: () => {
-                saveAsJSON(blueprint, 'cpu.json');
-            } },
+    createControlButtonBar([
+        { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
         { name: 'Load', fn: () => loadFromJSON(obj => {
-                print(breakLine);
-                print('');
-                print('      LOADED A CONTROLLER FROM FILE:');
+                terminal(breakLine);
+                terminal('');
+                terminal('      LOADED A CONTROLLER FROM FILE:');
                 console.log('Loaded controller blueprint:', obj);
                 const cpu2 = loadControllerBlueprint(obj);
-                print(systemSectorToString(cpu2));
-                print(datablockTableToString(cpu2));
+                terminal(systemSectorToString(cpu2));
+                terminal(datablockTableToString(cpu2));
             }) },
+        { name: 'Scale + ', fn: () => view.scale = vec2(1.25, 1.25) },
+        { name: 'DUMMY', fn: () => { } },
     ]);
 };
 ////////////////////
@@ -152,7 +185,7 @@ function alignValue(value, integerPart = defaultIntegerPadding, desimalPart = 7)
 //
 function functionToString(cpu, funcID) {
     const type = cpu.getDatablockHeaderByID(funcID).type;
-    if (type != DatablockType.FUNCTION && type != DatablockType.CIRCUIT)
+    if (type != 4 /* FUNCTION */ && type != 3 /* CIRCUIT */)
         return 'Invalid function ID: ' + funcID;
     let text = '';
     const addLine = (line) => text += (line + '\n');
@@ -161,7 +194,7 @@ function functionToString(cpu, funcID) {
     const ioValues = cpu.readFunctionIOValues(funcRef);
     const ioFlags = cpu.readFunctionIOFlags(funcRef);
     const inputRefs = cpu.readFunctionInputRefs(funcRef);
-    const func = (type == DatablockType.FUNCTION) ? getFunction(funcHeader.library, funcHeader.opcode) : null;
+    const func = (type == 4 /* FUNCTION */) ? getFunction(funcHeader.library, funcHeader.opcode) : null;
     const funcName = (func) ? getFunctionName(funcHeader.library, funcHeader.opcode) : 'CIRCUIT';
     const inputRefLen = 6;
     const valueLen = 8;

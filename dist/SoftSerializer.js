@@ -1,5 +1,5 @@
 import SoftController, { getFunction } from './SoftController.js';
-import { DatablockType, datablockHeaderByteLength, taskStructByteLength } from './SoftTypes.js';
+import { datablockHeaderByteLength, taskStructByteLength } from './SoftTypes.js';
 export function loadControllerBlueprint(obj, spareDataMemSize = 0, spareDatablockCount = 0, spareTaskCount = 0) {
     const blueprint = obj;
     // Calculate needed data memory for data blocks
@@ -26,16 +26,16 @@ export function loadControllerBlueprint(obj, spareDataMemSize = 0, spareDatabloc
 export function datablockSize(block) {
     let size = datablockHeaderByteLength;
     switch (block.type) {
-        case DatablockType.TASK: {
+        case 2 /* TASK */: {
             size += taskStructByteLength;
             break;
         }
-        case DatablockType.CIRCUIT: {
+        case 3 /* CIRCUIT */: {
             const circuitDef = block.body;
             size += SoftController.calcCircuitSize(circuitDef.inputCount, circuitDef.inputCount, circuitDef.staticCount);
             break;
         }
-        case DatablockType.FUNCTION: {
+        case 4 /* FUNCTION */: {
             const funcDef = block.body;
             const funcTyp = getFunction(funcDef.library, funcDef.opcode);
             const inputCount = funcDef.inputCount || funcTyp.inputs.length;
@@ -49,7 +49,7 @@ export function datablockSize(block) {
 }
 export function loadCircuit(cpu, datablocks, circDefID, spareInputs = 0, spareOutputs = 0, spareFuncCalls = 0) {
     const block = datablocks[circDefID];
-    if (block.type != DatablockType.CIRCUIT) {
+    if (block.type != 3 /* CIRCUIT */) {
         console.error('Load Circuit: Data block type invalid.');
         return;
     }
@@ -63,7 +63,7 @@ export function loadCircuit(cpu, datablocks, circDefID, spareInputs = 0, spareOu
     // Create function calls
     circDef.callList.forEach(funcDefID => {
         const funcBlock = datablocks[funcDefID];
-        if (funcBlock.type == DatablockType.FUNCTION) {
+        if (funcBlock.type == 4 /* FUNCTION */) {
             const funcDef = funcBlock.body;
             const funcOnlineID = cpu.createFunctionBlock(funcDef.library, funcDef.opcode, circOnlineID, undefined, funcDef.inputCount, funcDef.outputCount, funcDef.staticCount);
             funcDef.ioValues && Object.keys(funcDef.ioValues).forEach(key => {
@@ -76,7 +76,7 @@ export function loadCircuit(cpu, datablocks, circDefID, spareInputs = 0, spareOu
             });
             renumMap.set(funcDefID, funcOnlineID);
         }
-        else if (funcBlock.type == DatablockType.CIRCUIT) {
+        else if (funcBlock.type == 3 /* CIRCUIT */) {
             const circOnlineID = loadCircuit(cpu, datablocks, funcDefID);
             renumMap.set(funcDefID, circOnlineID);
         }
@@ -113,15 +113,15 @@ export function createControllerBlueprint(cpu) {
             const blockHeader = cpu.getDatablockHeader(blockRef);
             let body;
             switch (blockHeader.type) {
-                case DatablockType.TASK: {
+                case 2 /* TASK */: {
                     body = createTaskDefinition(cpu, blockRef);
                     break;
                 }
-                case DatablockType.CIRCUIT: {
+                case 3 /* CIRCUIT */: {
                     body = createCircuitDefinition(cpu, blockRef);
                     break;
                 }
-                case DatablockType.FUNCTION: {
+                case 4 /* FUNCTION */: {
                     body = createFunctionDefinition(cpu, blockRef);
                     break;
                 }
@@ -148,7 +148,7 @@ function refactorIDs(plan) {
     renum(0);
     function refactorCircuit(circID) {
         const circBlock = plan.datablocks[circID];
-        if (circBlock.type != DatablockType.CIRCUIT) {
+        if (circBlock.type != 3 /* CIRCUIT */) {
             console.error('Refactor: Invalid circuit data block type');
             return null;
         }
@@ -156,9 +156,9 @@ function refactorIDs(plan) {
         renum(circID);
         circ.callList.forEach(callID => {
             const funcBlock = plan.datablocks[callID];
-            if (funcBlock.type == DatablockType.FUNCTION)
+            if (funcBlock.type == 4 /* FUNCTION */)
                 renum(callID);
-            else if (funcBlock.type == DatablockType.CIRCUIT)
+            else if (funcBlock.type == 3 /* CIRCUIT */)
                 refactorCircuit(callID);
             else {
                 console.error('Refactor: Invalid function call data block type');
@@ -168,7 +168,7 @@ function refactorIDs(plan) {
     }
     plan.taskList.forEach(taskID => {
         const taskBlock = plan.datablocks[taskID];
-        if (taskBlock.type != DatablockType.TASK) {
+        if (taskBlock.type != 2 /* TASK */) {
             console.error('Refactor: Invalid task data block type');
             return;
         }
@@ -187,13 +187,13 @@ function refactorIDs(plan) {
             const newID = renumMap.get(oldID);
             console.log(`Refactor: change ID ${oldID} -> ${newID}`);
             switch (block.type) {
-                case DatablockType.TASK: {
+                case 2 /* TASK */: {
                     datablocks[newID] = block;
                     const task = block.body;
                     task.targetID = renumMap.get(task.targetID);
                     break;
                 }
-                case DatablockType.CIRCUIT: {
+                case 3 /* CIRCUIT */: {
                     const circ = block.body;
                     circ.callList = circ.callList.map(callID => renumMap.get(callID));
                     if (circ.outputRefs) {
@@ -203,7 +203,7 @@ function refactorIDs(plan) {
                         });
                     }
                 }
-                case DatablockType.FUNCTION: {
+                case 4 /* FUNCTION */: {
                     datablocks[newID] = block;
                     const func = block.body;
                     if (func.inputRefs) {

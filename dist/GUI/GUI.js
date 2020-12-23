@@ -20,9 +20,10 @@ export default class GUI {
             downPos: undefined,
             upPos: undefined,
         };
-        document.onload = this.init;
+        this.init();
     }
     init() {
+        console.log('GUI Init');
         this.root = (this.parentElementID) ? document.getElementById(this.parentElementID) : document.body;
         this.DOMElement = document.createElement('div');
         const defaultStyle = {
@@ -34,7 +35,7 @@ export default class GUI {
         this.unattachedElements.forEach(elem => this.attachElement(elem));
         this.unattachedElements.clear();
         this.setup();
-        requestAnimationFrame(this.update);
+        requestAnimationFrame(this.update.bind(this));
     }
     update() {
         this.updateRequests.forEach(elem => {
@@ -43,7 +44,7 @@ export default class GUI {
                 this.updateRequests.delete(elem);
         });
         this.loop();
-        requestAnimationFrame(this.update);
+        requestAnimationFrame(this.update.bind(this));
     }
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     //   User defined functions
