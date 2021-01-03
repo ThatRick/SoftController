@@ -11,7 +11,7 @@ export default class GUIRectElement extends GUIElement {
         };
         this.onDragEnded = (ev, pointer) => {
             const pos = this.pos.copy();
-            pos.div(this.gui.snap).round().mul(this.gui.snap);
+            pos.div(this.gui.scale).round().mul(this.gui.scale);
             this.pos = Vec2.round(this.pos);
         };
     }

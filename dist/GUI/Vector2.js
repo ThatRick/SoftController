@@ -67,7 +67,7 @@ export default class Vec2 {
         return Math.sqrt(dx * dx + dy * dy);
     }
     equal(v) {
-        return (this.x == v.x && this.y == v.y);
+        return (v && this.x == v.x && this.y == v.y);
     }
     // ###################################################
     //    STATIC FUNCTIONS - always return new a vector
@@ -114,6 +114,12 @@ export default class Vec2 {
     static distanceSquared(a, b) {
         const v = Vec2.sub(b, a);
         return Vec2.dot(v, v);
+    }
+    static min(a, b) {
+        return new Vec2(Math.min(a.x, b.x), Math.min(a.y, b.y));
+    }
+    static max(a, b) {
+        return new Vec2(Math.max(a.x, b.x), Math.max(a.y, b.y));
     }
     // Ray from a to b
     static ray(a, b) {

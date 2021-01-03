@@ -9,8 +9,8 @@ export interface GUIPointerState
     isDragging:         boolean
 
     eventTarget:        EventTarget
-    target:             IGUIElement
-    downTarget:         IGUIElement
+    targetElem:         IGUIElement
+    downTargetElem:     IGUIElement
     
     dragHyst:           number
     dragOffset:         Vec2
@@ -28,7 +28,7 @@ export interface GUIPointerEventHandler extends GUIPointerEventReceiver
     pointer: GUIPointerState
     scale: Vec2
 
-    getPointerTarget?: (ev) => IGUIElement
+    getPointerTargetElem?: (ev) => IGUIElement
 }
 
 
@@ -48,7 +48,7 @@ export interface GUIPointerEventReceiver
 
 export interface IGUIView {
     scale: Vec2
-    snap: Vec2
+    size: Vec2
 
     registerElement(elem: IGUIElement)
     unregisterElement(elem: IGUIElement)
