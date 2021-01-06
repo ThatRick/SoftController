@@ -1,5 +1,5 @@
-import { Vec2 } from './GUITypes.js'
-import GUIView from './GUIView.js'
+import { Vec2 } from './GUI/GUITypes.js'
+import GUIView from './GUI/GUIView.js'
 import TraceLayer from './TraceLayer.js'
 
 export default class CircuitView extends GUIView
@@ -11,14 +11,5 @@ export default class CircuitView extends GUIView
 
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale)
 
-    }
-
-    addResizeObserver() {
-        const resizeObserver = new ResizeObserver(entries => {
-            for (let entry of entries) {
-            }
-
-        })
-        resizeObserver.observe(this.DOMElement)
     }
 }

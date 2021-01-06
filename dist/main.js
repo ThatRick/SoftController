@@ -1,10 +1,10 @@
 import SoftController, { getFunction, getFunctionName } from './SoftController.js';
 import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js';
-import CircuitView from './GUI/CircuitView.js';
+import CircuitView from './CircuitView.js';
 import GUIRectElement from './GUI/GUIRectElement.js';
 import Vec2, { vec2 } from './GUI/Vector2.js';
 function createTerminal(div) {
-    return function logLine(text) {
+    return (text) => {
         const pre = document.createElement('pre');
         pre.textContent = text;
         div.appendChild(pre);
@@ -22,8 +22,8 @@ function createControlButtonBar(buttons) {
         nav.appendChild(elem);
     });
 }
-function setGridTemplateRows(gridContainer, rows) {
-    const template = Object.values(rows).map(rowHeight => (rowHeight > 0) ? rowHeight + 'px' : 'auto').join(' ');
+function setGridTemplateRows(gridContainer, gridRowHeights) {
+    const template = Object.values(gridRowHeights).map(rowHeight => (rowHeight > 0) ? rowHeight + 'px' : 'auto').join(' ');
     gridContainer.style.gridTemplateRows = template;
 }
 const CSSGridRowHeights = {

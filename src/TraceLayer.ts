@@ -1,5 +1,4 @@
-import Vec2, {vec2} from './Vector2.js'
-import CircuitView from './CircuitView.js'
+import Vec2, {vec2} from './GUI/Vector2.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
 

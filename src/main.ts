@@ -2,7 +2,7 @@ import SoftController, {getFunction, getFunctionName} from './SoftController.js'
 import { DatablockType, IO_FLAG, ITask } from './SoftTypes.js';
 import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js'
 import GUIView from './GUI/GUIView.js'
-import CircuitView from './GUI/CircuitView.js'
+import CircuitView from './CircuitView.js'
 import GUIRectElement from './GUI/GUIRectElement.js';
 import Vec2, {vec2} from './GUI/Vector2.js'
 
