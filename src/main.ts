@@ -6,7 +6,7 @@ import GUIRectElement from './GUI/GUIRectElement.js';
 import Vec2, {vec2} from './GUI/Vector2.js'
 
 function createTerminal(div: HTMLElement) {
-    return function logLine(text: string) {
+    return (text: string) => {
         const pre = document.createElement('pre');
         pre.textContent = text;
         div.appendChild(pre);
@@ -26,8 +26,8 @@ function createControlButtonBar(buttons: {name: string, fn: () => void}[]) {
     })
 }
 
-function setGridTemplateRows(gridContainer: HTMLElement, rows: {[key: string]: number }) {
-    const template = Object.values(rows).map(rowHeight => (rowHeight > 0) ? rowHeight + 'px' : 'auto').join(' ')
+function setGridTemplateRows(gridContainer: HTMLElement, gridRowHeights: {[key: string]: number }) {
+    const template = Object.values(gridRowHeights).map(rowHeight => (rowHeight > 0) ? rowHeight + 'px' : 'auto').join(' ')
     gridContainer.style.gridTemplateRows = template
 }
 
