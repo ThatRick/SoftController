@@ -2,6 +2,7 @@ import SoftController, {getFunction, getFunctionName} from './SoftController.js'
 import { DatablockType, IO_FLAG, ITask } from './SoftTypes.js';
 import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js'
 import GUIView from './GUI/GUIView.js'
+import CircuitView from './GUI/CircuitView.js'
 import GUIRectElement from './GUI/GUIRectElement.js';
 import Vec2, {vec2} from './GUI/Vector2.js'
 
@@ -46,28 +47,36 @@ window.onload = () =>
 {
     /////////////////////////
     //  GUI Testing
-    const guiDiv = document.getElementById('gui')
-    const view = new GUIView(guiDiv)
-    view.scale = vec2(16, 24)
+    const viewSize = vec2(80, 40)
+    const viewScale = vec2(16, 24)
+    
+    const guiContainer = document.getElementById('gui')
+    const view = new CircuitView(guiContainer, viewSize, viewScale)
 
-    const gridSize = vec2(200, 200)
-
+    // Populate view with random test blocks
+    const blocks: GUIRectElement[] = []
     const blockSize = vec2(6, 6)
-    for (let i = 0; i < 20; i++) {
-        const x = Math.random() * (gridSize.x - blockSize.x)
-        const y = Math.random() * (gridSize.y - blockSize.y)
+    for (let i = 0; i < 10; i++) {
+        const x = Math.random() * (viewSize.x - blockSize.x)
+        const y = Math.random() * (viewSize.y - blockSize.y)
         const col = (Math.round(Math.random() * 8) + 7).toString(16)
-        const block = new GUIRectElement(view.children, 'div', vec2(x, y).round(), blockSize, {
+        const pos = vec2(x, y).round()
+        const block = new GUIRectElement(view.children, 'div', pos, blockSize, {
             backgroundColor: '#44' + col,
-            border: '2px solid white',
+            border: '1px solid white',
             boxSizing: 'border-box'
         });
+        blocks.push(block)
+        if (i > 0) {
+            const outputPos = Vec2.add(blocks[i-1].pos, vec2(blockSize.x, 0.5))
+            view.traceLayer.addLine(outputPos, Vec2.add(pos, vec2(0, 0.5)))
+        }
     }
     //////////////////////////
 
     const terminal = createTerminal(document.getElementById('terminal'));
 
-    const memSize = 64 * 1024;
+    const memSize = 64 * 1024;  // bytes
     const cpu = new SoftController(memSize);
     window['cpu'] = cpu;
     
@@ -76,7 +85,7 @@ window.onload = () =>
     const taskId = cpu.createTask(circId, 20, 5);
     
     const interval = 10 // ms
-    let ticks = 100
+    let ticks = 10
     
     const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
@@ -189,13 +198,13 @@ const breakLine = '='.repeat(80)
 //  Align value by desimal point
 //
 const defaultIntegerPadding = 9
-function alignValue(value: number, integerPart = defaultIntegerPadding, desimalPart = 7) {
+function alignValue(value: number, integerPartLen = defaultIntegerPadding, desimalPartLen = 7) {
     let [ints, decs] = value.toString().split('.');
-    let str = ints.padStart(integerPart);
+    let str = ints.padStart(integerPartLen);
     if (decs) {
-        if (decs.length > desimalPart) {
-            let [, fixed] = value.toFixed(desimalPart).split('.');
-            decs = fixed.slice(0, desimalPart-1) + '~';
+        if (decs.length > desimalPartLen) {
+            let [, fixed] = value.toFixed(desimalPartLen).split('.');
+            decs = fixed.slice(0, desimalPartLen-1) + '~';
         }
         str += '.' + decs;
     }
@@ -373,6 +382,7 @@ function taskToString(cpu: SoftController, taskID: number): string {
     }
     
     const task = cpu.getTaskByID(taskID);
+    console.log(task)
     let text = ''
     const addLine = (line: string) => text += (line + '\n');
     

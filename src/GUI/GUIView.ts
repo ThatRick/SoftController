@@ -11,44 +11,69 @@ const enum MouseButton {
 
 export default class GUIView implements IDOMElement, GUIPointerEventHandler{
 
-    children = new GUIContainer(this)
+    DOMElement: HTMLElement
+
+    children: GUIContainer
 
     DOMElements = new Map<EventTarget, IGUIElement>()
     updateRequests = new Set<IGUIElement>()
     
-    private _scale = Object.freeze(vec2(1, 1))
+    private _scale: Vec2
+    private _size: Vec2
 
     set scale(v: Vec2) {
-        if (this._scale.equal(v)) return
+        if (this._scale?.equal(v)) return
         this._scale = Object.freeze(v.copy())
+        this.resize()
+        this.update(true)
+    }
+    
+    get scale() { return this._scale }
+    
+    pos = vec2(0, 0)
+    absPos = vec2(0, 0)
+    
+    set size(v: Vec2) {
+        if (this._size?.equal(v)) return
+        this._size = Object.freeze(v.copy())
+        this.resize()
         this.update(true)
     }
 
-    get scale() { return this._scale }
+    get size() { return this._size }
 
-    snap = Object.freeze(vec2(32))
-
-    pos = vec2(0, 0)
-    absPos = vec2(0, 0)
-
-    get size() {
-        const box = this.DOMElement.getBoundingClientRect()
-        return vec2(box.width, box.height)
+    private resize() {
+        // this.DOMElement.style.width = this._size.x * this._scale.x + 'px'
+        // this.DOMElement.style.height = this._size.y * this._scale.y + 'px'
     }
 
     constructor(
-        public DOMElement: HTMLElement,
+        parent: HTMLElement,
+        size: Vec2,
+        scale: Vec2,
         style?: Partial<CSSStyleDeclaration>
     ) {
         console.log('GUI Init')
 
+        this.DOMElement = document.createElement('div')
+        parent.appendChild(this.DOMElement)
+
         const defaultStyle: Partial<CSSStyleDeclaration> = {
-            width: '100%',
             position: 'relative',
+            top: '0px',
+            left: '0px',
+            width: '100%',
+            height: '100%',
             overflow: 'auto'
         }
  
         Object.assign(this.DOMElement.style, defaultStyle, style)
+
+        this._size = size
+        this._scale = scale
+        this.resize()
+
+        this.children = new GUIContainer(this)
 
         CreatePointerHandlers(this)
         
@@ -104,7 +129,9 @@ export default class GUIView implements IDOMElement, GUIPointerEventHandler{
     //   Pointer events
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-    getPointerTarget(ev: PointerEvent) {
+    pointer: GUIPointerState
+
+    getPointerTargetElem(ev: PointerEvent) {
         return this.DOMElements.get(ev.target)
     }
 
@@ -119,33 +146,49 @@ export default class GUIView implements IDOMElement, GUIPointerEventHandler{
     }
 
     onDragStarted = (ev: PointerEvent) => {
-        if (ev.buttons == MouseButton.MIDDLE && ev.target == this.DOMElement) {
+        // Start scrolling view
+        if (ev.target == this.DOMElement) { // ev.buttons == MouseButton.MIDDLE
             this.scrollStartPos = vec2(this.DOMElement.scrollLeft, this.DOMElement.scrollTop)
             this.isScrolling = true
             this.DOMElement.style.cursor = 'grab'
         }
+        // Start dragging GUI element
+        if (this.pointer.isDragging && this.pointer.downTargetElem?.isMovable) {
+            this.pointer.dragTargetInitPos = this.pointer.downTargetElem.pos.copy()
+            this.pointer.downTargetElem.onDragStarted?.(ev, this.pointer)
+        }
     }
     onDragging = (ev: PointerEvent) => {
+        // Scrolling view
         if (this.isScrolling) {
             this.DOMElement.scrollLeft = this.scrollStartPos.x - this.pointer.dragOffset.x
             this.DOMElement.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y
         }
+        // Dragging GUI element
+        if (this.pointer.downTargetElem?.isMovable) {
+            this.pointer.downTargetElem.onDragging?.(ev, this.pointer)
+            const offset = Vec2.div(this.pointer.dragOffset, this.scale)
+            const newPos = Vec2.add(this.pointer.dragTargetInitPos, offset)
+            this.pointer.downTargetElem.pos = newPos
+        }
+
     }
     onDragEnded = (ev: PointerEvent) => {
+        // End scrolling
         this.endScrolling()
+        // End dragging
+        if (this.pointer.downTargetElem?.isMovable) {
+            this.pointer.downTargetElem.onDragEnded?.(ev, this.pointer)
+        }
     }
 
     onPointerLeave = (ev: PointerEvent) => {
         this.endScrolling()
     }
     
-    pointer: GUIPointerState
-
-    onPointerEnter?: (ev: PointerEvent) => void
-    onPointerDown?:  (ev: PointerEvent) => void
-    onPointerMove?:  (ev: PointerEvent) => void
-    onPointerUp?:    (ev: PointerEvent) => void
-    onClicked?:      (ev: PointerEvent) => void
-
-
+    // onPointerEnter: (ev: PointerEvent) => {}
+    // onPointerDown:  (ev: PointerEvent) => {}
+    // onPointerMove:  (ev: PointerEvent) => {}
+    // onPointerUp:    (ev: PointerEvent) => {}
+    // onClicked:      (ev: PointerEvent) => {}
 }

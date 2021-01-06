@@ -24,6 +24,7 @@ body {
         'terminal';
 }
 button {
+    color: white;
     margin: 1px;
     background-color: var(--buttonColor);
     height: 100%;
@@ -61,6 +62,9 @@ button:active {
 #gui {
     grid-area: gui;
     background-color: var(--guiBG);
+    width: 100%;
+    position: relative;
+    overflow: auto;
 }
 
 #splitBar {
@@ -81,6 +85,6 @@ button:active {
 }
 
 pre {
-    font-size: 1.25em;
+    font-size: 1.15em;
     margin-left: 1em;
 }
