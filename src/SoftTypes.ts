@@ -1,4 +1,4 @@
-import {DataType, StructDataTypes, StructValues, sizeOfStruct, sizeOfType, readStruct, writeStruct} from './TypedStructs.js'
+import {DataType, StructDataTypes, sizeOfStruct, sizeOfType, readStruct, writeStruct} from './Lib/TypedStructs.js'
 
 export type pointer = number
 export type bytesize = number

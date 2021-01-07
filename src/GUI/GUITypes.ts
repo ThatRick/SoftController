@@ -1,5 +1,5 @@
 import GUIView from './GUIView.js'
-import Vec2 from './Vector2.js'
+import Vec2 from '../Lib/Vector2.js'
 
 export {Vec2}
 
@@ -22,7 +22,7 @@ export interface GUIPointerState
 }
 
 
-export interface GUIPointerEventHandler extends GUIPointerEventReceiver
+export interface GUIPointerEventReceiver extends GUIPointerEventHandler
 {
     DOMElement: HTMLElement
     pointer: GUIPointerState
@@ -31,18 +31,19 @@ export interface GUIPointerEventHandler extends GUIPointerEventReceiver
     getPointerTargetElem?: (ev) => IGUIElement
 }
 
+type EventHandlerFn = (ev: PointerEvent, pointer?: GUIPointerState) => void
 
-export interface GUIPointerEventReceiver
+export interface GUIPointerEventHandler
 {
-    onPointerEnter?: (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onPointerLeave?: (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onPointerDown?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onPointerMove?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onPointerUp?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onClicked?:      (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onDragStarted?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onDragging?:     (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onDragEnded?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
+    onPointerEnter?: EventHandlerFn
+    onPointerLeave?: EventHandlerFn
+    onPointerDown?:  EventHandlerFn
+    onPointerMove?:  EventHandlerFn
+    onPointerUp?:    EventHandlerFn
+    onClicked?:      EventHandlerFn
+    onDragStarted?:  EventHandlerFn
+    onDragging?:     EventHandlerFn
+    onDragEnded?:    EventHandlerFn
 }
 
 
@@ -62,7 +63,7 @@ export interface IDOMElement {
     size?: Vec2
 }
 
-export interface IGUIElement extends IDOMElement, GUIPointerEventReceiver
+export interface IGUIElement extends IDOMElement, GUIPointerEventHandler
 {
     parent?: IGUIContainer
     children?: IGUIContainer

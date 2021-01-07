@@ -1,5 +1,5 @@
 import CreatePointerHandlers from './GUIPointerEventHandler.js';
-import Vec2, { vec2 } from './Vector2.js';
+import Vec2, { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 export default class GUIView {
     constructor(parent, size, scale, style) {

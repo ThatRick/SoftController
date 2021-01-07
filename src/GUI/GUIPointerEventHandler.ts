@@ -1,8 +1,8 @@
-import { GUIPointerEventHandler } from './GUITypes.js'
-import Vec2, {vec2} from './Vector2.js'
+import { GUIPointerEventReceiver } from './GUITypes.js'
+import Vec2, {vec2} from '../Lib/Vector2.js'
 
 
-export default function CreatePointerEventHandlers(view: GUIPointerEventHandler) {
+export default function CreatePointerEventHandlers(view: GUIPointerEventReceiver) {
 
     view.pointer = {
         isDown:             false,

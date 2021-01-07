@@ -1,6 +1,6 @@
-import { IGUIContainer, IGUIElement, GUIPointerEventHandler, GUIPointerState, IDOMElement } from './GUITypes.js'
+import { IGUIContainer, IGUIElement, GUIPointerEventReceiver, GUIPointerState, IDOMElement } from './GUITypes.js'
 import CreatePointerHandlers from './GUIPointerEventHandler.js'
-import Vec2, {vec2} from './Vector2.js'
+import Vec2, {vec2} from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
 
 const enum MouseButton {
@@ -9,7 +9,7 @@ const enum MouseButton {
     MIDDLE = 4
 }
 
-export default class GUIView implements IDOMElement, GUIPointerEventHandler{
+export default class GUIView implements IDOMElement, GUIPointerEventReceiver { 
 
     DOMElement: HTMLElement
 

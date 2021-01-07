@@ -4,7 +4,7 @@ import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerial
 import GUIView from './GUI/GUIView.js'
 import CircuitView from './CircuitView.js'
 import GUIRectElement from './GUI/GUIRectElement.js';
-import Vec2, {vec2} from './GUI/Vector2.js'
+import Vec2, {vec2} from './Lib/Vector2.js'
 
 function createTerminal(div: HTMLElement) {
     return (text: string) => {
@@ -68,8 +68,8 @@ window.onload = () =>
         });
         blocks.push(block)
         if (i > 0) {
-            const outputPos = Vec2.add(blocks[i-1].pos, vec2(blockSize.x, 0.5))
-            view.traceLayer.addLine(outputPos, Vec2.add(pos, vec2(0, 0.5)))
+            const outputPos = Vec2.add(blocks[i-1].pos, vec2(blockSize.x, 1))
+            view.traceLayer.addLine(outputPos, Vec2.add(pos, vec2(-1, 1)))
         }
     }
     //////////////////////////

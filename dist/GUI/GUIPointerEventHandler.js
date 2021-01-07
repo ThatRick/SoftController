@@ -1,4 +1,4 @@
-import Vec2, { vec2 } from './Vector2.js';
+import Vec2, { vec2 } from '../Lib/Vector2.js';
 export default function CreatePointerEventHandlers(view) {
     view.pointer = {
         isDown: false,

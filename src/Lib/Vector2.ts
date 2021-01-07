@@ -88,7 +88,7 @@ export default class Vec2
   }
 
   // ###################################################
-  //    STATIC FUNCTIONS - always return new a vector
+  //    STATIC FUNCTIONS - always returns a new vector
   // ###################################################
 
   static copy(v: Vec2): Vec2 {

@@ -1,4 +1,4 @@
-import { sizeOfStruct } from './Lib/TypedStructs.js';
+import { sizeOfStruct } from './TypedStructs.js';
 export const DatablockHeaderStruct = {
     byteLength: 5 /* uint32 */,
     type: 1 /* uint8 */,

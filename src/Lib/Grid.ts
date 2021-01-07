@@ -1,7 +1,7 @@
 import Vec2, {vec2} from './Vector2.js'
 
 
-export default class Grid<Cell>
+export default class Grid<Cell extends Object>
 {
     cells: Cell[][] = []        // [y][x]
 
@@ -38,6 +38,31 @@ export default class Grid<Cell>
                 this.cells[y][x] = undefined
             }
         }
+    }
+
+    rectHasCell(pos: Vec2, size?: Vec2) {
+        if (size == undefined) return (this.cells[pos.y][pos.x] != undefined)
+        for (let y = pos.y; y < pos.y + size.y; y++) {
+            if (this.cells[y] == undefined) continue
+            for (let x = pos.x; x < pos.x + size.x; x++) {
+                if (this.cells[y][x] != undefined) return true
+            }
+        }
+        return true
+    }
+
+    rectHasProps(props: Array<keyof Cell>, pos: Vec2, size?: Vec2) {
+        const hasProps = (cell: Cell) => cell && props.some(prop => cell.hasOwnProperty(prop))
+
+        if (size == undefined) return hasProps(this.cells[pos.y][pos.x])
+        
+        for (let y = pos.y; y < pos.y + size.y; y++) {
+            if (this.cells[y] == undefined) continue
+            for (let x = pos.x; x < pos.x + size.x; x++) {
+                if (hasProps(this.cells[y][x])) return true
+            }
+        }
+        return true
     }
 
     deleteCell(pos: Vec2) {

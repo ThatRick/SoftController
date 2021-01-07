@@ -1,5 +1,5 @@
 
-import {readStruct, setStructElement, writeStruct} from './TypedStructs.js'
+import {readStruct, setStructElement, writeStruct} from './Lib/TypedStructs.js'
 import {ID, IORef, IO_FLAG, DatablockType, IFunction} from './SoftTypes.js'
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionParams} from './SoftTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from './SoftTypes.js'

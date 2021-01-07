@@ -1,4 +1,4 @@
-import { readStruct, writeStruct } from './Lib/TypedStructs.js';
+import { readStruct, writeStruct } from './TypedStructs.js';
 import { FunctionHeaderStruct, functionHeaderByteLength } from './SoftTypes.js';
 import { DatablockHeaderStruct, datablockHeaderByteLength } from './SoftTypes.js';
 import { TaskStruct, taskStructByteLength } from './SoftTypes.js';

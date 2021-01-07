@@ -1,5 +1,6 @@
 import SoftController, { getFunction } from './SoftController.js';
 import { datablockHeaderByteLength, taskStructByteLength } from './SoftTypes.js';
+// Create a new controller from controller blueprint
 export function loadControllerBlueprint(obj, spareDataMemSize = 0, spareDatablockCount = 0, spareTaskCount = 0) {
     const blueprint = obj;
     // Calculate needed data memory for data blocks
@@ -23,6 +24,7 @@ export function loadControllerBlueprint(obj, spareDataMemSize = 0, spareDatabloc
     });
     return cpu;
 }
+// Calculate data block size in bytes
 export function datablockSize(block) {
     let size = datablockHeaderByteLength;
     switch (block.type) {
@@ -38,15 +40,16 @@ export function datablockSize(block) {
         case 4 /* FUNCTION */: {
             const funcDef = block.body;
             const funcTyp = getFunction(funcDef.library, funcDef.opcode);
-            const inputCount = funcDef.inputCount || funcTyp.inputs.length;
-            const outputCount = funcDef.outputCount || funcTyp.inputs.length;
-            const staticCount = funcDef.staticCount || funcTyp.staticCount || 0;
+            const inputCount = funcDef.inputCount ?? funcTyp.inputs.length;
+            const outputCount = funcDef.outputCount ?? funcTyp.inputs.length;
+            const staticCount = funcDef.staticCount ?? funcTyp.staticCount ?? 0;
             size += SoftController.calcFunctionSize(inputCount, outputCount, staticCount);
             break;
         }
     }
     return size;
 }
+// Load circuit blueprint to controller
 export function loadCircuit(cpu, datablocks, circDefID, spareInputs = 0, spareOutputs = 0, spareFuncCalls = 0) {
     const block = datablocks[circDefID];
     if (block.type != 3 /* CIRCUIT */) {
@@ -102,127 +105,80 @@ export function loadCircuit(cpu, datablocks, circDefID, spareInputs = 0, spareOu
     });
     return circOnlineID;
 }
+// 
+function readDatablock(cpu, blockRef) {
+    const blockHeader = cpu.getDatablockHeader(blockRef);
+    let body;
+    switch (blockHeader.type) {
+        case 2 /* TASK */: {
+            body = createTaskDefinition(cpu, blockRef);
+            break;
+        }
+        case 3 /* CIRCUIT */: {
+            body = createCircuitDefinition(cpu, blockRef);
+            break;
+        }
+        case 4 /* FUNCTION */: {
+            body = createFunctionDefinition(cpu, blockRef);
+            break;
+        }
+    }
+    return {
+        type: blockHeader.type,
+        body
+    };
+}
+// CREATE A CONTROLLER BLUEPRINT
 export function createControllerBlueprint(cpu) {
-    const datablocks = {};
     const taskCount = cpu.taskList.indexOf(0);
     const taskRefs = Array.from(cpu.taskList.slice(0, taskCount));
     const taskList = taskRefs.map(ref => cpu.getDatablockIDbyRef(ref));
+    const datablocks = {};
     for (let id = 0; id < cpu.datablockTableLastUsedID; id++) {
         const blockRef = cpu.datablockTable[id];
-        if (blockRef) {
-            const blockHeader = cpu.getDatablockHeader(blockRef);
-            let body;
-            switch (blockHeader.type) {
-                case 2 /* TASK */: {
-                    body = createTaskDefinition(cpu, blockRef);
-                    break;
-                }
-                case 3 /* CIRCUIT */: {
-                    body = createCircuitDefinition(cpu, blockRef);
-                    break;
-                }
-                case 4 /* FUNCTION */: {
-                    body = createFunctionDefinition(cpu, blockRef);
-                    break;
-                }
-            }
-            datablocks[id] = {
-                type: blockHeader.type,
-                body
-            };
-        }
+        if (blockRef)
+            datablocks[id] = readDatablock(cpu, blockRef);
     }
     const blueprint = {
+        blueprintType: 'controller',
         version: SoftController.version,
         taskList,
         datablocks
     };
     console.log(blueprint);
-    const refactored = refactorIDs(blueprint);
+    const refactored = refactorControllerBlueprint(blueprint);
     console.log(refactored);
     return refactored;
 }
-function refactorIDs(plan) {
-    const renumMap = new Map();
-    const renum = (id) => renumMap.set(id, renumMap.size).size - 1;
-    renum(0);
-    function refactorCircuit(circID) {
-        const circBlock = plan.datablocks[circID];
-        if (circBlock.type != 3 /* CIRCUIT */) {
-            console.error('Refactor: Invalid circuit data block type');
-            return null;
-        }
-        const circ = circBlock.body;
-        renum(circID);
-        circ.callList.forEach(callID => {
-            const funcBlock = plan.datablocks[callID];
-            if (funcBlock.type == 4 /* FUNCTION */)
-                renum(callID);
-            else if (funcBlock.type == 3 /* CIRCUIT */)
-                refactorCircuit(callID);
-            else {
-                console.error('Refactor: Invalid function call data block type');
-                return null;
-            }
-        });
+// CREATE A CIRCUIT BLUEPRINT
+export function createCircuitBlueprint(cpu, circuitID) {
+    const datablocks = {};
+    const ref = cpu.datablockTable[circuitID];
+    if (!ref) {
+        console.error('Create circuit blueprint: Invalid block id', circuitID);
+        return;
     }
-    plan.taskList.forEach(taskID => {
-        const taskBlock = plan.datablocks[taskID];
-        if (taskBlock.type != 2 /* TASK */) {
-            console.error('Refactor: Invalid task data block type');
-            return;
-        }
-        const task = taskBlock.body;
-        renum(taskID);
-        const circID = task.targetID;
-        refactorCircuit(circID);
+    const circuitDef = readDatablock(cpu, ref);
+    if (circuitDef.type != 3 /* CIRCUIT */) {
+        console.error('Create circuit blueprint: Invalid block type', circuitDef.type);
+        return;
+    }
+    datablocks[circuitID] = circuitDef;
+    const circuit = circuitDef.body;
+    circuit.callList.forEach(id => {
+        const blockRef = cpu.datablockTable[id];
+        datablocks[id] = readDatablock(cpu, blockRef);
     });
-    const datablocks = {}; // Create a new data block table with refactored IDs
-    console.log(renumMap);
-    Object.keys(plan.datablocks).forEach(key => {
-        const oldID = Number(key);
-        console.log('Refactor: checking old id', oldID);
-        if (oldID > 0 && renumMap.has(oldID)) { // If old ID is not found in renum map, then it's not called and is therefore discarded
-            const block = plan.datablocks[oldID];
-            const newID = renumMap.get(oldID);
-            console.log(`Refactor: change ID ${oldID} -> ${newID}`);
-            switch (block.type) {
-                case 2 /* TASK */: {
-                    datablocks[newID] = block;
-                    const task = block.body;
-                    task.targetID = renumMap.get(task.targetID);
-                    break;
-                }
-                case 3 /* CIRCUIT */: {
-                    const circ = block.body;
-                    circ.callList = circ.callList.map(callID => renumMap.get(callID));
-                    if (circ.outputRefs) {
-                        Object.keys(circ.outputRefs).forEach(key => {
-                            const ioRef = circ.outputRefs[key];
-                            ioRef.id = renumMap.get(ioRef.id);
-                        });
-                    }
-                }
-                case 4 /* FUNCTION */: {
-                    datablocks[newID] = block;
-                    const func = block.body;
-                    if (func.inputRefs) {
-                        Object.keys(func.inputRefs).forEach(key => {
-                            const ioRef = func.inputRefs[key];
-                            ioRef.id = renumMap.get(ioRef.id);
-                        });
-                    }
-                }
-            }
-        }
-    });
-    return {
-        version: plan.version,
-        taskList: plan.taskList.map(oldID => renumMap.get(oldID)),
+    const blueprint = {
+        blueprintType: 'circuit',
+        version: SoftController.version,
+        circuitID,
         datablocks
     };
+    const refactored = refactorCircuitBlueprint(blueprint);
+    return refactored;
 }
-// TASK
+// SERIALIZE A TASK
 function createTaskDefinition(cpu, taskRef) {
     const task = cpu.getTask(taskRef);
     return {
@@ -231,7 +187,7 @@ function createTaskDefinition(cpu, taskRef) {
         offset: task.offset
     };
 }
-// CIRCUIT
+// SERIALIZE A CIRCUIT
 function createCircuitDefinition(cpu, ref) {
     const funcHeader = cpu.readFunctionHeader(ref);
     const inputRefs = Array.from(cpu.readFunctionInputRefs(ref)).map(ioRef => cpu.solveIOReference(ioRef));
@@ -262,7 +218,7 @@ function createCircuitDefinition(cpu, ref) {
         circuitDef.outputRefs = modifiedOutputRefs;
     return circuitDef;
 }
-// FUNCTION
+// SERIALIZE A FUNCTION
 function createFunctionDefinition(cpu, ref) {
     const funcHeader = cpu.readFunctionHeader(ref);
     const ioFlags = Array.from(cpu.readFunctionIOFlags(ref));
@@ -310,4 +266,108 @@ function createFunctionDefinition(cpu, ref) {
     if (Object.keys(modifiedInputRefs).length > 0)
         funcDef.inputRefs = modifiedInputRefs;
     return funcDef;
+}
+// Refactor a data block table by renum map
+function refactorDatablockTable(datablocks, renumMap) {
+    const refactored = {}; // Create a new data block table with refactored IDs
+    Object.keys(datablocks).forEach(key => {
+        const oldID = Number(key);
+        console.log('Refactor: checking old id', oldID);
+        if (oldID > 0 && renumMap.has(oldID)) { // If old ID is not found in renum map, then it's not called and is therefore discarded
+            const block = datablocks[oldID];
+            const newID = renumMap.get(oldID);
+            console.log(`Refactor: change ID ${oldID} -> ${newID}`);
+            switch (block.type) {
+                case 2 /* TASK */: {
+                    refactored[newID] = block;
+                    const task = block.body;
+                    task.targetID = renumMap.get(task.targetID);
+                    break;
+                }
+                case 3 /* CIRCUIT */: {
+                    const circ = block.body;
+                    circ.callList = circ.callList.map(callID => renumMap.get(callID));
+                    if (circ.outputRefs) {
+                        Object.keys(circ.outputRefs).forEach(key => {
+                            const ioRef = circ.outputRefs[key];
+                            ioRef.id = renumMap.get(ioRef.id);
+                        });
+                    }
+                }
+                case 4 /* FUNCTION */: {
+                    refactored[newID] = block;
+                    const func = block.body;
+                    if (func.inputRefs) {
+                        Object.keys(func.inputRefs).forEach(key => {
+                            const ioRef = func.inputRefs[key];
+                            ioRef.id = renumMap.get(ioRef.id);
+                        });
+                    }
+                }
+            }
+        }
+    });
+    return refactored;
+}
+// Create a renumerator function
+function createRenumerator(renumMap) {
+    renumMap.set(0, 0);
+    return (id) => renumMap.set(id, renumMap.size).size - 1;
+}
+// Numerate circuit data blocks recursively
+function numerateCircuit(circID, datablocks, renum) {
+    const circBlock = datablocks[circID];
+    if (circBlock.type != 3 /* CIRCUIT */) {
+        console.error('Refactor: Invalid circuit data block type');
+        return null;
+    }
+    const circ = circBlock.body;
+    renum(circID);
+    circ.callList.forEach(callID => {
+        const funcBlock = datablocks[callID];
+        if (funcBlock.type == 4 /* FUNCTION */)
+            renum(callID);
+        else if (funcBlock.type == 3 /* CIRCUIT */)
+            numerateCircuit(callID, datablocks, renum);
+        else {
+            console.error('Refactor: Invalid function call data block type');
+            return null;
+        }
+    });
+}
+// REFACTOR CIRCUIT BLUEPRINT
+function refactorCircuitBlueprint(plan) {
+    const renumMap = new Map();
+    const renum = createRenumerator(renumMap);
+    numerateCircuit(plan.circuitID, plan.datablocks, renum);
+    const datablocks = refactorDatablockTable(plan.datablocks, renumMap);
+    return {
+        blueprintType: 'circuit',
+        version: plan.version,
+        circuitID: renumMap.get(plan.circuitID),
+        datablocks
+    };
+}
+// REFACTOR CONTROLLER BLUEPRINT
+function refactorControllerBlueprint(plan) {
+    const renumMap = new Map();
+    const renum = createRenumerator(renumMap);
+    plan.taskList.forEach(taskID => {
+        const taskBlock = plan.datablocks[taskID];
+        if (taskBlock.type != 2 /* TASK */) {
+            console.error('Refactor: Invalid task data block type');
+            return;
+        }
+        const task = taskBlock.body;
+        renum(taskID);
+        const circID = task.targetID;
+        numerateCircuit(circID, plan.datablocks, renum);
+    });
+    const datablocks = refactorDatablockTable(plan.datablocks, renumMap);
+    return {
+        blueprintType: 'controller',
+        version: plan.version,
+        taskList: plan.taskList.map(oldID => renumMap.get(oldID)),
+        datablocks
+    };
 }
