@@ -1,4 +1,5 @@
-import SoftController, {getFunction, getFunctionName} from './SoftController.js'
+import SoftController from './SoftController.js'
+import {getFunction, getFunctionName} from './FunctionCollection.js'
 import {IORef,  DatablockType, IFunction, datablockHeaderByteLength, taskStructByteLength} from './SoftTypes.js'
 
 interface IODefinition

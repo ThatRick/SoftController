@@ -1,4 +1,5 @@
-import SoftController, { getFunction } from './SoftController.js';
+import SoftController from './SoftController.js';
+import { getFunction } from './FunctionCollection.js';
 import { datablockHeaderByteLength, taskStructByteLength } from './SoftTypes.js';
 // Create a new controller from controller blueprint
 export function loadControllerBlueprint(obj, spareDataMemSize = 0, spareDatablockCount = 0, spareTaskCount = 0) {

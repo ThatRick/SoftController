@@ -7,7 +7,7 @@ const lineStyle = {
     strokeWidth: 2,
     pointerEvents: 'visible'
 }
-
+ 
 const sizePadding = 10
 
 export interface Trace
@@ -62,6 +62,7 @@ export default class TraceLayer
         if (offsetY == 0 && offsetX > 0) {
             segments = [this.createSegment(a, b)]
         }
+        
         // 3 segments
         else if (offsetX > minOffsetX*2) {
             tx1 ??= a.x + offsetX / 2

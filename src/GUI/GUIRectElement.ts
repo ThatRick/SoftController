@@ -4,8 +4,6 @@ import GUIContainer from './GUIContainer.js'
 
 export default class GUIRectElement extends GUIElement
 {
-    children = new GUIContainer(this)
-
     isMovable = true
 
     constructor(
@@ -15,8 +13,7 @@ export default class GUIRectElement extends GUIElement
         size:   Vec2,
         style?: Partial<CSSStyleDeclaration>
     ) {
-        super(parent, elem, pos, size, style)
-
+        super(parent, elem, pos, size, style, true)
     }
 
     init(gui: IGUIView) {

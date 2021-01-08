@@ -1,8 +1,9 @@
 import { readStruct, writeStruct } from './Lib/TypedStructs.js';
+import { getIOType } from './SoftTypes.js';
 import { FunctionHeaderStruct, functionHeaderByteLength } from './SoftTypes.js';
 import { DatablockHeaderStruct, datablockHeaderByteLength } from './SoftTypes.js';
 import { TaskStruct, taskStructByteLength } from './SoftTypes.js';
-import { LogicLib } from './SoftFuncLib.js';
+import { getFunction, getFunctionName } from './FunctionCollection.js';
 const BYTES_PER_VALUE = 4;
 const BYTES_PER_REF = 4;
 /*
@@ -14,37 +15,6 @@ const BYTES_PER_REF = 4;
 */
 function alignBytes(addr, bytes = BYTES_PER_VALUE) {
     return Math.ceil(addr / bytes) * bytes;
-}
-// Load function libraries
-const functionLibraries = [
-    null,
-    LogicLib
-];
-export function getFunction(libraryID, opcode) {
-    if (libraryID < 1 || libraryID >= functionLibraries.length) {
-        console.error('Invalid function library id', libraryID);
-        return null;
-    }
-    const library = functionLibraries[libraryID];
-    if (opcode >= Object.keys(library.functions).length) {
-        console.error('Invalid function opcode', opcode);
-        return null;
-    }
-    const func = library.getFunction(opcode);
-    return func;
-}
-export function getFunctionName(libraryID, opcode) {
-    if (libraryID < 1 || libraryID >= functionLibraries.length) {
-        console.error('Invalid function library id', libraryID);
-        return null;
-    }
-    const library = functionLibraries[libraryID];
-    if (opcode >= Object.keys(library.functions).length) {
-        console.error('Invalid function opcode', opcode);
-        return null;
-    }
-    const name = library.getFunctionName(opcode);
-    return name;
 }
 const systemSectorLength = 10;
 //////////////////////////////////
@@ -416,7 +386,7 @@ export default class SoftController {
         if (circuitID) {
             this.addFunctionCall(circuitID, id, callIndex);
         }
-        console.log(`for function ${functionLibraries[library].getFunctionName(opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        console.log(`for function ${getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
         return id;
     }
     deleteFunctionBlock(id) {
@@ -527,10 +497,10 @@ export default class SoftController {
             const ioFlag = this.bytes[pointers.flags + i];
             if (inputRef > 0) {
                 let value = this.floats[inputRef];
-                if (ioFlag & 2 /* BOOLEAN */) {
+                if (getIOType(ioFlag) == 2 /* BOOL */) {
                     value = (value && 1) ^ (ioFlag & 8 /* INVERTED */ && 1);
                 }
-                else if (ioFlag & 4 /* INTEGER */) {
+                else if (getIOType(ioFlag) == 1 /* INT */) {
                     value = Math.floor(value);
                 }
                 this.floats[pointers.inputs + i] = value;
@@ -568,10 +538,10 @@ export default class SoftController {
                 const ioFlag = this.bytes[outputFlags + i];
                 if (outputRef > 0) {
                     let value = this.floats[outputRef];
-                    if (ioFlag & 2 /* BOOLEAN */) {
+                    if (getIOType(ioFlag) == 2 /* BOOL */) {
                         value = (value) ? 1 : 0;
                     }
-                    else if (ioFlag & 4 /* INTEGER */) {
+                    else if (getIOType(ioFlag) == 1 /* INT */) {
                         value = Math.floor(value);
                     }
                     this.floats[pointers.outputs + i] = value;

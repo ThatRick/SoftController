@@ -43,12 +43,12 @@ export default class GUIView implements IDOMElement, GUIPointerEventReceiver {
     get size() { return this._size }
 
     private resize() {
-        // this.DOMElement.style.width = this._size.x * this._scale.x + 'px'
-        // this.DOMElement.style.height = this._size.y * this._scale.y + 'px'
+        this.DOMElement.style.width = this._size.x * this._scale.x + 'px'
+        this.DOMElement.style.height = this._size.y * this._scale.y + 'px'
     }
 
     constructor(
-        parent: HTMLElement,
+        private parentDOM: HTMLElement,
         size: Vec2,
         scale: Vec2,
         style?: Partial<CSSStyleDeclaration>
@@ -56,15 +56,15 @@ export default class GUIView implements IDOMElement, GUIPointerEventReceiver {
         console.log('GUI Init')
 
         this.DOMElement = document.createElement('div')
-        parent.appendChild(this.DOMElement)
+        parentDOM.appendChild(this.DOMElement)
 
         const defaultStyle: Partial<CSSStyleDeclaration> = {
             position: 'relative',
             top: '0px',
             left: '0px',
-            width: '100%',
-            height: '100%',
-            overflow: 'auto'
+            //width: '100%',
+            //height: '100%',
+            //overflow: 'auto'
         }
  
         Object.assign(this.DOMElement.style, defaultStyle, style)
@@ -148,7 +148,7 @@ export default class GUIView implements IDOMElement, GUIPointerEventReceiver {
     onDragStarted = (ev: PointerEvent) => {
         // Start scrolling view
         if (ev.target == this.DOMElement) { // ev.buttons == MouseButton.MIDDLE
-            this.scrollStartPos = vec2(this.DOMElement.scrollLeft, this.DOMElement.scrollTop)
+            this.scrollStartPos = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop)
             this.isScrolling = true
             this.DOMElement.style.cursor = 'grab'
         }
@@ -161,8 +161,8 @@ export default class GUIView implements IDOMElement, GUIPointerEventReceiver {
     onDragging = (ev: PointerEvent) => {
         // Scrolling view
         if (this.isScrolling) {
-            this.DOMElement.scrollLeft = this.scrollStartPos.x - this.pointer.dragOffset.x
-            this.DOMElement.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y
+            this.parentDOM.scrollLeft = this.scrollStartPos.x - this.pointer.dragOffset.x
+            this.parentDOM.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y
         }
         // Dragging GUI element
         if (this.pointer.downTargetElem?.isMovable) {

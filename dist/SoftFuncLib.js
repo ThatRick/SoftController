@@ -1,10 +1,11 @@
 const AND = {
+    name: 'AND',
     inputs: [
-        { initValue: 1, flags: 2 /* BOOLEAN */ },
-        { initValue: 1, flags: 2 /* BOOLEAN */ }
+        { initValue: 1, flags: 2 /* BOOL */ },
+        { initValue: 1, flags: 2 /* BOOL */ }
     ],
     outputs: [
-        { initValue: 1, flags: 2 /* BOOLEAN */ }
+        { initValue: 1, flags: 2 /* BOOL */ }
     ],
     variableInputCount: { min: 2, max: 64 },
     run(params, values) {
@@ -16,12 +17,13 @@ const AND = {
     }
 };
 const OR = {
+    name: 'OR',
     inputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ },
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ },
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     outputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     variableInputCount: { min: 2, max: 64 },
     run(params, values) {
@@ -33,12 +35,13 @@ const OR = {
     }
 };
 const XOR = {
+    name: 'XOR',
     inputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ },
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ },
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     outputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     run(params, values) {
         const a = values[params.input + 0];
@@ -47,22 +50,24 @@ const XOR = {
     }
 };
 const NOT = {
+    name: 'NOT',
     inputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     outputs: [
-        { initValue: 1, flags: 2 /* BOOLEAN */ }
+        { initValue: 1, flags: 2 /* BOOL */ }
     ],
     run(params, values) {
         values[params.output] = values[params.input] ? 0 : 1;
     }
 };
 const EDGE_UP = {
+    name: '_|‾',
     inputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     outputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     staticCount: 1,
     run(params, values) {
@@ -71,11 +76,12 @@ const EDGE_UP = {
     }
 };
 const EDGE_DOWN = {
+    name: '‾|_',
     inputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     outputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     staticCount: 1,
     run(params, values) {
@@ -84,12 +90,13 @@ const EDGE_DOWN = {
     }
 };
 const RS = {
+    name: 'RS',
     inputs: [
-        { name: 'R', initValue: 0, flags: 2 /* BOOLEAN */ },
-        { name: 'S', initValue: 0, flags: 2 /* BOOLEAN */ }
+        { name: 'R', initValue: 0, flags: 2 /* BOOL */ },
+        { name: 'S', initValue: 0, flags: 2 /* BOOL */ }
     ],
     outputs: [
-        { initValue: 0, flags: 2 /* BOOLEAN */ }
+        { initValue: 0, flags: 2 /* BOOL */ }
     ],
     staticCount: 1,
     run(params, values) {

@@ -98,14 +98,32 @@ export interface IFunctionParams
     dt:             number
 }
 
+export function getIOType(flags: number) {
+    return (flags & IOTypeBitMask) as IO_TYPE
+}
+
+export function setIOType(flags: number, ioType: IO_TYPE) {
+    return (flags & ~IOTypeBitMask) | ioType
+}
+
+export const enum IO_TYPE
+{
+    REAL =  0,
+    INT =   1,
+    BOOL =  2,
+}
+
 // IO FLAGS
 export const enum IO_FLAG
 {
-    BOOLEAN =       (1 << 1),
-    INTEGER =       (1 << 2),
+    TYPE_BIT0 =     (1 << 0),
+    TYPE_BIT1 =     (1 << 1),
+    TYPE_BIT2 =     (1 << 2),
     INVERTED =      (1 << 3),
     HIDDEN =        (1 << 4)
 }
+
+const IOTypeBitMask = (IO_FLAG.TYPE_BIT0 | IO_FLAG.TYPE_BIT1 | IO_FLAG.TYPE_BIT2)
 
 interface IOInfo {
     initValue:  number
@@ -116,6 +134,7 @@ interface IOInfo {
 // FUNCTION
 export interface IFunction
 {
+    name: string
     inputs: IOInfo[]
     outputs: IOInfo[]
 

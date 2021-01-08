@@ -1,8 +1,11 @@
-import SoftController, { getFunction, getFunctionName } from './SoftController.js';
+import SoftController from './SoftController.js';
+import { getFunction, getFunctionName } from './FunctionCollection.js';
+import { getIOType } from './SoftTypes.js';
 import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js';
 import CircuitView from './CircuitView.js';
-import GUIRectElement from './GUI/GUIRectElement.js';
-import Vec2, { vec2 } from './Lib/Vector2.js';
+import { vec2 } from './Lib/Vector2.js';
+import { FunctionBlock } from './CircuitModel.js';
+import FunctionBlockElement from './FunctionBlockElement.js';
 function createTerminal(div) {
     return (text) => {
         const pre = document.createElement('pre');
@@ -32,43 +35,44 @@ const CSSGridRowHeights = {
     splitBar: 10,
     terminal: 0
 };
+/////////////////////////
+//  GUI Testing
+function testGUI(cpu, funcs) {
+    const viewSize = vec2(80, 40);
+    const viewScale = vec2(14, 20);
+    const guiContainer = document.getElementById('gui');
+    const view = new CircuitView(guiContainer, viewSize, viewScale);
+    const blocks = funcs.map(id => {
+        const header = cpu.readFunctionHeaderByID(id);
+        if (header)
+            return new FunctionBlock(undefined, header.library, header.opcode, header.inputCount, header.outputCount);
+    });
+    const margin = vec2(6, 2);
+    const area = vec2(16, 8);
+    const w = (view.size.x - margin.x * 2);
+    console.log('width', w);
+    const blockElems = blocks.map((block, i) => {
+        const n = i * area.x;
+        const row = Math.trunc(n / w);
+        const col = n - row * w;
+        const y = margin.y + row * area.y;
+        const x = margin.x + col;
+        return new FunctionBlockElement(view.children, vec2(x, y), block);
+    });
+    return view;
+}
 //////////////////////////
 //  PROGRAM ENTRY POINT
 //
 window.onload = () => {
-    /////////////////////////
-    //  GUI Testing
-    const viewSize = vec2(80, 40);
-    const viewScale = vec2(16, 24);
-    const guiContainer = document.getElementById('gui');
-    const view = new CircuitView(guiContainer, viewSize, viewScale);
-    // Populate view with random test blocks
-    const blocks = [];
-    const blockSize = vec2(6, 6);
-    for (let i = 0; i < 10; i++) {
-        const x = Math.random() * (viewSize.x - blockSize.x);
-        const y = Math.random() * (viewSize.y - blockSize.y);
-        const col = (Math.round(Math.random() * 8) + 7).toString(16);
-        const pos = vec2(x, y).round();
-        const block = new GUIRectElement(view.children, 'div', pos, blockSize, {
-            backgroundColor: '#44' + col,
-            border: '1px solid white',
-            boxSizing: 'border-box'
-        });
-        blocks.push(block);
-        if (i > 0) {
-            const outputPos = Vec2.add(blocks[i - 1].pos, vec2(blockSize.x, 1));
-            view.traceLayer.addLine(outputPos, Vec2.add(pos, vec2(-1, 1)));
-        }
-    }
-    //////////////////////////
     const terminal = createTerminal(document.getElementById('terminal'));
     const memSize = 64 * 1024; // bytes
     const cpu = new SoftController(memSize);
     window['cpu'] = cpu;
-    const funcs = createTestBlocks(cpu, 10);
-    const circId = funcs[0];
+    const funcIDs = createTestBlocks(cpu, 10);
+    const circId = funcIDs[0];
     const taskId = cpu.createTask(circId, 20, 5);
+    const view = testGUI(cpu, funcIDs);
     const interval = 10; // ms
     let ticks = 10;
     const blueprint = createControllerBlueprint(cpu);
@@ -87,7 +91,7 @@ window.onload = () => {
         terminal(taskToString(cpu, taskId));
         // print(systemSectorToString(cpu));
         // print(datablockTableToString(cpu));
-        funcs.forEach(func => terminal(functionToString(cpu, func)));
+        funcIDs.forEach(func => terminal(functionToString(cpu, func)));
     }
     createControlButtonBar([
         { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
@@ -115,7 +119,9 @@ function createTestBlocks(cpu, blockCount = 10) {
     const logicLib = 1;
     for (let i = 1; i < blockCount + 1; i++) {
         const opcode = i % maxOpcode;
-        const funcId = cpu.createFunctionBlock(logicLib, opcode, circId);
+        const funcType = getFunction(logicLib, opcode);
+        const inputCount = funcType.variableInputCount ? 2 + Math.round(Math.random() * 4) : undefined;
+        const funcId = cpu.createFunctionBlock(logicLib, opcode, circId, undefined, inputCount);
         funcs.push(funcId);
         const funcInfo = cpu.readFunctionHeaderByID(funcId);
         const sourceId = funcs[i - 1];
@@ -216,7 +222,8 @@ function functionToString(cpu, funcID) {
     }
     function ioValue(i) {
         const flags = ioFlags[i];
-        const value = (flags & (2 /* BOOLEAN */ | 4 /* INTEGER */))
+        const ioType = getIOType(flags);
+        const value = (ioType == 2 /* BOOL */ || ioType == 1 /* INT */)
             ? ioValues[i].toFixed(0)
             : ioValues[i].toPrecision(precision);
         return (i < funcHeader.inputCount) ? value.padStart(valueLen) : value.padEnd(valueLen);

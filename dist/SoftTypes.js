@@ -26,3 +26,10 @@ export const TaskStruct = {
     runCount: 5 /* uint32 */ // counts number of calls
 };
 export const taskStructByteLength = sizeOfStruct(TaskStruct);
+export function getIOType(flags) {
+    return (flags & IOTypeBitMask);
+}
+export function setIOType(flags, ioType) {
+    return (flags & ~IOTypeBitMask) | ioType;
+}
+const IOTypeBitMask = (1 /* TYPE_BIT0 */ | 2 /* TYPE_BIT1 */ | 4 /* TYPE_BIT2 */);

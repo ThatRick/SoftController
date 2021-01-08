@@ -1,12 +1,13 @@
-import {IFunction, IO_FLAG, IFunctionLibrary} from './SoftTypes.js'
+import {IFunction, IO_FLAG, IO_TYPE, IFunctionLibrary} from './SoftTypes.js'
 
 const AND: IFunction =
 {
+    name: 'AND',
     inputs: [
-        { initValue: 1, flags: IO_FLAG.BOOLEAN },
-        { initValue: 1, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 1, flags: IO_TYPE.BOOL },
+        { initValue: 1, flags: IO_TYPE.BOOL } ],
     outputs: [
-        { initValue: 1, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 1, flags: IO_TYPE.BOOL } ],
 
     variableInputCount: {min: 2, max: 64},
 
@@ -21,11 +22,12 @@ const AND: IFunction =
 
 const OR: IFunction =
 {
+    name: 'OR',
     inputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN },
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL },
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
     outputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
 
     variableInputCount: {min: 2, max: 64},
 
@@ -40,11 +42,12 @@ const OR: IFunction =
 
 const XOR: IFunction =
 {
+    name: 'XOR',
     inputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN },
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL },
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
     outputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
 
     run(params, values) {
         const a = values[params.input + 0];
@@ -56,10 +59,11 @@ const XOR: IFunction =
 
 const NOT: IFunction =
 {
+    name: 'NOT',
     inputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
     outputs: [
-        { initValue: 1, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 1, flags: IO_TYPE.BOOL } ],
 
     run(params, values) {
         values[params.output] = values[params.input] ? 0 : 1;
@@ -68,10 +72,11 @@ const NOT: IFunction =
 
 const EDGE_UP: IFunction =
 {
+    name: '_|‾',
     inputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
     outputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
 
     staticCount: 1,
 
@@ -83,10 +88,11 @@ const EDGE_UP: IFunction =
 
 const EDGE_DOWN: IFunction =
 {
+    name: '‾|_',
     inputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
     outputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
 
     staticCount: 1,
 
@@ -98,11 +104,12 @@ const EDGE_DOWN: IFunction =
 
 const RS: IFunction =
 {
+    name: 'RS',
     inputs: [
-        { name: 'R', initValue: 0, flags: IO_FLAG.BOOLEAN },
-        { name: 'S', initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { name: 'R', initValue: 0, flags: IO_TYPE.BOOL },
+        { name: 'S', initValue: 0, flags: IO_TYPE.BOOL } ],
     outputs: [
-        { initValue: 0, flags: IO_FLAG.BOOLEAN } ],
+        { initValue: 0, flags: IO_TYPE.BOOL } ],
     
     staticCount: 1,
 

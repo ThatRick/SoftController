@@ -1,10 +1,8 @@
 import { Vec2 } from './GUITypes.js';
 import GUIElement from './GUIElement.js';
-import GUIContainer from './GUIContainer.js';
 export default class GUIRectElement extends GUIElement {
     constructor(parent, elem, pos, size, style) {
-        super(parent, elem, pos, size, style);
-        this.children = new GUIContainer(this);
+        super(parent, elem, pos, size, style, true);
         this.isMovable = true;
         this.onPointerDown = (ev, pointer) => {
             this.toFront();

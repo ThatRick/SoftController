@@ -1,3 +1,4 @@
+import GUIContainer from './GUIContainer.js'
 import {IDOMElement, IGUIElement, IGUIContainer, IGUIView, GUIPointerState, Vec2} from './GUITypes.js'
 
 export default class GUIElement implements IGUIElement{
@@ -19,7 +20,8 @@ export default class GUIElement implements IGUIElement{
         elem:   HTMLElement | 'div',
         pos:    Vec2,
         size?:  Vec2,
-        style?: Partial<CSSStyleDeclaration>
+        style?: Partial<CSSStyleDeclaration>,
+        hasChildren = false
     ) {
         this._pos = pos
         this._size = size
@@ -36,18 +38,23 @@ export default class GUIElement implements IGUIElement{
         if (style) Object.assign(this.DOMElement.style, defaultStyle, style)
 
         this.parent = parent
+
+        if (hasChildren) this.children = new GUIContainer(this)
+
         if (this.parent) this.parent.attachChildElement(this)
         
-
     }
 
     init(gui: IGUIView): void
     {
         this.gui = gui
-        console.log('GUIElement init')
+        if (this.onInit) setTimeout(() => this.onInit(gui))
+        console.log('GUIElement init, children:', this.children)
         this.children?.init(gui)
         this.update(gui, true)
     }
+
+    onInit?(gui: IGUIView): void
 
     update(gui: IGUIView, force?: boolean)
     {
@@ -63,17 +70,20 @@ export default class GUIElement implements IGUIElement{
             this.DOMElement.style.width =   this._sizeScaled.x + 'px'
             this.DOMElement.style.height =  this._sizeScaled.y + 'px'
         }
+        this.onUpdate?.(gui)
         return false
     }
+
+    onUpdate?(gui: IGUIView): void
 
     requestUpdate() {
         if (this.gui) this.gui.requestElementUpdate(this)
     }
 
     // Position
-    private _pos: Vec2
-    private _posScaled: Vec2
-    private _posHasChanged = false
+    protected _pos: Vec2
+    protected _posScaled: Vec2
+    protected _posHasChanged = false
 
     set pos(p: Vec2) {
         if (this._pos.equal(p)) return
@@ -91,9 +101,9 @@ export default class GUIElement implements IGUIElement{
     }
 
     // Size
-    private _size: Vec2
-    private _sizeScaled: Vec2
-    private _sizeHasChanged = false
+    protected _size: Vec2
+    protected _sizeScaled: Vec2
+    protected _sizeHasChanged = false
 
     set size(s: Vec2) {
         if (this._size.equal(s)) return

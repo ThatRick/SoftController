@@ -1,11 +1,10 @@
 
 import {readStruct, setStructElement, writeStruct} from './Lib/TypedStructs.js'
-import {ID, IORef, IO_FLAG, DatablockType, IFunction} from './SoftTypes.js'
+import {ID, IORef, IO_FLAG, IO_TYPE, getIOType, setIOType, DatablockType, IFunction} from './SoftTypes.js'
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionParams} from './SoftTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from './SoftTypes.js'
 import {ITask, TaskStruct, taskStructByteLength} from './SoftTypes.js'
-import {IFunctionLibrary} from './SoftTypes.js'
-import {LogicLib} from './SoftFuncLib.js'
+import {getFunction, getFunctionName} from './FunctionCollection.js'
 
 const BYTES_PER_VALUE = 4
 const BYTES_PER_REF = 4
@@ -17,44 +16,9 @@ const BYTES_PER_REF = 4
     Data sector:                        (Data Blocks)
 */
 
-
 function alignBytes(addr: number, bytes = BYTES_PER_VALUE) {
     return Math.ceil(addr / bytes) * bytes;
 }
-
-// Load function libraries
-const functionLibraries: IFunctionLibrary[] = [
-    null,
-    LogicLib
-]
-
-export function getFunction(libraryID: number, opcode: number): IFunction
-{
-    if (libraryID < 1 || libraryID >= functionLibraries.length) {
-        console.error('Invalid function library id', libraryID); return null;
-    }
-    const library = functionLibraries[libraryID];
-
-    if (opcode >= Object.keys(library.functions).length) {
-        console.error('Invalid function opcode', opcode); return null;
-    }
-    const func = library.getFunction(opcode); 
-    return func;
-}
-
-export function getFunctionName(libraryID: number, opcode: number): string {
-    if (libraryID < 1 || libraryID >= functionLibraries.length) {
-        console.error('Invalid function library id', libraryID); return null;
-    }
-    const library = functionLibraries[libraryID];
-
-    if (opcode >= Object.keys(library.functions).length) {
-        console.error('Invalid function opcode', opcode); return null;
-    }
-    const name = library.getFunctionName(opcode); 
-    return name;    
-}
-
 
 // SYSTEM SECTOR [array of uint32]
 const enum SystemSector {
@@ -538,7 +502,7 @@ export default class SoftController
             this.addFunctionCall(circuitID, id, callIndex);
         }
 
-        console.log(`for function ${functionLibraries[library].getFunctionName(opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        console.log(`for function ${getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
 
         return id;
     }
@@ -667,10 +631,10 @@ export default class SoftController
             const ioFlag = this.bytes[pointers.flags + i];
             if (inputRef > 0) {
                 let value = this.floats[inputRef];
-                if (ioFlag & IO_FLAG.BOOLEAN) {
+                if (getIOType(ioFlag) == IO_TYPE.BOOL) {
                     value = (value && 1) ^ (ioFlag & IO_FLAG.INVERTED && 1)
                 }
-                else if (ioFlag & IO_FLAG.INTEGER) {
+                else if (getIOType(ioFlag) == IO_TYPE.INT) {
                     value = Math.floor(value)
                 }
                 this.floats[pointers.inputs + i] = value;
@@ -714,10 +678,10 @@ export default class SoftController
                 const ioFlag = this.bytes[outputFlags + i];
                 if (outputRef > 0) {
                     let value = this.floats[outputRef];
-                    if (ioFlag & IO_FLAG.BOOLEAN) {
+                    if (getIOType(ioFlag) == IO_TYPE.BOOL) {
                         value = (value) ? 1 : 0;
                     }
-                    else if (ioFlag & IO_FLAG.INTEGER) {
+                    else if (getIOType(ioFlag) == IO_TYPE.INT) {
                         value = Math.floor(value)
                     }
                     this.floats[pointers.outputs + i] = value;

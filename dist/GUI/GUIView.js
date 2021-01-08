@@ -2,7 +2,8 @@ import CreatePointerHandlers from './GUIPointerEventHandler.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 export default class GUIView {
-    constructor(parent, size, scale, style) {
+    constructor(parentDOM, size, scale, style) {
+        this.parentDOM = parentDOM;
         this.DOMElements = new Map();
         this.updateRequests = new Set();
         this.pos = vec2(0, 0);
@@ -11,7 +12,7 @@ export default class GUIView {
         this.onDragStarted = (ev) => {
             // Start scrolling view
             if (ev.target == this.DOMElement) { // ev.buttons == MouseButton.MIDDLE
-                this.scrollStartPos = vec2(this.DOMElement.scrollLeft, this.DOMElement.scrollTop);
+                this.scrollStartPos = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop);
                 this.isScrolling = true;
                 this.DOMElement.style.cursor = 'grab';
             }
@@ -24,8 +25,8 @@ export default class GUIView {
         this.onDragging = (ev) => {
             // Scrolling view
             if (this.isScrolling) {
-                this.DOMElement.scrollLeft = this.scrollStartPos.x - this.pointer.dragOffset.x;
-                this.DOMElement.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y;
+                this.parentDOM.scrollLeft = this.scrollStartPos.x - this.pointer.dragOffset.x;
+                this.parentDOM.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y;
             }
             // Dragging GUI element
             if (this.pointer.downTargetElem?.isMovable) {
@@ -48,14 +49,11 @@ export default class GUIView {
         };
         console.log('GUI Init');
         this.DOMElement = document.createElement('div');
-        parent.appendChild(this.DOMElement);
+        parentDOM.appendChild(this.DOMElement);
         const defaultStyle = {
             position: 'relative',
             top: '0px',
             left: '0px',
-            width: '100%',
-            height: '100%',
-            overflow: 'auto'
         };
         Object.assign(this.DOMElement.style, defaultStyle, style);
         this._size = size;
@@ -84,8 +82,8 @@ export default class GUIView {
     }
     get size() { return this._size; }
     resize() {
-        // this.DOMElement.style.width = this._size.x * this._scale.x + 'px'
-        // this.DOMElement.style.height = this._size.y * this._scale.y + 'px'
+        this.DOMElement.style.width = this._size.x * this._scale.x + 'px';
+        this.DOMElement.style.height = this._size.y * this._scale.y + 'px';
     }
     update(force = false) {
         if (force) {

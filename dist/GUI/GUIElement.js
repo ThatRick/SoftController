@@ -1,9 +1,10 @@
+import GUIContainer from './GUIContainer.js';
 import { Vec2 } from './GUITypes.js';
 export default class GUIElement {
     ////////////////////////////
     //      Constructor
     ////////////////////////////
-    constructor(parent, elem, pos, size, style) {
+    constructor(parent, elem, pos, size, style, hasChildren = false) {
         this._posHasChanged = false;
         this._sizeHasChanged = false;
         this._pos = pos;
@@ -20,12 +21,16 @@ export default class GUIElement {
         if (style)
             Object.assign(this.DOMElement.style, defaultStyle, style);
         this.parent = parent;
+        if (hasChildren)
+            this.children = new GUIContainer(this);
         if (this.parent)
             this.parent.attachChildElement(this);
     }
     init(gui) {
         this.gui = gui;
-        console.log('GUIElement init');
+        if (this.onInit)
+            setTimeout(() => this.onInit(gui));
+        console.log('GUIElement init, children:', this.children);
         this.children?.init(gui);
         this.update(gui, true);
     }
@@ -42,6 +47,7 @@ export default class GUIElement {
             this.DOMElement.style.width = this._sizeScaled.x + 'px';
             this.DOMElement.style.height = this._sizeScaled.y + 'px';
         }
+        this.onUpdate?.(gui);
         return false;
     }
     requestUpdate() {
