@@ -1,5 +1,6 @@
-import {getFunction, getFunctionName} from './FunctionCollection.js'
-import { IFunction, IO_FLAG, IO_TYPE, getIOType, setIOType } from './SoftTypes.js'
+import {getFunction, getFunctionName} from '../SoftController/FunctionCollection.js'
+import { IFunction, IO_FLAG, IO_TYPE, getIOType, setIOType } from '../SoftController/SoftTypes.js'
+import { PinType } from './CircuitTypes.js'
 
 type ID = number
 
@@ -9,7 +10,7 @@ interface IO_REF
     ioNum:      number
 }
 
-export class FunctionBlockIO
+export abstract class FunctionBlockIO
 {
     constructor(
         public readonly funcBlock: FunctionBlock,
@@ -17,6 +18,7 @@ export class FunctionBlockIO
         ioNum: number,
         flags: number,
         value: number,
+        pinType: PinType,
         public readonly isCircuitIO = false
     ) {
         this._name = name
@@ -25,8 +27,10 @@ export class FunctionBlockIO
         this._type = getIOType(flags)
         this._value = value
         this.initValue = value
+        this.pinType = pinType
     }
 
+    readonly pinType: PinType
     _name: string
     _ioNum: number
     _flags: number
@@ -35,6 +39,7 @@ export class FunctionBlockIO
 
     readonly initValue: number
 
+    get name()  { return this._name }
     get ioNum() { return this._ioNum }
     get type()  { return this._type }
     get value() { return this._value }
@@ -59,7 +64,7 @@ export class Input extends FunctionBlockIO
         isCircuitIO = false,
         ref: IO_REF = undefined,
     ) {
-        super(funcBlock, name, ioNum, flags, value, isCircuitIO)
+        super(funcBlock, name, ioNum, flags, value, 'input', isCircuitIO)
 
         this._ref = ref
         this._inverted = !!(flags & IO_FLAG.INVERTED)
@@ -80,7 +85,7 @@ export class Output extends FunctionBlockIO
         value: number,
         isCircuitIO = false,
     ) {
-        super(funcBlock, name, ioNum, flags, value, isCircuitIO)
+        super(funcBlock, name, ioNum, flags, value, 'output', isCircuitIO)
     }
 }
 

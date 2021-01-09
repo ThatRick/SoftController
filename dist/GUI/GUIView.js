@@ -4,7 +4,7 @@ import GUIContainer from './GUIContainer.js';
 export default class GUIView {
     constructor(parentDOM, size, scale, style) {
         this.parentDOM = parentDOM;
-        this.DOMElements = new Map();
+        this.eventTargetMap = new Map();
         this.updateRequests = new Set();
         this.pos = vec2(0, 0);
         this.absPos = vec2(0, 0);
@@ -109,16 +109,16 @@ export default class GUIView {
     //     Element handling
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     registerElement(elem) {
-        this.DOMElements.set(elem.DOMElement, elem);
+        this.eventTargetMap.set(elem.DOMElement, elem);
     }
     unregisterElement(elem) {
-        this.DOMElements.delete(elem.DOMElement);
+        this.eventTargetMap.delete(elem.DOMElement);
     }
     requestElementUpdate(elem) {
         this.updateRequests.add(elem);
     }
     getPointerTargetElem(ev) {
-        return this.DOMElements.get(ev.target);
+        return this.eventTargetMap.get(ev.target);
     }
     endScrolling() {
         if (this.isScrolling) {

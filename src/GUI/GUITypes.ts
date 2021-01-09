@@ -21,7 +21,6 @@ export interface GUIPointerState
     upPos:              Vec2  
 }
 
-
 export interface GUIPointerEventReceiver extends GUIPointerEventHandler
 {
     DOMElement: HTMLElement

@@ -1,4 +1,4 @@
-import Vec2, {vec2} from './Lib/Vector2.js'
+import Vec2, {vec2} from '../Lib/Vector2.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
 

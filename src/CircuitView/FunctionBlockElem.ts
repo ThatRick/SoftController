@@ -1,25 +1,30 @@
-import GUIElement from './GUI/GUIElement.js'
-import { IGUIContainer, IGUIView } from './GUI/GUITypes.js'
-import Vec2, {vec2} from './Lib/Vector2.js'
+import GUIElement from '../GUI/GUIElement.js'
+import { IGUIContainer, IGUIView } from '../GUI/GUITypes.js'
+import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock } from './CircuitModel.js'
-import { Table } from './Lib/HTML.js'
-import FunctionBlockIOPin from './FunctionBlockIOPin.js'
+import CircuitView from './CircuitView.js'
+import { Table } from '../Lib/HTML.js'
+import FunctionBlockPinElem from './FunctionBlockPinElem.js'
+import { CircuitElement, ElementType } from './CircuitTypes.js'
 
-export default class FunctionBlockElement extends GUIElement
+export default class FunctionBlockElem extends GUIElement implements CircuitElement
 {
     static isMinimal(func: FunctionBlock) {
         return (func.inputs[0]._name == undefined)
     }
 
     static getBlockSize(func: FunctionBlock) {
-        const w = (FunctionBlockElement.isMinimal(func) || !func.outputs?.[0]?._name) ? 4 : 6
+        const w = (FunctionBlockElem.isMinimal(func) || !func.outputs?.[0]?._name) ? 4 : 6
         const h = Math.max(func.inputs.length, func.outputs.length)
         return vec2(w, h)
     }
 
+    type: ElementType = 'block'
+    id: number
+
     constructor(circuitView: IGUIContainer, pos: Vec2, funcBlock: FunctionBlock)
     {
-        super(circuitView, 'div', pos, FunctionBlockElement.getBlockSize(funcBlock), {
+        super(circuitView, 'div', pos, FunctionBlockElem.getBlockSize(funcBlock), {
             backgroundColor: '#448',
             color: 'white',
             boxSizing: 'border-box',
@@ -27,8 +32,9 @@ export default class FunctionBlockElement extends GUIElement
             userSelect: 'none'
         }, true)
         
+        this.id = funcBlock.id
         this.func = funcBlock
-        this.isMinimal = FunctionBlockElement.isMinimal(funcBlock)
+        this.isMinimal = FunctionBlockElem.isMinimal(funcBlock)
     }
 
     isMovable = true
@@ -36,10 +42,10 @@ export default class FunctionBlockElement extends GUIElement
     isMinimal: boolean
     IONameTable: Table
 
-    inputPins: FunctionBlockIOPin[] = []
-    outputPins: FunctionBlockIOPin[] = []
+    inputPins: FunctionBlockPinElem[] = []
+    outputPins: FunctionBlockPinElem[] = []
 
-    onInit(gui: IGUIView) {
+    onInit(gui: CircuitView) {
 
         Object.assign(this.DOMElement.style, {
             fontSize: Math.round(gui.scale.y * 0.65)+'px'
@@ -49,22 +55,17 @@ export default class FunctionBlockElement extends GUIElement
         this.createPins(gui)
     }
 
-    createPins(gui) {
-        const size = vec2(0.5, 0.2)
-        const yOffset = 0.5 - size.y / 2
-        const inputPinOffset = vec2(1-size.x, yOffset)
-        const outputPinOffset = vec2(0, yOffset)
+    createPins(gui: CircuitView) {
+
         this.func.inputs.forEach((input, i) => {
-            const pos = vec2(-1, i).add(inputPinOffset)
-            this.inputPins[i] = new FunctionBlockIOPin(this.children, input, pos, size)
+            this.inputPins[i] = new FunctionBlockPinElem(this.children, input, vec2(-1, i))
         })
         this.func.outputs.forEach((output, i) => {
-            const pos = vec2(this.size.x, i).add(outputPinOffset)
-            this.outputPins[i] = new FunctionBlockIOPin(this.children, output, pos, size)
+            this.outputPins[i] = new FunctionBlockPinElem(this.children, output, vec2(this.size.x, i))
         })
     }
 
-    createNames(gui) {
+    createNames(gui: CircuitView) {
         if (this.isMinimal) {
             this.DOMElement.textContent = this.func.name
             Object.assign(this.DOMElement.style, {

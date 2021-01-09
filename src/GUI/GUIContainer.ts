@@ -1,10 +1,10 @@
 import {IDOMElement, IGUIElement, IGUIContainer, IGUIView} from './GUITypes.js'
 
-export default class GUIContainer implements IGUIContainer
+export default class GUIContainer<T extends IGUIElement> implements IGUIContainer
 {
     DOMElement: HTMLElement
-    elements = new Set<IGUIElement>()
-    uninitializedElements = new Set<IGUIElement>()
+    elements = new Set<T>()
+    uninitializedElements = new Set<T>()
 
     gui: IGUIView
 
@@ -17,7 +17,7 @@ export default class GUIContainer implements IGUIContainer
     get absPos() { return this.parent.absPos }
     get size() { return this.parent.size }
 
-    attachChildElement(elem: IGUIElement) {
+    attachChildElement(elem: T) {
         this.DOMElement.appendChild(elem.DOMElement)
         this.elements.add(elem)
         elem.parent = this
@@ -28,7 +28,7 @@ export default class GUIContainer implements IGUIContainer
             this.uninitializedElements.add(elem)  
     }
 
-    removeChildElement(elem: IGUIElement) {
+    removeChildElement(elem: T) {
         if (!this.gui) {
             this.uninitializedElements.delete(elem)            
             return

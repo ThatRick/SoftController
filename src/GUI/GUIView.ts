@@ -1,4 +1,4 @@
-import { IGUIContainer, IGUIElement, GUIPointerEventReceiver, GUIPointerState, IDOMElement } from './GUITypes.js'
+import { IGUIContainer, IGUIElement, GUIPointerEventReceiver, GUIPointerState, IDOMElement, IGUIView } from './GUITypes.js'
 import CreatePointerHandlers from './GUIPointerEventHandler.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
@@ -9,14 +9,14 @@ const enum MouseButton {
     MIDDLE = 4
 }
 
-export default class GUIView implements IDOMElement, GUIPointerEventReceiver { 
+export default class GUIView<T extends IGUIElement> implements IDOMElement, GUIPointerEventReceiver, IGUIView { 
 
     DOMElement: HTMLElement
 
-    children: GUIContainer
+    children: GUIContainer<T>
 
-    DOMElements = new Map<EventTarget, IGUIElement>()
-    updateRequests = new Set<IGUIElement>()
+    eventTargetMap = new Map<EventTarget, T>()
+    updateRequests = new Set<T>()
     
     private _scale: Vec2
     private _size: Vec2
@@ -62,9 +62,6 @@ export default class GUIView implements IDOMElement, GUIPointerEventReceiver {
             position: 'relative',
             top: '0px',
             left: '0px',
-            //width: '100%',
-            //height: '100%',
-            //overflow: 'auto'
         }
  
         Object.assign(this.DOMElement.style, defaultStyle, style)
@@ -113,15 +110,15 @@ export default class GUIView implements IDOMElement, GUIPointerEventReceiver {
     //     Element handling
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-    registerElement(elem: IGUIElement) {
-        this.DOMElements.set(elem.DOMElement, elem)
+    registerElement(elem: T) {
+        this.eventTargetMap.set(elem.DOMElement, elem)
     }
 
-    unregisterElement(elem: IGUIElement) {
-        this.DOMElements.delete(elem.DOMElement)
+    unregisterElement(elem: T) {
+        this.eventTargetMap.delete(elem.DOMElement)
     }
 
-    requestElementUpdate(elem: IGUIElement) {
+    requestElementUpdate(elem: T) {
         this.updateRequests.add(elem)
     }
 
@@ -132,7 +129,7 @@ export default class GUIView implements IDOMElement, GUIPointerEventReceiver {
     pointer: GUIPointerState
 
     getPointerTargetElem(ev: PointerEvent) {
-        return this.DOMElements.get(ev.target)
+        return this.eventTargetMap.get(ev.target)
     }
 
     scrollStartPos: Vec2

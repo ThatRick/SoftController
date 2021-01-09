@@ -1,11 +1,11 @@
-import SoftController from './SoftController.js';
-import { getFunction, getFunctionName } from './FunctionCollection.js';
-import { getIOType } from './SoftTypes.js';
-import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js';
-import CircuitView from './CircuitView.js';
+import SoftController from './SoftController/SoftController.js';
+import { getFunction, getFunctionName } from './SoftController/FunctionCollection.js';
+import { getIOType } from './SoftController/SoftTypes.js';
+import { createControllerBlueprint, loadControllerBlueprint } from './SoftController/SoftSerializer.js';
+import CircuitView from './CircuitView/CircuitView.js';
 import { vec2 } from './Lib/Vector2.js';
-import { FunctionBlock } from './CircuitModel.js';
-import FunctionBlockElement from './FunctionBlockElement.js';
+import { FunctionBlock } from './CircuitView/CircuitModel.js';
+import FunctionBlockElem from './CircuitView/FunctionBlockElem.js';
 function createTerminal(div) {
     return (text) => {
         const pre = document.createElement('pre');
@@ -57,7 +57,7 @@ function testGUI(cpu, funcs) {
         const col = n - row * w;
         const y = margin.y + row * area.y;
         const x = margin.x + col;
-        return new FunctionBlockElement(view.children, vec2(x, y), block);
+        return new FunctionBlockElem(view.children, vec2(x, y), block);
     });
     return view;
 }

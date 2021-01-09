@@ -1,13 +1,11 @@
-import SoftController from './SoftController.js'
-import { getFunction, getFunctionName } from './FunctionCollection.js'
-import { DatablockType, IO_FLAG, IO_TYPE, getIOType } from './SoftTypes.js';
-import { createControllerBlueprint, loadControllerBlueprint } from './SoftSerializer.js'
-import GUIView from './GUI/GUIView.js'
-import CircuitView from './CircuitView.js'
-import GUIRectElement from './GUI/GUIRectElement.js';
+import SoftController from './SoftController/SoftController.js'
+import { getFunction, getFunctionName } from './SoftController/FunctionCollection.js'
+import { DatablockType, IO_FLAG, IO_TYPE, getIOType } from './SoftController/SoftTypes.js';
+import { createControllerBlueprint, loadControllerBlueprint } from './SoftController/SoftSerializer.js'
+import CircuitView from './CircuitView/CircuitView.js'
 import Vec2, {vec2} from './Lib/Vector2.js'
-import { FunctionBlock } from './CircuitModel.js';
-import FunctionBlockElement from './FunctionBlockElement.js';
+import { FunctionBlock } from './CircuitView/CircuitModel.js';
+import FunctionBlockElem from './CircuitView/FunctionBlockElem.js';
 
 function createTerminal(div: HTMLElement) {
     return (text: string) => {
@@ -69,7 +67,7 @@ function testGUI(cpu: SoftController, funcs: number[]) {
         const col = n - row * w
         const y = margin.y + row * area.y
         const x = margin.x + col
-        return new FunctionBlockElement(view.children, vec2(x, y), block)
+        return new FunctionBlockElem(view.children, vec2(x, y), block)
     })
 
     return view
