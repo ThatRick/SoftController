@@ -17,4 +17,12 @@ export default class CircuitView extends GUIView<CircuitElement>
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale)
     }
 
+    onPointerDown = (ev: PointerEvent) => {
+        const elem = this.pointer.downTargetElem
+        elem && console.log('Clicked on', {
+            type: elem.type,
+            id: elem.id,
+            pos: elem.absPos.toString()
+        })
+    }
 }

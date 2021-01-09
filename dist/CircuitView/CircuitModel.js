@@ -36,12 +36,13 @@ export class Output extends FunctionBlockIO {
     }
 }
 export class FunctionBlock {
-    constructor(circuit, library, opcode, numInputs = 0, numOutputs = 0) {
+    constructor(circuit, library, opcode, numInputs = 0, numOutputs = 0, id) {
         this.circuit = circuit;
         this.library = library;
         this.opcode = opcode;
         this.inputs = [];
         this.outputs = [];
+        this.id = id;
         if (library) {
             this.func = getFunction(library, opcode);
             this.name = this.func.name;

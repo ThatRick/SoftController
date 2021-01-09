@@ -5,7 +5,6 @@ import FunctionBlockPinElem from './FunctionBlockPinElem.js';
 export default class FunctionBlockElem extends GUIElement {
     constructor(circuitView, pos, funcBlock) {
         super(circuitView, 'div', pos, FunctionBlockElem.getBlockSize(funcBlock), {
-            backgroundColor: '#448',
             color: 'white',
             boxSizing: 'border-box',
             fontFamily: 'monospace',
@@ -23,7 +22,12 @@ export default class FunctionBlockElem extends GUIElement {
             pos.div(this.gui.scale).round().mul(this.gui.scale);
             this.pos = Vec2.round(this.pos);
         };
-        this.id = funcBlock.id;
+        this.onPointerEnter = () => {
+            this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
+        };
+        this.onPointerLeave = () => {
+            this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
+        };
         this.func = funcBlock;
         this.isMinimal = FunctionBlockElem.isMinimal(funcBlock);
     }
@@ -35,8 +39,10 @@ export default class FunctionBlockElem extends GUIElement {
         const h = Math.max(func.inputs.length, func.outputs.length);
         return vec2(w, h);
     }
+    get id() { return this.func.id; }
     onInit(gui) {
-        Object.assign(this.DOMElement.style, {
+        this.setStyle({
+            backgroundColor: this.gui.style.colorBlock,
             fontSize: Math.round(gui.scale.y * 0.65) + 'px'
         });
         this.createNames(gui);
@@ -53,7 +59,7 @@ export default class FunctionBlockElem extends GUIElement {
     createNames(gui) {
         if (this.isMinimal) {
             this.DOMElement.textContent = this.func.name;
-            Object.assign(this.DOMElement.style, {
+            this.setStyle({
                 textAlign: 'center',
                 verticalAlign: 'middle',
                 lineHeight: this._sizeScaled.y + 'px'

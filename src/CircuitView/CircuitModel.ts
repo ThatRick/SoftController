@@ -97,7 +97,9 @@ export class FunctionBlock
         public readonly opcode: number,
         numInputs = 0,
         numOutputs = 0,
+        id: number
     ) {
+        this.id = id
         if (library) {
             this.func = getFunction(library, opcode)
             this.name = this.func.name

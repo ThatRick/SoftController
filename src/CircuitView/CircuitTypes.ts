@@ -1,4 +1,5 @@
 import GUIElement from '../GUI/GUIElement.js'
+import CircuitView from './CircuitView.js'
 
 export type ElementType = 'block' | 'input' | 'output' | 'traceSegment'
 
@@ -8,6 +9,7 @@ export interface CircuitElement extends GUIElement
 {
     type:   ElementType
     id:     number
+    gui:    CircuitView
 }
 
 export interface CircuitStyle
@@ -22,8 +24,8 @@ export interface CircuitStyle
 export const defaultStyle: CircuitStyle =
 {
     colorBackground:    '#224',
-    colorBlock:         '#446',
-    colorBlockHover:    '#556',
+    colorBlock:         '#447',
+    colorBlockHover:    '#558',
     colorPin:           '#555',
-    colorPinHover:      '#666',
+    colorPinHover:      '#888',
 }

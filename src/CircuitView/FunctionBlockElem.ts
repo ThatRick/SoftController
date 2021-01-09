@@ -20,19 +20,18 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
     }
 
     type: ElementType = 'block'
-    id: number
+    get id(): number { return this.func.id }
+    gui: CircuitView
 
     constructor(circuitView: IGUIContainer, pos: Vec2, funcBlock: FunctionBlock)
     {
         super(circuitView, 'div', pos, FunctionBlockElem.getBlockSize(funcBlock), {
-            backgroundColor: '#448',
             color: 'white',
             boxSizing: 'border-box',
             fontFamily: 'monospace',
             userSelect: 'none'
         }, true)
         
-        this.id = funcBlock.id
         this.func = funcBlock
         this.isMinimal = FunctionBlockElem.isMinimal(funcBlock)
     }
@@ -47,9 +46,10 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
 
     onInit(gui: CircuitView) {
 
-        Object.assign(this.DOMElement.style, {
+        this.setStyle({
+            backgroundColor: this.gui.style.colorBlock,
             fontSize: Math.round(gui.scale.y * 0.65)+'px'
-        } as Partial<CSSStyleDeclaration>)
+        })
 
         this.createNames(gui)
         this.createPins(gui)
@@ -68,11 +68,11 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
     createNames(gui: CircuitView) {
         if (this.isMinimal) {
             this.DOMElement.textContent = this.func.name
-            Object.assign(this.DOMElement.style, {
+            this.setStyle({
                 textAlign: 'center',
                 verticalAlign: 'middle',
                 lineHeight: this._sizeScaled.y + 'px'
-            } as Partial<CSSStyleDeclaration>)
+            })
         }
         else {
             const [INPUT, OUTPUT] = [0, 1]
@@ -117,5 +117,12 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
         const pos = this.pos.copy()
         pos.div(this.gui.scale).round().mul(this.gui.scale)
         this.pos = Vec2.round(this.pos)
+    }
+
+    onPointerEnter = () => {
+        this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover
+    }
+    onPointerLeave = () => {
+        this.DOMElement.style.backgroundColor = this.gui.style.colorBlock
     }
 }

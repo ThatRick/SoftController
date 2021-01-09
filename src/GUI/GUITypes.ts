@@ -3,14 +3,14 @@ import Vec2 from '../Lib/Vector2.js'
 
 export {Vec2}
 
-export interface GUIPointerState
+export interface GUIPointerState<T extends IGUIElement>
 {
     isDown:             boolean
     isDragging:         boolean
 
     eventTarget:        EventTarget
-    targetElem:         IGUIElement
-    downTargetElem:     IGUIElement
+    targetElem:         T
+    downTargetElem:     T
     
     dragHyst:           number
     dragOffset:         Vec2
@@ -21,16 +21,7 @@ export interface GUIPointerState
     upPos:              Vec2  
 }
 
-export interface GUIPointerEventReceiver extends GUIPointerEventHandler
-{
-    DOMElement: HTMLElement
-    pointer: GUIPointerState
-    scale: Vec2
-
-    getPointerTargetElem?: (ev) => IGUIElement
-}
-
-type EventHandlerFn = (ev: PointerEvent, pointer?: GUIPointerState) => void
+export type EventHandlerFn = (ev: PointerEvent, pointer?: GUIPointerState<IGUIElement>) => void
 
 export interface GUIPointerEventHandler
 {

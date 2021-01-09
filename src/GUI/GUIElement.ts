@@ -9,7 +9,7 @@ export default class GUIElement implements IGUIElement{
 
     isMovable: boolean
 
-    protected gui: IGUIView
+    gui: IGUIView
 
 
     ////////////////////////////
@@ -35,7 +35,7 @@ export default class GUIElement implements IGUIElement{
         const defaultStyle: Partial<CSSStyleDeclaration> = {
             position: 'absolute'
         }
-        if (style) Object.assign(this.DOMElement.style, defaultStyle, style)
+        Object.assign(this.DOMElement.style, defaultStyle, style)
 
         this.parent = parent
 
@@ -113,14 +113,18 @@ export default class GUIElement implements IGUIElement{
     }
     get size() { return this._size?.copy() }
 
-    // Event receivers
-    onPointerEnter?: (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onPointerLeave?: (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onPointerDown?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onPointerMove?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onPointerUp?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onClicked?:      (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onDragStarted?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onDragging?:     (ev: PointerEvent, pointer?: GUIPointerState) => void
-    onDragEnded?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
+    setStyle(style: Partial<CSSStyleDeclaration>) {
+        Object.assign(this.DOMElement.style, style)
+    }
+
+    // // Event receivers
+    // onPointerEnter?: (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // onPointerLeave?: (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // onPointerDown?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // onPointerMove?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // onPointerUp?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // onClicked?:      (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // onDragStarted?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // onDragging?:     (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // onDragEnded?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
 }

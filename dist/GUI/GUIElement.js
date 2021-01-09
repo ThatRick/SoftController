@@ -18,8 +18,7 @@ export default class GUIElement {
         const defaultStyle = {
             position: 'absolute'
         };
-        if (style)
-            Object.assign(this.DOMElement.style, defaultStyle, style);
+        Object.assign(this.DOMElement.style, defaultStyle, style);
         this.parent = parent;
         if (hasChildren)
             this.children = new GUIContainer(this);
@@ -76,4 +75,7 @@ export default class GUIElement {
         this.requestUpdate();
     }
     get size() { return this._size?.copy(); }
+    setStyle(style) {
+        Object.assign(this.DOMElement.style, style);
+    }
 }

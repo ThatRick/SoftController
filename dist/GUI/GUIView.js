@@ -1,4 +1,3 @@
-import CreatePointerHandlers from './GUIPointerEventHandler.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 export default class GUIView {
@@ -8,6 +7,22 @@ export default class GUIView {
         this.updateRequests = new Set();
         this.pos = vec2(0, 0);
         this.absPos = vec2(0, 0);
+        //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+        //   Pointer events
+        //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+        this.pointer = {
+            isDown: false,
+            isDragging: false,
+            eventTarget: undefined,
+            targetElem: undefined,
+            downTargetElem: undefined,
+            dragHyst: 2,
+            dragOffset: undefined,
+            dragTargetInitPos: undefined,
+            pos: vec2(0),
+            downPos: vec2(0),
+            upPos: vec2(0)
+        };
         this.isScrolling = false;
         this.onDragStarted = (ev) => {
             // Start scrolling view
@@ -60,7 +75,7 @@ export default class GUIView {
         this._scale = scale;
         this.resize();
         this.children = new GUIContainer(this);
-        CreatePointerHandlers(this);
+        this.setupPointerHandlers();
         this.setup();
         this.children.init(this);
         requestAnimationFrame(this.update.bind(this));
@@ -125,5 +140,67 @@ export default class GUIView {
             this.isScrolling = false;
             this.DOMElement.style.cursor = 'default';
         }
+    }
+    setupPointerHandlers() {
+        // Pointer down
+        this.DOMElement.onpointerdown = ev => {
+            ev.preventDefault();
+            this.pointer.isDown = true;
+            this.pointer.downPos.set(ev.x, ev.y);
+            this.pointer.eventTarget = ev.target;
+            this.pointer.targetElem = this.getPointerTargetElem?.(ev);
+            this.pointer.downTargetElem = this.pointer.targetElem;
+            this.pointer.targetElem?.onPointerDown?.(ev, this.pointer);
+            this.onPointerDown?.(ev);
+        };
+        // Pointer move
+        this.DOMElement.onpointermove = ev => {
+            ev.preventDefault();
+            this.pointer.pos.set(ev.x, ev.y);
+            // Only find target GUI Element if Event Target has changed
+            if (ev.target != this.pointer.eventTarget) {
+                this.pointer.eventTarget = ev.target;
+                this.pointer.targetElem?.onPointerLeave?.(ev, this.pointer);
+                this.pointer.targetElem = this.getPointerTargetElem?.(ev);
+                this.pointer.targetElem?.onPointerEnter?.(ev, this.pointer);
+            }
+            this.pointer.targetElem?.onPointerMove?.(ev, this.pointer);
+            this.onPointerMove?.(ev);
+            // Check if user is dragging
+            if (this.pointer.isDown) {
+                this.pointer.dragOffset = Vec2.sub(this.pointer.pos, this.pointer.downPos);
+                const pointerIsDragging = this.pointer.isDragging || this.pointer.dragOffset.len() > this.pointer.dragHyst;
+                // Drag started
+                if (pointerIsDragging && !this.pointer.isDragging) {
+                    this.pointer.isDragging = true;
+                    this.onDragStarted?.(ev);
+                }
+                // Dragging
+                if (this.pointer.isDragging) {
+                    this.onDragging?.(ev);
+                }
+            }
+        };
+        // Pointer up
+        this.DOMElement.onpointerup = ev => {
+            ev.preventDefault();
+            this.pointer.isDown = false;
+            this.pointer.upPos = vec2(ev.x, ev.y);
+            this.pointer.eventTarget = ev.target;
+            this.pointer.targetElem = this.getPointerTargetElem?.(ev);
+            this.onPointerUp?.(ev);
+            // Clicked
+            if (!this.pointer.isDragging) {
+                this.onClicked?.(ev);
+                if (this.pointer.targetElem == this.pointer.downTargetElem)
+                    this.pointer.targetElem?.onClicked?.(ev, this.pointer);
+            }
+            // Stop dragging
+            if (this.pointer.isDragging) {
+                this.pointer.isDragging = false;
+                this.onDragEnded?.(ev);
+            }
+            this.pointer.downTargetElem = undefined;
+        };
     }
 }

@@ -45,7 +45,7 @@ function testGUI(cpu, funcs) {
     const blocks = funcs.map(id => {
         const header = cpu.readFunctionHeaderByID(id);
         if (header)
-            return new FunctionBlock(undefined, header.library, header.opcode, header.inputCount, header.outputCount);
+            return new FunctionBlock(undefined, header.library, header.opcode, header.inputCount, header.outputCount, id);
     });
     const margin = vec2(6, 2);
     const area = vec2(16, 8);

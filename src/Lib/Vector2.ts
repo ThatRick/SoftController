@@ -87,6 +87,10 @@ export default class Vec2
     return (v && this.x == v.x && this.y == v.y)
   }
 
+  toString() {
+    return `(x: ${this.x}, y: ${this.y})`
+  }
+
   // ###################################################
   //    STATIC FUNCTIONS - always returns a new vector
   // ###################################################
