@@ -36,7 +36,9 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
         this.isMinimal = FunctionBlockElem.isMinimal(funcBlock)
     }
 
-    isMovable = true
+    isDraggable = true
+    isSelectable = true
+
     func: FunctionBlock
     isMinimal: boolean
     IONameTable: Table
@@ -111,12 +113,6 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
 
     onPointerDown = (ev, pointer) => {
         this.toFront()
-    }
-
-    onDragEnded = (ev, pointer) => {
-        const pos = this.pos.copy()
-        pos.div(this.gui.scale).round().mul(this.gui.scale)
-        this.pos = Vec2.round(this.pos)
     }
 
     onPointerEnter = () => {

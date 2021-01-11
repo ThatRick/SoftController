@@ -1,5 +1,5 @@
 import GUIElement from '../GUI/GUIElement.js';
-import Vec2, { vec2 } from '../Lib/Vector2.js';
+import { vec2 } from '../Lib/Vector2.js';
 import { Table } from '../Lib/HTML.js';
 import FunctionBlockPinElem from './FunctionBlockPinElem.js';
 export default class FunctionBlockElem extends GUIElement {
@@ -11,16 +11,12 @@ export default class FunctionBlockElem extends GUIElement {
             userSelect: 'none'
         }, true);
         this.type = 'block';
-        this.isMovable = true;
+        this.isDraggable = true;
+        this.isSelectable = true;
         this.inputPins = [];
         this.outputPins = [];
         this.onPointerDown = (ev, pointer) => {
             this.toFront();
-        };
-        this.onDragEnded = (ev, pointer) => {
-            const pos = this.pos.copy();
-            pos.div(this.gui.scale).round().mul(this.gui.scale);
-            this.pos = Vec2.round(this.pos);
         };
         this.onPointerEnter = () => {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;

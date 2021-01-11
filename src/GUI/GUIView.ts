@@ -2,12 +2,6 @@ import { IGUIContainer, IGUIElement, GUIPointerState, IDOMElement, IGUIView } fr
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
 
-const enum MouseButton {
-    LEFT =   1,
-    RIGHT =  2,
-    MIDDLE = 4
-}
-
 export default class GUIView<T extends IGUIElement> implements IDOMElement, IGUIView { 
 
     DOMElement: HTMLElement
@@ -47,7 +41,7 @@ export default class GUIView<T extends IGUIElement> implements IDOMElement, IGUI
     }
 
     constructor(
-        private parentDOM: HTMLElement,
+        public parentDOM: HTMLElement,
         size: Vec2,
         scale: Vec2,
         style?: Partial<CSSStyleDeclaration>
@@ -145,63 +139,15 @@ export default class GUIView<T extends IGUIElement> implements IDOMElement, IGUI
     getPointerTargetElem(ev: PointerEvent) {
         return this.eventTargetMap.get(ev.target)
     }
-
-    scrollStartPos: Vec2
-    isScrolling = false
-
-    endScrolling() {
-        if (this.isScrolling) {
-            this.isScrolling = false
-            this.DOMElement.style.cursor = 'default'
-        }
-    }
-
-    onDragStarted = (ev: PointerEvent) => {
-        // Start scrolling view
-        if (ev.target == this.DOMElement) { // ev.buttons == MouseButton.MIDDLE
-            this.scrollStartPos = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop)
-            this.isScrolling = true
-            this.DOMElement.style.cursor = 'grab'
-        }
-        // Start dragging GUI element
-        if (this.pointer.isDragging && this.pointer.downTargetElem?.isMovable) {
-            this.pointer.dragTargetInitPos = this.pointer.downTargetElem.pos.copy()
-            this.pointer.downTargetElem.onDragStarted?.(ev, this.pointer)
-        }
-    }
-    onDragging = (ev: PointerEvent) => {
-        // Scrolling view
-        if (this.isScrolling) {
-            this.parentDOM.scrollLeft = this.scrollStartPos.x - this.pointer.dragOffset.x
-            this.parentDOM.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y
-        }
-        // Dragging GUI element
-        if (this.pointer.downTargetElem?.isMovable) {
-            this.pointer.downTargetElem.onDragging?.(ev, this.pointer)
-            const offset = Vec2.div(this.pointer.dragOffset, this.scale)
-            const newPos = Vec2.add(this.pointer.dragTargetInitPos, offset)
-            this.pointer.downTargetElem.pos = newPos
-        }
-
-    }
-    onDragEnded = (ev: PointerEvent) => {
-        // End scrolling
-        this.endScrolling()
-        // End dragging
-        if (this.pointer.downTargetElem?.isMovable) {
-            this.pointer.downTargetElem.onDragEnded?.(ev, this.pointer)
-        }
-    }
-
-    onPointerLeave = (ev: PointerEvent) => {
-        this.endScrolling()
-    }
     
     onPointerEnter?: (ev: PointerEvent) => void
     onPointerDown?:  (ev: PointerEvent) => void
     onPointerMove?:  (ev: PointerEvent) => void
     onPointerUp?:    (ev: PointerEvent) => void
     onClicked?:      (ev: PointerEvent) => void
+    onDragStarted?:  (ev: PointerEvent) => void
+    onDragging?:     (ev: PointerEvent) => void
+    onDragEnded?:    (ev: PointerEvent) => void
 
     setupPointerHandlers() {
     

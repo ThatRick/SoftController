@@ -1,5 +1,5 @@
 import GUIContainer from './GUIContainer.js'
-import {IDOMElement, IGUIElement, IGUIContainer, IGUIView, GUIPointerState, Vec2} from './GUITypes.js'
+import {IGUIElement, IGUIContainer, IGUIView, GUIPointerState, Vec2, EventHandlerFn} from './GUITypes.js'
 
 export default class GUIElement implements IGUIElement{
     DOMElement: HTMLElement
@@ -7,7 +7,8 @@ export default class GUIElement implements IGUIElement{
     parent?: IGUIContainer
     children?: IGUIContainer
 
-    isMovable: boolean
+    isDraggable: boolean
+    isSelectable: boolean
 
     gui: IGUIView
 
@@ -117,14 +118,14 @@ export default class GUIElement implements IGUIElement{
         Object.assign(this.DOMElement.style, style)
     }
 
-    // // Event receivers
-    // onPointerEnter?: (ev: PointerEvent, pointer?: GUIPointerState) => void
-    // onPointerLeave?: (ev: PointerEvent, pointer?: GUIPointerState) => void
-    // onPointerDown?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    // onPointerMove?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    // onPointerUp?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
-    // onClicked?:      (ev: PointerEvent, pointer?: GUIPointerState) => void
-    // onDragStarted?:  (ev: PointerEvent, pointer?: GUIPointerState) => void
-    // onDragging?:     (ev: PointerEvent, pointer?: GUIPointerState) => void
-    // onDragEnded?:    (ev: PointerEvent, pointer?: GUIPointerState) => void
+    // Event receivers
+    onPointerEnter?: EventHandlerFn
+    onPointerLeave?: EventHandlerFn
+    onPointerDown?:  EventHandlerFn
+    onPointerMove?:  EventHandlerFn
+    onPointerUp?:    EventHandlerFn
+    onClicked?:      EventHandlerFn
+    onDragStarted?:  EventHandlerFn
+    onDragging?:     EventHandlerFn
+    onDragEnded?:    EventHandlerFn
 }

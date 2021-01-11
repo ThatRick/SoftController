@@ -14,18 +14,22 @@ export interface CircuitElement extends GUIElement
 
 export interface CircuitStyle
 {
-    colorBackground:    string
-    colorBlock:         string
-    colorBlockHover:    string
-    colorPin:           string
-    colorPinHover:      string
+    colorBackground:        string
+    colorBlock:             string
+    colorBlockHover:        string
+    blockOutlineUnselected: string,
+    blockOutlineSelected:   string,
+    colorPin:               string
+    colorPinHover:          string
 }
 
 export const defaultStyle: CircuitStyle =
 {
-    colorBackground:    '#224',
-    colorBlock:         '#447',
-    colorBlockHover:    '#558',
-    colorPin:           '#555',
-    colorPinHover:      '#888',
+    colorBackground:        '#224',
+    colorBlock:             '#447',
+    colorBlockHover:        '#558',
+    blockOutlineUnselected: 'none',
+    blockOutlineSelected:   'thin solid #AAF',
+    colorPin:               '#777',
+    colorPinHover:          '#999',
 }

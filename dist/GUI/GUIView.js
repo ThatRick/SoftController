@@ -23,45 +23,6 @@ export default class GUIView {
             downPos: vec2(0),
             upPos: vec2(0)
         };
-        this.isScrolling = false;
-        this.onDragStarted = (ev) => {
-            // Start scrolling view
-            if (ev.target == this.DOMElement) { // ev.buttons == MouseButton.MIDDLE
-                this.scrollStartPos = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop);
-                this.isScrolling = true;
-                this.DOMElement.style.cursor = 'grab';
-            }
-            // Start dragging GUI element
-            if (this.pointer.isDragging && this.pointer.downTargetElem?.isMovable) {
-                this.pointer.dragTargetInitPos = this.pointer.downTargetElem.pos.copy();
-                this.pointer.downTargetElem.onDragStarted?.(ev, this.pointer);
-            }
-        };
-        this.onDragging = (ev) => {
-            // Scrolling view
-            if (this.isScrolling) {
-                this.parentDOM.scrollLeft = this.scrollStartPos.x - this.pointer.dragOffset.x;
-                this.parentDOM.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y;
-            }
-            // Dragging GUI element
-            if (this.pointer.downTargetElem?.isMovable) {
-                this.pointer.downTargetElem.onDragging?.(ev, this.pointer);
-                const offset = Vec2.div(this.pointer.dragOffset, this.scale);
-                const newPos = Vec2.add(this.pointer.dragTargetInitPos, offset);
-                this.pointer.downTargetElem.pos = newPos;
-            }
-        };
-        this.onDragEnded = (ev) => {
-            // End scrolling
-            this.endScrolling();
-            // End dragging
-            if (this.pointer.downTargetElem?.isMovable) {
-                this.pointer.downTargetElem.onDragEnded?.(ev, this.pointer);
-            }
-        };
-        this.onPointerLeave = (ev) => {
-            this.endScrolling();
-        };
         console.log('GUI Init');
         this.DOMElement = document.createElement('div');
         parentDOM.appendChild(this.DOMElement);
@@ -134,12 +95,6 @@ export default class GUIView {
     }
     getPointerTargetElem(ev) {
         return this.eventTargetMap.get(ev.target);
-    }
-    endScrolling() {
-        if (this.isScrolling) {
-            this.isScrolling = false;
-            this.DOMElement.style.cursor = 'default';
-        }
     }
     setupPointerHandlers() {
         // Pointer down
