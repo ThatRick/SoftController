@@ -1,8 +1,9 @@
 import SoftController from './SoftController.js'
+import IControllerInterface, { calcCircuitSize, calcFunctionSize } from './ControllerInterface.js'
 import {getFunction, getFunctionName} from './FunctionCollection.js'
-import {IORef,  DatablockType, IFunction, datablockHeaderByteLength, taskStructByteLength} from './SoftTypes.js'
+import {IORef, DatablockType, IFunction, datablockHeaderByteLength, taskStructByteLength} from './SoftTypes.js'
 
-interface IODefinition
+export interface IODefinition
 {
     [index: number]: number
 }
@@ -10,6 +11,13 @@ interface IODefinition
 interface IORefDefinition
 {
     [index: number]: IORef
+}
+
+interface ITaskDefinition
+{
+    targetID:       number
+    interval:       number
+    offset:         number
 }
 
 interface IFunctionDefinition
@@ -28,13 +36,6 @@ interface ICircuitDefinition extends IFunctionDefinition
 {
     callList:       number[]
     outputRefs?:    IORefDefinition
-}
-
-interface ITaskDefinition
-{
-    targetID:       number
-    interval:       number
-    offset:         number
 }
 
 interface IDatablockDefinition
@@ -64,10 +65,7 @@ interface ICircuitBlueprint
     datablocks:     IDatablockTable
 }
 
-
-
-// Create a new controller from controller blueprint
-export function loadControllerBlueprint(obj: Object, spareDataMemSize = 0, spareDatablockCount = 0, spareTaskCount = 0): SoftController {
+export function getBlueprintResourceNeeded(obj: Object) {
     const blueprint = obj as IControllerBlueprint
 
     // Calculate needed data memory for data blocks
@@ -79,19 +77,29 @@ export function loadControllerBlueprint(obj: Object, spareDataMemSize = 0, spare
         neededDataMemSize += datablockSize(block)
     })
 
-    const dataMemSize = neededDataMemSize + spareDataMemSize
-    const datablockTableLength = 2 + Object.keys(blueprint.datablocks).length + spareDatablockCount
-    const taskListLength = blueprint.taskList.length + spareTaskCount
+    const dataMemSize = neededDataMemSize
+    const datablockTableLength = 2 + Object.keys(blueprint.datablocks).length
+    const taskListLength = blueprint.taskList.length
     
     console.log(`Loading controller (needed mem: ${dataMemSize} bytes, table size: ${datablockTableLength}, task list size: ${taskListLength})`)
-    const cpu = new SoftController(dataMemSize, datablockTableLength, taskListLength)
+    
+    return {
+        dataMemSize,
+        datablockTableLength,
+        taskListLength
+    }
+}
+
+// Create a new controller from controller blueprint
+export function loadControllerBlueprint(cpu: IControllerInterface, obj: Object) {
+    const blueprint = obj as IControllerBlueprint
 
     blueprint.taskList.forEach(taskID => {
         const block = blueprint.datablocks[taskID]
         const task = block.body as ITaskDefinition
         const taskOnlineID = cpu.createTask(0, task.interval, task.offset)
         const circOnlineID = loadCircuit(cpu, blueprint.datablocks, task.targetID);
-        cpu.setTaskTarget(taskOnlineID, circOnlineID);
+        cpu.setTaskCallTarget(taskOnlineID, circOnlineID);
     })
 
     return cpu
@@ -108,7 +116,7 @@ export function datablockSize(block: IDatablockDefinition): number {
         }
         case DatablockType.CIRCUIT: {
             const circuitDef = block.body as ICircuitDefinition
-            size += SoftController.calcCircuitSize(circuitDef.inputCount, circuitDef.inputCount, circuitDef.staticCount)
+            size += calcCircuitSize(circuitDef.inputCount, circuitDef.outputCount, circuitDef.staticCount)
             break
         }
         case DatablockType.FUNCTION: {
@@ -117,7 +125,7 @@ export function datablockSize(block: IDatablockDefinition): number {
             const inputCount = funcDef.inputCount ?? funcTyp.inputs.length
             const outputCount = funcDef.outputCount ?? funcTyp.inputs.length
             const staticCount = funcDef.staticCount ?? funcTyp.staticCount ?? 0
-            size += SoftController.calcFunctionSize(inputCount, outputCount, staticCount)
+            size += calcFunctionSize(inputCount, outputCount, staticCount)
             break
         }
     }
@@ -125,7 +133,7 @@ export function datablockSize(block: IDatablockDefinition): number {
 }
 
 // Load circuit blueprint to controller
-export function loadCircuit(cpu: SoftController, datablocks: IDatablockTable, circDefID: number,
+export function loadCircuit(cpu: IControllerInterface, datablocks: IDatablockTable, circDefID: number,
                             spareInputs=0, spareOutputs=0, spareFuncCalls=0 ): number {
 
     const block = datablocks[circDefID]
@@ -152,11 +160,11 @@ export function loadCircuit(cpu: SoftController, datablocks: IDatablockTable, ci
                                                          funcDef.inputCount, funcDef.outputCount, funcDef.staticCount)
             funcDef.ioValues && Object.keys(funcDef.ioValues).forEach(key => {
                 const ioNum = Number(key)
-                cpu.setFunctionIOValue(funcOnlineID, ioNum, funcDef.ioValues[key])
+                cpu.setFunctionBlockIOValue(funcOnlineID, ioNum, funcDef.ioValues[key])
             })
             funcDef.ioFlags && Object.keys(funcDef.ioFlags).forEach(key => {
                 const ioNum = Number(key)
-                cpu.setFunctionIOFlags(funcOnlineID, ioNum, funcDef.ioFlags[key])
+                cpu.setFunctionBlockIOFlags(funcOnlineID, ioNum, funcDef.ioFlags[key])
             })
             renumMap.set(funcDefID, funcOnlineID)
         }
@@ -175,7 +183,7 @@ export function loadCircuit(cpu: SoftController, datablocks: IDatablockTable, ci
             const inputNum = Number(key)
             const ioRef: IORef = funcDef.inputRefs[inputNum]
             const sourceOnlineID = renumMap.get(ioRef.id)
-            cpu.connectFunctionInput(onlineID, inputNum, sourceOnlineID, ioRef.ioNum)
+            cpu.connectFunctionBlockInput(onlineID, inputNum, sourceOnlineID, ioRef.ioNum)
         })
     })
     // Create circuit output references with renumbered IDs
@@ -190,22 +198,22 @@ export function loadCircuit(cpu: SoftController, datablocks: IDatablockTable, ci
 }
 
 // 
-function readDatablock(cpu: SoftController, blockRef: number): IDatablockDefinition {
+function readDatablock(cpu: IControllerInterface, id: number): IDatablockDefinition {
 
-    const blockHeader = cpu.getDatablockHeader(blockRef)
+    const blockHeader = cpu.getDatablockHeader(id)
     let body
 
     switch(blockHeader.type) {
         case DatablockType.TASK: {
-            body = createTaskDefinition(cpu, blockRef)
+            body = createTaskDefinition(cpu, id)
             break
         }
         case DatablockType.CIRCUIT: {
-            body = createCircuitDefinition(cpu, blockRef)
+            body = createCircuitDefinition(cpu, id)
             break
         }
         case DatablockType.FUNCTION: {
-            body = createFunctionDefinition(cpu, blockRef)
+            body = createFunctionDefinition(cpu, id)
             break
         }
     }
@@ -217,23 +225,17 @@ function readDatablock(cpu: SoftController, blockRef: number): IDatablockDefinit
 }
 
 // CREATE A CONTROLLER BLUEPRINT
-export function createControllerBlueprint(cpu: SoftController) {
-
-    const taskCount = cpu.taskList.indexOf(0)
-    const taskRefs = Array.from(cpu.taskList.slice(0, taskCount))
-    
-    const taskList = taskRefs.map(ref => cpu.getDatablockIDbyRef(ref))
+export function createControllerBlueprint(cpu: IControllerInterface) {
     
     const datablocks: IDatablockTable = {}
-    for (let id = 0; id < cpu.datablockTableLastUsedID; id++) {
-        const blockRef = cpu.datablockTable[id]
-        if (blockRef) datablocks[id] = readDatablock(cpu, blockRef)
-    }
-
+    cpu.getDatablockTable().forEach((ref, id) => {
+        if (ref) datablocks[id] = readDatablock(cpu, id)
+    })
+    
     const blueprint: IControllerBlueprint = {
         blueprintType: 'controller',
-        version: SoftController.version,
-        taskList,
+        version: cpu.getVersion(),
+        taskList: cpu.getTaskList(),
         datablocks
     }
 
@@ -248,10 +250,10 @@ export function createControllerBlueprint(cpu: SoftController) {
 
 
 // CREATE A CIRCUIT BLUEPRINT
-export function createCircuitBlueprint(cpu: SoftController, circuitID: number) {
+export function createCircuitBlueprint(cpu: IControllerInterface, circuitID: number) {
     const datablocks: IDatablockTable = {}
 
-    const ref = cpu.datablockTable[circuitID]
+    const ref = cpu.getDatablockRef(circuitID)
     if (!ref) { console.error('Create circuit blueprint: Invalid block id', circuitID); return }
     
     const circuitDef = readDatablock(cpu, ref)
@@ -262,13 +264,13 @@ export function createCircuitBlueprint(cpu: SoftController, circuitID: number) {
     const circuit = circuitDef.body as ICircuitDefinition
 
     circuit.callList.forEach(id => {
-        const blockRef = cpu.datablockTable[id]
+        const blockRef = cpu.getDatablockRef(id)
         datablocks[id] = readDatablock(cpu, blockRef)
     })
 
     const blueprint: ICircuitBlueprint = {
         blueprintType: 'circuit',
-        version: SoftController.version,
+        version: cpu.getVersion(),
         circuitID,
         datablocks
     }
@@ -280,40 +282,38 @@ export function createCircuitBlueprint(cpu: SoftController, circuitID: number) {
 
 
 // SERIALIZE A TASK
-function createTaskDefinition(cpu: SoftController, taskRef: number): ITaskDefinition {
-    const task = cpu.getTask(taskRef)
+function createTaskDefinition(cpu: IControllerInterface, id: number): ITaskDefinition {
+    const task = cpu.getTaskByID(id)
     return {
-        targetID:   cpu.getDatablockIDbyRef(task.targetRef),
+        targetID:   cpu.getDatablockID(task.targetRef),
         interval:   task.interval,
         offset:     task.offset
     }
 }
 
 // SERIALIZE A CIRCUIT
-function createCircuitDefinition(cpu: SoftController, ref: number): ICircuitDefinition {
-    const funcHeader = cpu.readFunctionHeader(ref)
+function createCircuitDefinition(cpu: IControllerInterface, id: number): ICircuitDefinition {
+    const data = cpu.getCircuitData(id)
 
-    const inputRefs = Array.from(cpu.readFunctionInputRefs(ref)).map(ioRef => cpu.solveIOReference(ioRef))
     const modifiedInputRefs = {}
-    inputRefs.forEach((ref, i) => {
+    data.inputRefs.forEach((ref, i) => {
         if (ref) modifiedInputRefs[i] = ref
     })
 
-    const outputRefs = Array.from(cpu.readCircuitOutputRefs(ref)).map(ioRef => cpu.solveIOReference(ioRef))
     const modifiedOutputRefs = {}
-    outputRefs.forEach((ref, i) => {
+    data.outputRefs.forEach((ref, i) => {
         if (ref) modifiedOutputRefs[i] = ref
     })
 
     const circuitDef: ICircuitDefinition = {
         library:        0,
         opcode:         0,
-        inputCount:     funcHeader.inputCount,
-        outputCount:    funcHeader.outputCount,
-        staticCount:    funcHeader.staticCount,
-        ioFlags:        Array.from(cpu.readFunctionIOFlags(ref)),
-        ioValues:       Array.from(cpu.readFunctionIOValues(ref)),
-        callList:       Array.from(cpu.readCircuitCallList(ref)).map(callRef => cpu.getDatablockIDbyRef(callRef)),
+        inputCount:     data.inputCount,
+        outputCount:    data.outputCount,
+        staticCount:    data.staticCount,
+        ioFlags:        data.ioFlags,
+        ioValues:       data.ioValues,
+        callList:       data.callList
     }
 
     if (Object.keys(modifiedInputRefs).length > 0)      circuitDef.inputRefs = modifiedInputRefs
@@ -323,47 +323,43 @@ function createCircuitDefinition(cpu: SoftController, ref: number): ICircuitDefi
 }
 
 // SERIALIZE A FUNCTION
-function createFunctionDefinition(cpu: SoftController, ref: number): IFunctionDefinition {
-    const funcHeader = cpu.readFunctionHeader(ref)
-    
-    const ioFlags = Array.from(cpu.readFunctionIOFlags(ref))
-    const ioValues = Array.from(cpu.readFunctionIOValues(ref))
-    const inputRefs = Array.from(cpu.readFunctionInputRefs(ref)).map(ioRef => cpu.solveIOReference(ioRef))
+function createFunctionDefinition(cpu: IControllerInterface, id: number): IFunctionDefinition {
+    const data = cpu.getFunctionBlockData(id)
 
     const modifiedFlags = {}
     const modifiedValues = {}
     const modifiedInputRefs = {}
     
-    const func = getFunction(funcHeader.library, funcHeader.opcode)
+    const func = getFunction(data.library, data.opcode)
 
     // Modified inputs
-    for (let i = 0; i < funcHeader.inputCount; i++) {
+    for (let i = 0; i < data.inputCount; i++) {
         const k = Math.min(i, func.inputs.length-1)
-        if (ioFlags[i] != func.inputs[k].flags)         modifiedFlags[i] = ioFlags[i]
-        if (ioValues[i] != func.inputs[k].initValue)    modifiedValues[i] = ioFlags[i]
+        if (data.ioFlags[i] != func.inputs[k].flags)         modifiedFlags[i] = data.ioFlags[i]
+        if (data.ioValues[i] != func.inputs[k].initValue)    modifiedValues[i] = data.ioFlags[i]
     }
 
     // Modified outputs
-    for (let i = funcHeader.inputCount; i < funcHeader.inputCount + funcHeader.outputCount; i++) {
-        const k = Math.min(i - funcHeader.inputCount, func.outputs.length-1)
-        if (ioFlags[i] != func.outputs[k].flags)         modifiedFlags[i] = ioFlags[i]
-        if (ioValues[i] != func.outputs[k].initValue)    modifiedValues[i] = ioFlags[i]
+    for (let i = data.inputCount; i < data.inputCount + data.outputCount; i++) {
+        const k = Math.min(i - data.inputCount, func.outputs.length-1)
+        if (data.ioFlags[i] != func.outputs[k].flags)         modifiedFlags[i] = data.ioFlags[i]
+        if (data.ioValues[i] != func.outputs[k].initValue)    modifiedValues[i] = data.ioFlags[i]
     }
 
     // Defined input references
-    inputRefs.forEach((ref, i) => {
+    data.inputRefs.forEach((ref, i) => {
         if (ref) modifiedInputRefs[i] = ref
     })
 
     const funcDef: IFunctionDefinition =
     {
-        library:        funcHeader.library,
-        opcode:         funcHeader.opcode
+        library:        data.library,
+        opcode:         data.opcode
     }       
     
-    if (funcHeader.inputCount != func.inputs.length)    funcDef.inputCount = funcHeader.inputCount
-    if (funcHeader.outputCount != func.outputs.length)  funcDef.outputCount = funcHeader.outputCount
-    if (funcHeader.staticCount != func.staticCount)     funcDef.staticCount = funcHeader.staticCount
+    if (data.inputCount != func.inputs.length)          funcDef.inputCount = data.inputCount
+    if (data.outputCount != func.outputs.length)        funcDef.outputCount = data.outputCount
+    if (data.staticCount != func.staticCount)           funcDef.staticCount = data.staticCount
     if (Object.keys(modifiedFlags).length > 0)          funcDef.ioFlags = modifiedFlags
     if (Object.keys(modifiedValues).length > 0)         funcDef.ioValues = modifiedValues
     if (Object.keys(modifiedInputRefs).length > 0)      funcDef.inputRefs = modifiedInputRefs

@@ -8,18 +8,25 @@ export default class CircuitView extends GUIView {
         super(parent, size, scale);
         this.gridMap = new CircuitGrid();
         this.style = defaultStyle;
-        this.selection = new Set();
+        this.selectedElements = new Set();
         ////////////////////////////////
         //      POINTER HANDLING
         ////////////////////////////////
         this.onPointerDown = (ev) => {
             const elem = this.pointer.downTargetElem;
-            if (elem?.isSelectable && !this.selection.has(elem)) {
-                if (!ev.shiftKey)
+            if (elem?.isSelectable && !ev.shiftKey) {
+                if (!this.selectedElements.has(elem)) {
                     this.unselectAll();
-                this.selectElement(elem);
+                    this.selectElement(elem);
+                }
             }
-            else {
+            if (elem?.isSelectable && ev.shiftKey && (elem?.isMultiSelectable || this.selectedElements.size == 0)) {
+                (this.selectedElements.has(elem)) ? this.unselectElement(elem) : this.selectElement(elem);
+            }
+        };
+        this.onClicked = (ev) => {
+            const elem = this.pointer.downTargetElem;
+            if (!elem?.isSelectable && !ev.shiftKey) {
                 this.unselectAll();
             }
             console.log('Clicked:', this.elementToString(elem));
@@ -90,9 +97,16 @@ export default class CircuitView extends GUIView {
     }
     draggingElement(elem, startPos, offset, currentPos) {
         switch (elem.type) {
-            case 'block':
+            case 'block': {
                 elem.pos = currentPos;
                 break;
+            }
+            case 'input': {
+                break;
+            }
+            case 'output': {
+                break;
+            }
         }
     }
     dragElementEnded(elem, startPos, offset, currentPos) {
@@ -103,23 +117,25 @@ export default class CircuitView extends GUIView {
     /////////////////////////
     selectElement(elem) {
         console.log('Selected element', this.elementToString(elem));
-        this.selection.add(elem);
+        this.selectedElements.add(elem);
+        elem.selected();
         switch (elem.type) {
-            case 'block':
-                elem.DOMElement.style.outline = this.style.blockOutlineSelected;
-                break;
+            case 'block': { }
+            case 'input': { }
+            case 'output': { }
         }
     }
     unselectElement(elem) {
         console.log('Unselected element', this.elementToString(elem));
-        this.selection.delete(elem);
+        this.selectedElements.delete(elem);
+        elem.unselected();
         switch (elem.type) {
-            case 'block':
-                elem.DOMElement.style.outline = this.style.blockOutlineUnselected;
-                break;
+            case 'block': { }
+            case 'input': { }
+            case 'output': { }
         }
     }
     unselectAll() {
-        this.selection.forEach(elem => this.unselectElement(elem));
+        this.selectedElements.forEach(elem => this.unselectElement(elem));
     }
 }

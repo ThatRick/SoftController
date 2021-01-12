@@ -58,8 +58,9 @@ export interface IGUIElement extends IDOMElement, GUIPointerEventHandler
     parent?: IGUIContainer
     children?: IGUIContainer
 
-    isDraggable: boolean
-    isSelectable: boolean
+    isDraggable?: boolean
+    isSelectable?: boolean
+    isMultiSelectable?: boolean
 
     init(gui: IGUIView): void
     update(gui: IGUIView, force?: boolean): boolean

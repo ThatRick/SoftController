@@ -1,11 +1,11 @@
-import SoftController from './SoftController/SoftController.js';
 import { getFunction, getFunctionName } from './SoftController/FunctionCollection.js';
 import { getIOType } from './SoftController/SoftTypes.js';
-import { createControllerBlueprint, loadControllerBlueprint } from './SoftController/SoftSerializer.js';
+// import { createControllerBlueprint, getBlueprintResourceNeeded, loadControllerBlueprint } from './SoftController/SoftSerializer.js'
 import CircuitView from './CircuitView/CircuitView.js';
 import { vec2 } from './Lib/Vector2.js';
 import { FunctionBlock } from './CircuitView/CircuitModel.js';
 import FunctionBlockElem from './CircuitView/FunctionBlockElem.js';
+import SoftControllerLink from './SoftController/SoftControllerLink.js';
 function createTerminal(div) {
     return (text) => {
         const pre = document.createElement('pre');
@@ -37,20 +37,20 @@ const CSSGridRowHeights = {
 };
 /////////////////////////
 //  GUI Testing
-function testGUI(cpu, funcs) {
+async function testGUI(cpu, funcs) {
+    const guiContainer = document.getElementById('gui');
     const viewSize = vec2(80, 40);
     const viewScale = vec2(14, 20);
-    const guiContainer = document.getElementById('gui');
     const view = new CircuitView(guiContainer, viewSize, viewScale);
-    const blocks = funcs.map(id => {
-        const header = cpu.readFunctionHeaderByID(id);
-        if (header)
-            return new FunctionBlock(undefined, header.library, header.opcode, header.inputCount, header.outputCount, id);
-    });
     const margin = vec2(6, 2);
     const area = vec2(16, 8);
     const w = (view.size.x - margin.x * 2);
-    console.log('width', w);
+    const getBlocks = funcs.map(async (id) => {
+        const header = await cpu.getFunctionBlockHeader(id);
+        if (header)
+            return new FunctionBlock(undefined, header.library, header.opcode, header.inputCount, header.outputCount, id);
+    });
+    const blocks = await Promise.all(getBlocks);
     const blockElems = blocks.map((block, i) => {
         const n = i * area.x;
         const row = Math.trunc(n / w);
@@ -61,59 +61,68 @@ function testGUI(cpu, funcs) {
     });
     return view;
 }
+const errorLogger = error => console.error(error);
 //////////////////////////
 //  PROGRAM ENTRY POINT
 //
-window.onload = () => {
+window.onload = () => app().catch(rejected => console.error(rejected));
+async function app() {
     const terminal = createTerminal(document.getElementById('terminal'));
     const memSize = 64 * 1024; // bytes
-    const cpu = new SoftController(memSize);
-    window['cpu'] = cpu;
-    const funcIDs = createTestBlocks(cpu, 10);
-    const circId = funcIDs[0];
-    const taskId = cpu.createTask(circId, 20, 5);
-    const view = testGUI(cpu, funcIDs);
-    const interval = 10; // ms
-    let ticks = 10;
-    const blueprint = createControllerBlueprint(cpu);
+    const cpu = new SoftControllerLink();
+    const result = await cpu.createController(memSize, 256, 16);
+    console.log('Created controller with result:', result);
+    // const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
-    terminal(systemSectorToString(cpu));
+    terminal(await systemSectorToString(cpu));
     terminal(breakLine);
     terminal('');
     terminal('      RUNNING TEST...');
-    const loop = setInterval(() => {
-        cpu.tick(interval);
-        if (--ticks == 0)
-            stop();
-    }, interval);
-    function stop() {
-        clearTimeout(loop);
-        terminal(taskToString(cpu, taskId));
-        // print(systemSectorToString(cpu));
+    terminal(await datablockTableToString(cpu));
+    const funcIDs = await createTestBlocks(cpu, 10);
+    const circId = funcIDs[0];
+    const taskId = await cpu.createTask(circId, 20, 5);
+    const view = await testGUI(cpu, funcIDs);
+    const interval = 10; // ms
+    let ticks = 10;
+    cpu.stepController(interval, ticks).catch(errorLogger).then(async (result) => {
+        terminal(await taskToString(cpu, taskId));
+        terminal(await systemSectorToString(cpu));
         // print(datablockTableToString(cpu));
-        funcIDs.forEach(func => terminal(functionToString(cpu, func)));
-    }
+        funcIDs.forEach(async (func) => terminal(await functionToString(cpu, func)));
+    });
     createControlButtonBar([
-        { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
-        { name: 'Load', fn: () => loadFromJSON(obj => {
-                terminal(breakLine);
-                terminal('');
-                terminal('      LOADED A CONTROLLER FROM FILE:');
-                console.log('Loaded controller blueprint:', obj);
-                const cpu2 = loadControllerBlueprint(obj);
-                terminal(systemSectorToString(cpu2));
-                terminal(datablockTableToString(cpu2));
-            }) },
+        // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
+        // { name: 'Load', fn: () => loadFromJSON(obj => {
+        //     terminal(breakLine);
+        //     terminal('');
+        //     terminal('      LOADED A CONTROLLER FROM FILE:');
+        //     console.log('Loaded controller blueprint:', obj)
+        //     const needed = getBlueprintResourceNeeded(obj)
+        //     const dataMemSize = needed.dataMemSize + 4096
+        //     const datablockTableLength = needed.datablockTableLength + 256
+        //     const taskListLength = needed.taskListLength + 16
+        //     console.log(`Loading controller (needed mem: ${dataMemSize} bytes, table size: ${datablockTableLength}, task list size: ${taskListLength})`)
+        //     const cpuLink = new SoftControllerLink(new SoftController(dataMemSize, datablockTableLength, taskListLength))
+        //     loadControllerBlueprint(obj);
+        //     terminal(systemSectorToString(cpuLink));
+        //     terminal(datablockTableToString(cpuLink));
+        // })},
         { name: 'Scale + ', fn: () => view.scale = vec2(1.25, 1.25) },
         { name: 'DUMMY', fn: () => { } },
     ]);
-};
+    return true;
+}
 ////////////////////
 //  CREATE A TEST
 //
-function createTestBlocks(cpu, blockCount = 10) {
+async function createTestBlocks(cpu, blockCount = 10) {
     // test
-    const circId = cpu.createCircuit(4, 2, blockCount);
+    const circId = await cpu.createCircuit(4, 2, blockCount).catch(error => { console.log(error); return; });
+    if (!circId) {
+        console.error('no circid');
+        return;
+    }
     const funcs = [circId];
     const maxOpcode = 7;
     const logicLib = 1;
@@ -121,17 +130,17 @@ function createTestBlocks(cpu, blockCount = 10) {
         const opcode = i % maxOpcode;
         const funcType = getFunction(logicLib, opcode);
         const inputCount = funcType.variableInputCount ? 2 + Math.round(Math.random() * 4) : undefined;
-        const funcId = cpu.createFunctionBlock(logicLib, opcode, circId, undefined, inputCount);
+        const funcId = await cpu.createFunctionBlock(logicLib, opcode, circId, undefined, inputCount);
         funcs.push(funcId);
-        const funcInfo = cpu.readFunctionHeaderByID(funcId);
+        const funcInfo = await cpu.getFunctionBlockHeader(funcId);
         const sourceId = funcs[i - 1];
-        const sourceInfo = cpu.readFunctionHeaderByID(sourceId);
+        const sourceInfo = await cpu.getFunctionBlockHeader(sourceId);
         const inputNum = i % funcInfo.inputCount;
         const sourceIONum = sourceInfo.inputCount;
         const inverted = !(i % 2);
-        cpu.connectFunctionInput(funcId, inputNum, sourceId, sourceIONum, inverted);
+        await cpu.connectFunctionBlockInput(funcId, inputNum, sourceId, sourceIONum, inverted);
     }
-    cpu.setFunctionIOValue(1, 0, 1);
+    await cpu.setFunctionBlockIOValue(1, 0, 1);
     return funcs;
 }
 ///////////////////////
@@ -197,36 +206,31 @@ function alignValue(value, integerPartLen = defaultIntegerPadding, desimalPartLe
 /////////////////////////////////////
 //  Print function block to string
 //
-function functionToString(cpu, funcID) {
-    const type = cpu.getDatablockHeaderByID(funcID).type;
+async function functionToString(cpu, funcID) {
+    const type = (await cpu.getDatablockHeader(funcID)).type;
     if (type != 4 /* FUNCTION */ && type != 3 /* CIRCUIT */)
         return 'Invalid function ID: ' + funcID;
     let text = '';
     const addLine = (line) => text += (line + '\n');
-    const funcRef = cpu.datablockTable[funcID];
-    const funcHeader = cpu.readFunctionHeader(funcRef);
-    const ioValues = cpu.readFunctionIOValues(funcRef);
-    const ioFlags = cpu.readFunctionIOFlags(funcRef);
-    const inputRefs = cpu.readFunctionInputRefs(funcRef);
-    const func = (type == 4 /* FUNCTION */) ? getFunction(funcHeader.library, funcHeader.opcode) : null;
-    const funcName = (func) ? getFunctionName(funcHeader.library, funcHeader.opcode) : 'CIRCUIT';
+    const funcBlock = await cpu.getFunctionBlockData(funcID);
+    const func = (type == 4 /* FUNCTION */) ? getFunction(funcBlock.library, funcBlock.opcode) : null;
+    const funcName = (func) ? getFunctionName(funcBlock.library, funcBlock.opcode) : 'CIRCUIT';
     const inputRefLen = 6;
     const valueLen = 8;
     const precision = 6;
     const inputNameLen = 9;
     const outputNameLen = 6;
-    const rows = Math.max(funcHeader.inputCount, funcHeader.outputCount);
-    function solveRef(ref) {
-        const solved = cpu.solveIOReference(ref);
-        return (solved) ? solved.id + ':' + solved.ioNum : ref.toString(16);
+    const rows = Math.max(funcBlock.inputCount, funcBlock.outputCount);
+    function printRef(ioRef) {
+        return (ioRef) ? ioRef.id + ':' + ioRef.ioNum : '';
     }
     function ioValue(i) {
-        const flags = ioFlags[i];
+        const flags = funcBlock.ioFlags[i];
         const ioType = getIOType(flags);
         const value = (ioType == 2 /* BOOL */ || ioType == 1 /* INT */)
-            ? ioValues[i].toFixed(0)
-            : ioValues[i].toPrecision(precision);
-        return (i < funcHeader.inputCount) ? value.padStart(valueLen) : value.padEnd(valueLen);
+            ? funcBlock.ioValues[i].toFixed(0)
+            : funcBlock.ioValues[i].toPrecision(precision);
+        return (i < funcBlock.inputCount) ? value.padStart(valueLen) : value.padEnd(valueLen);
     }
     addLine(breakLine);
     addLine(`${funcID.toString().padStart(3, '0')}:  ${funcName}`);
@@ -234,21 +238,21 @@ function functionToString(cpu, funcID) {
     addLine(`${' '.repeat(inputRefLen)}    ${' '.repeat(valueLen)}   _${'_'.repeat(inputNameLen)}${'_'.repeat(outputNameLen)}_`);
     for (let i = 0; i < rows; i++) {
         let hasInput, hasOutput;
-        const connector = (i < inputRefs.length && inputRefs[i] != 0) ? '―>' : '  ';
-        const inputRef = (i < inputRefs.length && inputRefs[i] != 0) ? solveRef(inputRefs[i]).padStart(inputRefLen) : ' '.repeat(inputRefLen);
-        const inputValue = (i < funcHeader.inputCount && (hasInput = true)) ? ioValue(i) : ' '.repeat(valueLen);
-        const inputName = (i < funcHeader.inputCount) ? (func ? ((i < func.inputs.length && func.inputs[i].name) ? func.inputs[i].name.padEnd(inputNameLen)
+        const connector = (i < funcBlock.inputRefs.length && funcBlock.inputRefs[i]) ? '―>' : '  ';
+        const inputRef = (i < funcBlock.inputRefs.length && funcBlock.inputRefs[i]) ? printRef(funcBlock.inputRefs[i]).padStart(inputRefLen) : ' '.repeat(inputRefLen);
+        const inputValue = (i < funcBlock.inputCount && (hasInput = true)) ? ioValue(i) : ' '.repeat(valueLen);
+        const inputName = (i < funcBlock.inputCount) ? (func ? ((i < func.inputs.length && func.inputs[i].name) ? func.inputs[i].name.padEnd(inputNameLen)
             : ((i == 0) ? funcName.padEnd(inputNameLen)
                 : ' '.repeat(inputNameLen)))
             : i.toString().padEnd(inputNameLen))
             : ' '.repeat(inputNameLen);
-        const outNum = i + funcHeader.inputCount;
-        const outputName = (i < funcHeader.outputCount) ? (func ? ((i < func.outputs.length && func.outputs[i].name) ? func.outputs[i].name.padStart(outputNameLen)
+        const outNum = i + funcBlock.inputCount;
+        const outputName = (i < funcBlock.outputCount) ? (func ? ((i < func.outputs.length && func.outputs[i].name) ? func.outputs[i].name.padStart(outputNameLen)
             : ' '.repeat(outputNameLen))
             : i.toString().padStart(outputNameLen))
             : ' '.repeat(outputNameLen);
-        const outputValue = (i < funcHeader.outputCount && (hasOutput = true)) ? ioValue(outNum) : ' '.repeat(valueLen);
-        const inputPin = hasInput ? (ioFlags[i] & 8 /* INVERTED */ ? 'o' : '-') : ' ';
+        const outputValue = (i < funcBlock.outputCount && (hasOutput = true)) ? ioValue(outNum) : ' '.repeat(valueLen);
+        const inputPin = hasInput ? (funcBlock.ioFlags[i] & 8 /* INVERTED */ ? 'o' : '-') : ' ';
         const outputPin = hasOutput ? '-' : ' ';
         const line = `${inputRef} ${connector} ${inputValue} ${inputPin}| ${inputName}${outputName} |${outputPin} ${outputValue}`;
         addLine(line);
@@ -261,18 +265,19 @@ function functionToString(cpu, funcID) {
 //////////////////////////////
 //  Print circuit to string
 //
-function circuitToString(cpu, circuitID) {
+async function circuitToString(cpu, circuitID) {
     let text = '';
     const addLine = (line) => text += (line + '\n');
-    const circRef = cpu.datablockTable[circuitID];
-    const callList = cpu.readCircuitCallList(circRef);
-    addLine(`CALL LIST (size: ${callList.length})`);
+    const circuit = await cpu.getCircuitData(circuitID);
+    if (!circuit)
+        return 'Error';
+    addLine(`CALL LIST (size: ${circuit.callList.length})`);
     addLine('');
-    for (let i = 0; i < callList.length; i++) {
-        const callRef = callList[i];
+    for (let i = 0; i < circuit.callList.length; i++) {
+        const callRef = circuit.callList[i];
         if (callRef == 0)
             break;
-        const funcID = cpu.getDatablockIDbyRef(callRef);
+        const funcID = cpu.getDatablockID(callRef);
         addLine(`${i.toString().padStart(3)}:  ${funcID.toString().padStart(3, '0')}  [${callRef.toString(16).toUpperCase()}]`);
     }
     return text;
@@ -280,17 +285,18 @@ function circuitToString(cpu, circuitID) {
 ///////////////////////////////////////////
 //  Print data block table info to string
 //
-function datablockTableToString(cpu) {
+async function datablockTableToString(cpu) {
     const typeNames = ['UNDEFINED', 'UNALLOCATED', 'TASK', 'CIRCUIT', 'FUNCTION', 'DATA'];
     const maxTypeNameLength = (typeNames.reduce((a, b) => (a.length > b.length) ? a : b)).length;
     let text = '';
     const addLine = (line) => text += (line + '\n');
+    const datablockTable = await cpu.getDatablockList().catch(error => []);
     addLine(breakLine);
-    addLine(`DATA BLOCK TABLE (size: ${cpu.datablockTable.length})`);
+    addLine(`DATA BLOCK TABLE (size: ${datablockTable.length})`);
     addLine('');
-    cpu.datablockTable.forEach((offset, id) => {
+    datablockTable.forEach(async (offset, id) => {
         if (offset) {
-            const header = cpu.getDatablockHeaderByID(id);
+            const header = await cpu.getDatablockHeader(id);
             const startAddr = offset.toString(16).toUpperCase();
             const endAddr = (offset + header.byteLength - 1).toString(16).toUpperCase();
             addLine(`${id.toString().padStart(3, '0')}:  ${typeNames[header.type].padEnd(maxTypeNameLength)}  \
@@ -302,7 +308,7 @@ ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  
 //////////////////////////////////////////////
 //  Print system sector parameters to string
 //
-function systemSectorToString(cpu) {
+async function systemSectorToString(cpu) {
     const systemParameterNames = [
         'ID',
         'Version',
@@ -321,19 +327,20 @@ function systemSectorToString(cpu) {
     addLine(breakLine);
     addLine(`SYSTEM SECTOR`);
     addLine('');
-    for (let i = 0; i < cpu.systemSector.length; i++) {
-        addLine(`${i.toString().padStart(3)}:  ${systemParameterNames[i].padEnd(maxParamNameLength)}  ${cpu.systemSector[i].toString().padStart(6)}`);
-    }
+    const systemSector = await cpu.getSystemSector();
+    Object.keys(systemSector).forEach((key, i) => {
+        addLine(`${i.toString().padStart(3)}:  ${systemParameterNames[i].padEnd(maxParamNameLength)}  ${systemSector[key].toString().padStart(6)}`);
+    });
     addLine('');
     return text;
 }
 ///////////////////////////
 //  Print task to string
 //
-function taskToString(cpu, taskID) {
+async function taskToString(cpu, taskID) {
     const nameLength = 22;
     const names = {
-        targetRef: ['Target Ref', (value) => `${('0x' + value.toString(16).toUpperCase()).padStart(defaultIntegerPadding)}  (ID: ${cpu.getDatablockIDbyRef(value)})`],
+        targetRef: ['Target Ref', (value) => `${('0x' + value.toString(16).toUpperCase()).padStart(defaultIntegerPadding)}  (ID: ${cpu.getDatablockID(value)})`],
         interval: ['Interval (ms)', (value) => alignValue(value)],
         offset: ['Offset (ms)', (value) => alignValue(value)],
         timeAccu: ['Time Accumulator (ms)', (value) => alignValue(value)],
@@ -341,7 +348,7 @@ function taskToString(cpu, taskID) {
         cpuTimeInt: ['CPU Time Integer (ms)', (value) => alignValue(value)],
         runCount: ['Run Count', (value) => alignValue(value)],
     };
-    const task = cpu.getTaskByID(taskID);
+    const task = await cpu.getTask(taskID);
     console.log(task);
     let text = '';
     const addLine = (line) => text += (line + '\n');

@@ -14,6 +14,8 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
 
     io: FunctionBlockIO
     pin: HTMLDivElement
+
+    isSelectable = true
     
     constructor(parent: IGUIContainer, io: FunctionBlockIO, pos: Vec2) {
         super(parent, 'div', pos, vec2(1, 1))
@@ -39,6 +41,14 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
             backgroundColor: gui.style.colorPin,
             pointerEvents: 'none'
         })
+    }
+
+    selected() {
+        this.pin.style.outline = this.gui.style.blockOutlineSelected
+    }
+
+    unselected() {
+        this.pin.style.outline = this.gui.style.blockOutlineUnselected
     }
 
     onPointerEnter = (ev: PointerEvent) => {

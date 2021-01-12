@@ -4,6 +4,7 @@ import { domElement } from '../Lib/HTML.js';
 export default class FunctionBlockPinElem extends GUIElement {
     constructor(parent, io, pos) {
         super(parent, 'div', pos, vec2(1, 1));
+        this.isSelectable = true;
         this.onPointerEnter = (ev) => {
             this.pin.style.backgroundColor = this.gui.style.colorPinHover;
         };
@@ -28,5 +29,11 @@ export default class FunctionBlockPinElem extends GUIElement {
             backgroundColor: gui.style.colorPin,
             pointerEvents: 'none'
         });
+    }
+    selected() {
+        this.pin.style.outline = this.gui.style.blockOutlineSelected;
+    }
+    unselected() {
+        this.pin.style.outline = this.gui.style.blockOutlineUnselected;
     }
 }

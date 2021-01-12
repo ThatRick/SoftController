@@ -1,6 +1,7 @@
 import {getFunction, getFunctionName} from '../SoftController/FunctionCollection.js'
 import { IFunction, IO_FLAG, IO_TYPE, getIOType, setIOType } from '../SoftController/SoftTypes.js'
 import { PinType } from './CircuitTypes.js'
+import SoftController from '../SoftController/SoftController.js'
 
 type ID = number
 
@@ -152,5 +153,13 @@ export class FunctionBlock
 export class Circuit extends FunctionBlock
 {
     blocks:     Map<ID, FunctionBlock> = new Map<ID, FunctionBlock>()
-    callList:   ID[]
+    callList:   ID[] = []
+
+    cpu: SoftController | undefined
+    onlineID: number
+
+    loadOnlineCircuit(cpu: SoftController, circuitID: SVGAnimatedNumber) {
+
+
+    }
 }

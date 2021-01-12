@@ -10,6 +10,9 @@ export interface CircuitElement extends GUIElement
     type:   ElementType
     id:     number
     gui:    CircuitView
+
+    selected(): void
+    unselected(): void
 }
 
 export interface CircuitStyle

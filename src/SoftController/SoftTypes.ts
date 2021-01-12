@@ -106,6 +106,13 @@ export function setIOType(flags: number, ioType: IO_TYPE) {
     return (flags & ~IOTypeBitMask) | ioType
 }
 
+export const BYTES_PER_VALUE = 4
+export const BYTES_PER_REF = 4
+
+export function alignBytes(addr: number, bytes = BYTES_PER_VALUE) {
+    return Math.ceil(addr / bytes) * bytes;
+}
+
 export const enum IO_TYPE
 {
     REAL =  0,

@@ -82,5 +82,8 @@ export class Circuit extends FunctionBlock {
     constructor() {
         super(...arguments);
         this.blocks = new Map();
+        this.callList = [];
+    }
+    loadOnlineCircuit(cpu, circuitID) {
     }
 }

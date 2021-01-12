@@ -7,8 +7,9 @@ export default class GUIElement implements IGUIElement{
     parent?: IGUIContainer
     children?: IGUIContainer
 
-    isDraggable: boolean
-    isSelectable: boolean
+    isDraggable?: boolean
+    isSelectable?: boolean
+    isMultiSelectable?: boolean
 
     gui: IGUIView
 

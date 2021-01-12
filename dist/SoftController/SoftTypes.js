@@ -32,4 +32,9 @@ export function getIOType(flags) {
 export function setIOType(flags, ioType) {
     return (flags & ~IOTypeBitMask) | ioType;
 }
+export const BYTES_PER_VALUE = 4;
+export const BYTES_PER_REF = 4;
+export function alignBytes(addr, bytes = BYTES_PER_VALUE) {
+    return Math.ceil(addr / bytes) * bytes;
+}
 const IOTypeBitMask = (1 /* TYPE_BIT0 */ | 2 /* TYPE_BIT1 */ | 4 /* TYPE_BIT2 */);

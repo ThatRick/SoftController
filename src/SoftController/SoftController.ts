@@ -1,13 +1,13 @@
 
 import {readStruct, setStructElement, writeStruct} from '../Lib/TypedStructs.js'
-import {ID, IORef, IO_FLAG, IO_TYPE, getIOType, setIOType, DatablockType, IFunction} from './SoftTypes.js'
+import {ID, IORef, IO_FLAG, IO_TYPE, getIOType, setIOType, DatablockType, IFunction, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF} from './SoftTypes.js'
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionParams} from './SoftTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from './SoftTypes.js'
 import {ITask, TaskStruct, taskStructByteLength} from './SoftTypes.js'
 import {getFunction, getFunctionName} from './FunctionCollection.js'
+import { calcCircuitSize, calcFunctionSize } from './ControllerInterface.js'
 
-const BYTES_PER_VALUE = 4
-const BYTES_PER_REF = 4
+
 /*
     ///// MEMORY LAYOUT //////
     System sector:      Uint32Array     (Controller info)
@@ -16,9 +16,6 @@ const BYTES_PER_REF = 4
     Data sector:                        (Data Blocks)
 */
 
-function alignBytes(addr: number, bytes = BYTES_PER_VALUE) {
-    return Math.ceil(addr / bytes) * bytes;
-}
 
 // SYSTEM SECTOR [array of uint32]
 const enum SystemSector {
@@ -43,6 +40,8 @@ const systemSectorLength = 10
 export default class SoftController
 {
     static readonly version = 1
+
+    getVersion() { return SoftController.version }
     
     mem:                ArrayBuffer
 
@@ -81,6 +80,7 @@ export default class SoftController
 
     get freeMem() { return undefined } // must sum unallocated datablocks
 
+    getSystemSector() { return this.systemSector.slice() }
 
 /**********************
  *    CONSTRUCTORS    *
@@ -182,7 +182,7 @@ export default class SoftController
  *    TASK PROCEDURES    *
  *************************/
 
-    createTask(targetID: ID, interval: number, offset = 0, index?: number) {
+    createTask(callTargetID: ID, interval: number, offset = 0, index?: number) {
         // check last 
         const vacantIndex = this.taskList.findIndex(value => (value == 0));
         if (vacantIndex == -1) {
@@ -190,7 +190,7 @@ export default class SoftController
             return -1;
         }
 
-        const targetRef = this.datablockTable[targetID];
+        const targetRef = this.datablockTable[callTargetID];
         const task: ITask = {
             targetRef,              // Reference of callable circuit or function 
             interval,               // time interval between calls (ms)
@@ -230,23 +230,25 @@ export default class SoftController
         const taskByteOffset = taskRef + datablockHeaderByteLength;
         return readStruct<ITask>(this.mem, taskByteOffset, TaskStruct);        
     }
-    setTaskTarget(id: ID, targetID: ID) {
-        const startOffset = datablockHeaderByteLength + this.datablockTable[id];
+    setTaskCallTarget(taskID: ID, callTargetID: ID) {
+        const startOffset = datablockHeaderByteLength + this.datablockTable[taskID];
         writeStruct(this.mem, startOffset, TaskStruct, {
-            targetRef: this.datablockTable[targetID]
+            targetRef: this.datablockTable[callTargetID]
         });
         // updateStructElement(this.mem, startOffset, TaskStruct, 'targetRef', this.datablockTable[targetID]);
+    }
+    getTaskCount() {
+        return this.taskList.indexOf(0)
+    }
+    getTaskIDList() {
+        const taskRefs = Array.from(this.taskList.slice(0, this.getTaskCount()))
+        const taskIDs = taskRefs.map(ref => this.getDatablockID(ref))
+        return taskIDs
     }
 
 /****************************
  *    CIRCUIT PROCEDURES    *
  ****************************/
-
-    static calcCircuitSize(inputCount: number, outputCount: number, staticCount: number): number {
-        let byteLength = SoftController.calcFunctionSize(inputCount, outputCount, staticCount);
-        byteLength += outputCount * BYTES_PER_REF               // output references
-        return byteLength;
-    }
 
     // Creates a new circuit data block
     createCircuit(inputCount: number, outputCount: number, functionCount: number): ID {
@@ -261,7 +263,7 @@ export default class SoftController
             reserve: 0
         }
 
-        const byteLength = SoftController.calcCircuitSize(inputCount, outputCount, functionCount);
+        const byteLength = calcCircuitSize(inputCount, outputCount, functionCount);
 
         const buffer = new ArrayBuffer(byteLength)
         const bytes = new Uint8Array(buffer)
@@ -280,7 +282,7 @@ export default class SoftController
         const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);    
         
         funcCallList.forEach(ref => {                                               // Remove all functions in call list
-            const callID = this.getDatablockIDbyRef(ref);
+            const callID = this.getDatablockID(ref);
             if (callID > 0) this.unallocateDatablock(callID);
         })
 
@@ -303,7 +305,7 @@ export default class SoftController
         return true;
     }
 
-    getCircuitCallList(ref: number) {
+    getCircuitCallRefList(ref: number) {
         const circHeader = this.readFunctionHeader(ref);
         const pointers = this.functionDataMap(ref, circHeader);
         const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);
@@ -314,7 +316,7 @@ export default class SoftController
     // Adds function call to circuit
     addFunctionCall(circuitID: ID, functionID: ID, callIndex?: number): boolean {
         const circRef = this.datablockTable[circuitID];
-        const funcCallList = this.getCircuitCallList(circRef);
+        const funcCallList = this.getCircuitCallRefList(circRef);
         const functionRef = this.datablockTable[functionID];
         const vacantIndex = funcCallList.indexOf(0);                            // find first vacant call index
         if (vacantIndex == -1) {
@@ -333,7 +335,7 @@ export default class SoftController
 
     removeFunctionCall(circuitID: ID, functionID: ID): boolean {
         const circRef = this.datablockTable[circuitID];
-        const funcCallList = this.getCircuitCallList(circRef);
+        const funcCallList = this.getCircuitCallRefList(circRef);
         const functionRef = this.datablockTable[functionID];
 
         const callIndex = funcCallList.indexOf(functionRef);                    // find function call index
@@ -372,16 +374,17 @@ export default class SoftController
         this.ints[outputRefPointer] = sourceIOPointer;
     }
     
-    readCircuitOutputRefs(ref: number) {
-        const header = this.readFunctionHeader(ref);
-        const pointers = this.functionDataMap(ref, header);
+    readCircuitOutputRefsByID(id: number) {
+        const header = this.readFunctionHeaderByID(id);
+        const pointers = this.functionDataMapByID(id, header);
         const start = pointers.statics + header.staticCount;
         const outputRefs = this.ints.slice(start, start + header.outputCount);
         return outputRefs
     }
 
-    readCircuitCallList(ref: number) {
-        return this.getCircuitCallList(ref).slice();
+    readCircuitCallRefListByID(id: number) {
+        const ref = this.datablockTable[id]
+        return this.getCircuitCallRefList(ref).slice();
     }
 
 /****************************
@@ -420,16 +423,6 @@ export default class SoftController
         if (inverted) this.setFunctionIOFlag(funcId, inputNum, IO_FLAG.INVERTED);
     }
 
-    static calcFunctionSize(inputCount, outputCount, staticCount): number {
-        const ioCount = inputCount + outputCount
-        let byteLength = functionHeaderByteLength                    // Function header
-        byteLength += alignBytes(ioCount)                            // IO flags
-        byteLength += inputCount * BYTES_PER_REF                     // Input references
-        byteLength += (ioCount + staticCount) * BYTES_PER_VALUE      // IO and static values
-
-        return byteLength
-    }
-
     // Creates new function data block
     createFunctionBlock(library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number): ID
     {
@@ -458,7 +451,7 @@ export default class SoftController
             reserve: 0
         }
         
-        const byteLength = SoftController.calcFunctionSize(inputCount, outputCount, staticCount);
+        const byteLength = calcFunctionSize(inputCount, outputCount, staticCount);
 
         const buffer = new ArrayBuffer(byteLength)
         writeStruct(buffer, 0, FunctionHeaderStruct, funcHeader)           // Write function header
@@ -567,30 +560,30 @@ export default class SoftController
         return pointers.inputRefs + inputRefNum;        
     }
 
-    readFunctionIOValues(ref: number) {
-        const pointers = this.functionDataMap(ref);
+    readFunctionIOValuesByID(id: number) {
+        const pointers = this.functionDataMapByID(id);
         const ioValues = this.floats.slice(pointers.inputs, pointers.statics);
         return ioValues
     }
-    readFunctionInputRefs(ref: number) {
-        const pointers = this.functionDataMap(ref);
+    readFunctionInputRefsByID(id: number): Uint32Array {
+        const pointers = this.functionDataMapByID(id);
         const inputRefs = this.ints.slice(pointers.inputRefs, pointers.inputs);
         return inputRefs
     }
-    readFunctionIOFlags(ref: number) {
-        const funcHeader = this.readFunctionHeader(ref);
-        const pointers = this.functionDataMap(ref, funcHeader);
+    readFunctionIOFlagsByID(id: number) {
+        const funcHeader = this.readFunctionHeaderByID(id);
+        const pointers = this.functionDataMapByID(id, funcHeader);
         const ioCount = funcHeader.inputCount + funcHeader.outputCount;
         const ioFlags = this.bytes.slice(pointers.flags, pointers.flags + ioCount);
         return ioFlags
     }
 
-    solveIOReference(ioRef: number): IORef | null {
-        if (!ioRef) return null;
+    solveIOReference(ioRef: number): IORef {
+        if (!ioRef) return undefined;
         
         const byteOffset = ioRef * BYTES_PER_REF;
 
-        let solved: IORef = null;
+        let solved: IORef;
         
         for (let id = 0; id < this.datablockTableLastUsedID; id++) {
             const blockRef = this.datablockTable[id];
@@ -851,7 +844,10 @@ export default class SoftController
         }
     }
 
-    getDatablockIDbyRef(ref: number) {
+    getDatablockRef(id: ID) {
+        return this.datablockTable[id]
+    }
+    getDatablockID(ref: number) {
         const id = this.datablockTable.lastIndexOf(ref, this.datablockTableLastUsedID);
         if (id == -1) {
             console.error('Invalid data block reference', ref);
@@ -889,6 +885,13 @@ export default class SoftController
             } 
         }
         return candidateID
+    }
+
+    getDatablockTableUsedSize() {
+        return this.datablockTableLastUsedID
+    }
+    getDatablockTable() {
+        return Array.from(this.datablockTable.slice(0, this.datablockTableLastUsedID))
     }
 
 }

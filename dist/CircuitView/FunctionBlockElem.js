@@ -13,11 +13,9 @@ export default class FunctionBlockElem extends GUIElement {
         this.type = 'block';
         this.isDraggable = true;
         this.isSelectable = true;
+        this.isMultiSelectable = true;
         this.inputPins = [];
         this.outputPins = [];
-        this.onPointerDown = (ev, pointer) => {
-            this.toFront();
-        };
         this.onPointerEnter = () => {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
         };
@@ -88,6 +86,12 @@ export default class FunctionBlockElem extends GUIElement {
                 }
             });
         }
+    }
+    selected() {
+        this.DOMElement.style.outline = this.gui.style.blockOutlineSelected;
+    }
+    unselected() {
+        this.DOMElement.style.outline = this.gui.style.blockOutlineUnselected;
     }
     toFront() {
         this.parent.DOMElement.appendChild(this.DOMElement);

@@ -38,6 +38,7 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
 
     isDraggable = true
     isSelectable = true
+    isMultiSelectable = true
 
     func: FunctionBlock
     isMinimal: boolean
@@ -107,12 +108,16 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
         }
     }
 
-    toFront() {
-        this.parent.DOMElement.appendChild(this.DOMElement)
+    selected() {
+        this.DOMElement.style.outline = this.gui.style.blockOutlineSelected
     }
 
-    onPointerDown = (ev, pointer) => {
-        this.toFront()
+    unselected() {
+        this.DOMElement.style.outline = this.gui.style.blockOutlineUnselected
+    }
+
+    toFront() {
+        this.parent.DOMElement.appendChild(this.DOMElement)
     }
 
     onPointerEnter = () => {
