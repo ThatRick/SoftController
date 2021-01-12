@@ -321,14 +321,11 @@ async function circuitToString(cpu: IControllerInterface, circuitID: number) {
     const addLine = (line: string) => text += (line + '\n');
     const circuit = await cpu.getCircuitData(circuitID);
     if (!circuit) return 'Error'
-    addLine(`CALL LIST (size: ${circuit.callList.length})`)
+    addLine(`CALL LIST (size: ${circuit.callIDList.length})`)
     addLine('')
-    for (let i = 0; i < circuit.callList.length; i++) {
-        const callRef = circuit.callList[i];
-        if (callRef == 0) break;
-        const funcID = cpu.getDatablockID(callRef);
-        addLine(`${i.toString().padStart(3)}:  ${funcID.toString().padStart(3, '0')}  [${callRef.toString(16).toUpperCase()}]`)
-    }
+    circuit.callIDList.forEach((funcID, i) => {
+        addLine(`${i.toString().padStart(3)}:  ${funcID.toString().padStart(3, '0')}`)
+    })
 
     return text;
 }

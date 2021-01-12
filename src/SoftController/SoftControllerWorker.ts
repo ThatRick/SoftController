@@ -1,5 +1,5 @@
 import SoftController from './SoftController.js'
-import { ICircuitData, ICreateControllerParams, IFunctionBlockData, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse } from './ControllerInterface.js'
+import { ICircuitData, IConnectCircuitOutputParams, IConnectFunctionBlockInputParams, ICreateCircuitParams, ICreateControllerParams, ICreateFunctionBlockParams, ICreateTaskParams, IFunctionBlockData, ISetFunctionBlockIOFlagsParams, ISetFunctionBlockIOValueParams, ISetTaskCallTargetParams, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse } from './ControllerInterface.js'
 import { DatablockType, ID } from './SoftTypes.js'
 
 let cpu: SoftController
@@ -32,15 +32,20 @@ let ticker: Ticker
 onmessage = (e) =>
 {
     const msg = e.data as Message
+
+    let response: any
+    let error: string
+
     if (msg == undefined) {
         console.error('Worker: Invalid message, no data found.', e); return
     }
     if (msg.code == undefined) {
         console.error('Worker: Invalid message, no message code defined.', msg); return
     }
-
-    let response: any
-    let error: string
+    if (!cpu && msg.code > MessageCode.CreateController) {
+        respondReject(msg.id, msg.code, 'Controller does not exist')
+        return
+    }
 
     switch (msg.code) {
         case MessageCode.CreateController:
@@ -61,7 +66,6 @@ onmessage = (e) =>
         }
         case MessageCode.StartController:
         {
-            if (!ticker) { error = 'Could not start non-existent controller.'; break }
             const interval = msg.params as number
             ticker.start(interval)
             response = true
@@ -69,14 +73,12 @@ onmessage = (e) =>
         }
         case MessageCode.StopController:
         {
-            if (!ticker) { error = 'Could not stop non-existent controller.'; break }
             ticker.stop()
             response = true
             break
         }
         case MessageCode.StepController:
         {
-            if (!ticker) { error = 'Could not step non-existent controller.'; break }
             const params = msg.params as IStepControllerParams
             ticker.step(params.interval, params.numSteps)
             response = true
@@ -84,35 +86,53 @@ onmessage = (e) =>
         }
         case MessageCode.CreateTask:
         {
-            
+            const par = msg.params as ICreateTaskParams
+            const id = cpu.createTask(par.callTargetID, par.interval, par.offset)
+            if (id > 0) response = id
             break
         }
         case MessageCode.SetTaskCallTarget:
         {
+            const par = msg.params as ISetTaskCallTargetParams
+            response = cpu.setTaskCallTarget(par.taskID, par.callTargetID)
             break
         }
         case MessageCode.CreateCircuit:
         {
+            const par = msg.params as ICreateCircuitParams
+            const id = cpu.createCircuit(par.inputCount, par.outputCount, par.funcCallCount)
+            if (id > 0) response = id
             break
         }
         case MessageCode.ConnectCircuitOutput:
         {
+            const par = msg.params as IConnectCircuitOutputParams
+            response = cpu.connectCircuitOutput(par.circID, par.outputNum, par.sourceID, par.sourceIONum)
             break
         }
         case MessageCode.CreateFunctionBlock:
         {
+            const par = msg.params as ICreateFunctionBlockParams
+            const id = cpu.createFunctionBlock(par.library, par.opcode, par.circuitID, par.callIndex, par.inputCount, par.outputCount, par.staticCount)
+            if (id > 0) response = id
             break
         }
         case MessageCode.SetFunctionBlockIOValue:
         {
+            const par = msg.params as ISetFunctionBlockIOValueParams
+            response = cpu.setFunctionIOValue(par.funcID, par.ioNum, par.value)
             break
         }
         case MessageCode.SetFunctionBlockIOFlags:
         {
+            const par = msg.params as ISetFunctionBlockIOFlagsParams
+            response = cpu.setFunctionIOFlags(par.funcID, par.ioNum, par.flags)
             break
         }
         case MessageCode.ConnectFunctionBlockInput:
         {
+            const par = msg.params as IConnectFunctionBlockInputParams
+            response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum)
             break
         }
         case MessageCode.GetSystemSector:
@@ -135,30 +155,42 @@ onmessage = (e) =>
         }
         case MessageCode.GetTaskList:
         {
+            response = cpu.getTaskIDList()
             break
         }
         case MessageCode.GetTask:
         {
+            const id = msg.params as ID
+            response = cpu.getTaskByID(id)
             break
         }
         case MessageCode.GetDatablockList:
         {
+            response = cpu.getDatablockTable()
             break
         }
         case MessageCode.GetDatablockHeader:
         {
+            const id = msg.params as ID
+            response = cpu.getDatablockHeaderByID(id)
             break
         }
         case MessageCode.GetDatablockRef:
         {
+            const id = msg.params as ID
+            response = cpu.getDatablockRef(id)
             break
         }
         case MessageCode.GetDatablockID:
         {
+            const ref = msg.params as number
+            response = cpu.getDatablockID(ref)
             break
         }
         case MessageCode.GetFunctionBlockHeader:
         {
+            const id = msg.params as ID
+            response = cpu.readFunctionHeaderByID(id)
             break
         }
 
@@ -201,7 +233,7 @@ onmessage = (e) =>
     
             const data: ICircuitData =  {
                 outputRefs,
-                callList
+                callIDList: callList
             }
             response = data
             break

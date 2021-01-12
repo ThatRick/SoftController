@@ -224,6 +224,7 @@ export default class SoftController
 
     getTaskByID(id: ID): ITask {
         const taskRef = this.datablockTable[id];
+        if (!taskRef) return null
         return this.getTask(taskRef);
     }
     getTask(taskRef: number): ITask {
@@ -231,11 +232,14 @@ export default class SoftController
         return readStruct<ITask>(this.mem, taskByteOffset, TaskStruct);        
     }
     setTaskCallTarget(taskID: ID, callTargetID: ID) {
-        const startOffset = datablockHeaderByteLength + this.datablockTable[taskID];
+        const ref = this.datablockTable[taskID]
+        if (!ref) return false
+        const startOffset = ref + datablockHeaderByteLength;
         writeStruct(this.mem, startOffset, TaskStruct, {
             targetRef: this.datablockTable[callTargetID]
         });
         // updateStructElement(this.mem, startOffset, TaskStruct, 'targetRef', this.datablockTable[targetID]);
+        return true
     }
     getTaskCount() {
         return this.taskList.indexOf(0)
@@ -277,6 +281,7 @@ export default class SoftController
 
     deleteCircuit(id: ID) {
         const blockRef = this.datablockTable[id];
+        if (!blockRef) return false
         const circHeader = this.readFunctionHeader(blockRef);
         const pointers = this.functionDataMap(blockRef);
         const funcCallList = this.ints.subarray(pointers.statics, pointers.statics + circHeader.staticCount);    
@@ -289,6 +294,7 @@ export default class SoftController
         // TODO: remove task
 
         this.deleteFunctionBlock(id);
+        return true
     }
 
     defineCircuitIO(id: ID, ioNum: number, flags: number, value: number = 0) {
@@ -363,6 +369,7 @@ export default class SoftController
 
     getCircuitOutputRefPointer(id: ID, outputRefNum: number) {
         const header = this.readFunctionHeaderByID(id);
+        if (!header) return null
         const pointers = this.functionDataMapByID(id, header);
         return pointers.statics + header.staticCount + outputRefNum;        
     }
@@ -371,11 +378,15 @@ export default class SoftController
         const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
         const outputRefPointer = this.getCircuitOutputRefPointer(circuitId, outputNum);
 
+        if (!sourceIOPointer || !outputRefPointer) return false
+
         this.ints[outputRefPointer] = sourceIOPointer;
+        return true
     }
     
     readCircuitOutputRefsByID(id: number) {
         const header = this.readFunctionHeaderByID(id);
+        if (!header) return null
         const pointers = this.functionDataMapByID(id, header);
         const start = pointers.statics + header.staticCount;
         const outputRefs = this.ints.slice(start, start + header.outputCount);
@@ -384,6 +395,7 @@ export default class SoftController
 
     readCircuitCallRefListByID(id: number) {
         const ref = this.datablockTable[id]
+        if (!ref) return null
         return this.getCircuitCallRefList(ref).slice();
     }
 
@@ -391,36 +403,48 @@ export default class SoftController
  *    FUNCTION PROCEDURES   *
  ****************************/
 
-    setFunctionIOValue(id, ioNum, value) {
+    setFunctionIOValue(id: ID, ioNum: number, value: number) {
         const pointers = this.functionDataMapByID(id);
+        if (!pointers) return false
         if (ioNum < (pointers.statics - pointers.inputs)) {
             this.floats[pointers.inputs + ioNum] = value;
         }
+        return true
     }
 
-    setFunctionIOFlags(id, ioNum, flags) {
+    setFunctionIOFlags(id: ID, ioNum: number, flags: number) {
         const pointers = this.functionDataMapByID(id);
+        if (!pointers) return false
         if (ioNum < (pointers.statics - pointers.inputs)) {
             this.bytes[pointers.flags + ioNum] = flags;
         }
+        return true
     }
     
     setFunctionIOFlag(id: ID, ioNum: number, flag: number) {
         const pointers = this.functionDataMapByID(id);
+        if (!pointers) return false
         this.bytes[pointers.flags + ioNum] |= flag;
+        return true
     }
     
     clearFunctionIOFlag(id: ID, ioNum: number, flag: number) {
         const pointers = this.functionDataMapByID(id);
+        if (!pointers) return false
         this.bytes[pointers.flags + ioNum] &= ~flag;
+        return true
     }
 
     connectFunctionInput(funcId: ID, inputNum: number, sourceFuncId: ID, sourceIONum: number, inverted = false) {
         const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
         const inputRefPointer = this.getFunctionInputRefPointer(funcId, inputNum);
 
+        if (!sourceIOPointer || !inputRefPointer) return false
+
         this.ints[inputRefPointer] = sourceIOPointer;
         if (inverted) this.setFunctionIOFlag(funcId, inputNum, IO_FLAG.INVERTED);
+        
+        return true
     }
 
     // Creates new function data block
@@ -502,6 +526,7 @@ export default class SoftController
 
     deleteFunctionBlock(id: ID) {
         const blockHeader = this.getDatablockHeaderByID(id);
+        if (!blockHeader) return null
         const parentID = blockHeader.parentID;
         if (parentID) {
             this.removeFunctionCall(parentID, id);
@@ -510,6 +535,7 @@ export default class SoftController
 
     readFunctionHeaderByID(id: ID): IFunctionHeader {
         let datablockRef = this.datablockTable[id];
+        if (!datablockRef) return null
         return this.readFunctionHeader(datablockRef);
     }
     // Optimized version! Any struct change will break this
@@ -529,6 +555,7 @@ export default class SoftController
     functionDataMapByID(id: ID, header?: IFunctionHeader)
     {
         const datablockRef = this.datablockTable[id];
+        if (!datablockRef) return null
         return this.functionDataMap(datablockRef, header)
     }
     functionDataMap(datablockRef: number, header?: IFunctionHeader)
@@ -552,26 +579,31 @@ export default class SoftController
 
     getFunctionIOPointer(id: ID, ioNum: number) {
         const pointers = this.functionDataMapByID(id);
+        if (!pointers) return null
         return pointers.inputs + ioNum;
     }
 
     getFunctionInputRefPointer(id: ID, inputRefNum: number) {
         const pointers = this.functionDataMapByID(id);
+        if (!pointers) return null
         return pointers.inputRefs + inputRefNum;        
     }
 
     readFunctionIOValuesByID(id: number) {
         const pointers = this.functionDataMapByID(id);
+        if (!pointers) return null
         const ioValues = this.floats.slice(pointers.inputs, pointers.statics);
         return ioValues
     }
     readFunctionInputRefsByID(id: number): Uint32Array {
         const pointers = this.functionDataMapByID(id);
+        if (!pointers) return null
         const inputRefs = this.ints.slice(pointers.inputRefs, pointers.inputs);
         return inputRefs
     }
     readFunctionIOFlagsByID(id: number) {
         const funcHeader = this.readFunctionHeaderByID(id);
+        if (!funcHeader) return null
         const pointers = this.functionDataMapByID(id, funcHeader);
         const ioCount = funcHeader.inputCount + funcHeader.outputCount;
         const ioFlags = this.bytes.slice(pointers.flags, pointers.flags + ioCount);
@@ -816,7 +848,8 @@ export default class SoftController
     }
 
     getDatablockHeaderByID(id: ID): IDatablockHeader {
-        let datablockRef = this.datablockTable[id];
+        const datablockRef = this.datablockTable[id];
+        if (!datablockRef) return null
         return this.getDatablockHeader(datablockRef);
     }
     getDatablockHeader(datablockRef: number): IDatablockHeader {

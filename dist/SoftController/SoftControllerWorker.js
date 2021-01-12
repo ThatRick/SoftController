@@ -23,6 +23,8 @@ class Ticker {
 let ticker;
 onmessage = (e) => {
     const msg = e.data;
+    let response;
+    let error;
     if (msg == undefined) {
         console.error('Worker: Invalid message, no data found.', e);
         return;
@@ -31,8 +33,10 @@ onmessage = (e) => {
         console.error('Worker: Invalid message, no message code defined.', msg);
         return;
     }
-    let response;
-    let error;
+    if (!cpu && msg.code > 1 /* CreateController */) {
+        respondReject(msg.id, msg.code, 'Controller does not exist');
+        return;
+    }
     switch (msg.code) {
         case 1 /* CreateController */:
             {
@@ -52,10 +56,6 @@ onmessage = (e) => {
             }
         case 2 /* StartController */:
             {
-                if (!ticker) {
-                    error = 'Could not start non-existent controller.';
-                    break;
-                }
                 const interval = msg.params;
                 ticker.start(interval);
                 response = true;
@@ -63,20 +63,12 @@ onmessage = (e) => {
             }
         case 3 /* StopController */:
             {
-                if (!ticker) {
-                    error = 'Could not stop non-existent controller.';
-                    break;
-                }
                 ticker.stop();
                 response = true;
                 break;
             }
         case 4 /* StepController */:
             {
-                if (!ticker) {
-                    error = 'Could not step non-existent controller.';
-                    break;
-                }
                 const params = msg.params;
                 ticker.step(params.interval, params.numSteps);
                 response = true;
@@ -84,34 +76,56 @@ onmessage = (e) => {
             }
         case 5 /* CreateTask */:
             {
+                const par = msg.params;
+                const id = cpu.createTask(par.callTargetID, par.interval, par.offset);
+                if (id > 0)
+                    response = id;
                 break;
             }
         case 6 /* SetTaskCallTarget */:
             {
+                const par = msg.params;
+                response = cpu.setTaskCallTarget(par.taskID, par.callTargetID);
                 break;
             }
         case 7 /* CreateCircuit */:
             {
+                const par = msg.params;
+                const id = cpu.createCircuit(par.inputCount, par.outputCount, par.funcCallCount);
+                if (id > 0)
+                    response = id;
                 break;
             }
         case 8 /* ConnectCircuitOutput */:
             {
+                const par = msg.params;
+                response = cpu.connectCircuitOutput(par.circID, par.outputNum, par.sourceID, par.sourceIONum);
                 break;
             }
         case 9 /* CreateFunctionBlock */:
             {
+                const par = msg.params;
+                const id = cpu.createFunctionBlock(par.library, par.opcode, par.circuitID, par.callIndex, par.inputCount, par.outputCount, par.staticCount);
+                if (id > 0)
+                    response = id;
                 break;
             }
         case 10 /* SetFunctionBlockIOValue */:
             {
+                const par = msg.params;
+                response = cpu.setFunctionIOValue(par.funcID, par.ioNum, par.value);
                 break;
             }
         case 11 /* SetFunctionBlockIOFlags */:
             {
+                const par = msg.params;
+                response = cpu.setFunctionIOFlags(par.funcID, par.ioNum, par.flags);
                 break;
             }
         case 12 /* ConnectFunctionBlockInput */:
             {
+                const par = msg.params;
+                response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum);
                 break;
             }
         case 13 /* GetSystemSector */:
@@ -134,30 +148,42 @@ onmessage = (e) => {
             }
         case 14 /* GetTaskList */:
             {
+                response = cpu.getTaskIDList();
                 break;
             }
         case 15 /* GetTask */:
             {
+                const id = msg.params;
+                response = cpu.getTaskByID(id);
                 break;
             }
         case 16 /* GetDatablockList */:
             {
+                response = cpu.getDatablockTable();
                 break;
             }
         case 17 /* GetDatablockHeader */:
             {
+                const id = msg.params;
+                response = cpu.getDatablockHeaderByID(id);
                 break;
             }
         case 18 /* GetDatablockRef */:
             {
+                const id = msg.params;
+                response = cpu.getDatablockRef(id);
                 break;
             }
         case 19 /* GetDatablockID */:
             {
+                const ref = msg.params;
+                response = cpu.getDatablockID(ref);
                 break;
             }
         case 20 /* GetFunctionBlockHeader */:
             {
+                const id = msg.params;
+                response = cpu.readFunctionHeaderByID(id);
                 break;
             }
         case 21 /* GetFunctionBlockData */:
@@ -202,7 +228,7 @@ onmessage = (e) => {
                 const callList = Array.from(cpu.readCircuitCallRefListByID(id)).map(callRef => cpu.getDatablockID(callRef));
                 const data = {
                     outputRefs,
-                    callList
+                    callIDList: callList
                 };
                 response = data;
                 break;

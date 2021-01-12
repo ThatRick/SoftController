@@ -12,7 +12,7 @@ export interface IFunctionBlockData extends IFunctionHeader
 
 export interface ICircuitData
 {
-    callList:       number[]
+    callIDList:     number[]
     outputRefs:     IORef[]
 }
 

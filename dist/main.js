@@ -118,10 +118,10 @@ async function app() {
 //
 async function createTestBlocks(cpu, blockCount = 10) {
     // test
-    const circId = await cpu.createCircuit(4, 2, blockCount).catch(error => { console.log(error); return; });
+    const circId = await cpu.createCircuit(4, 2, blockCount);
     if (!circId) {
         console.error('no circid');
-        return;
+        return [];
     }
     const funcs = [circId];
     const maxOpcode = 7;
@@ -271,15 +271,11 @@ async function circuitToString(cpu, circuitID) {
     const circuit = await cpu.getCircuitData(circuitID);
     if (!circuit)
         return 'Error';
-    addLine(`CALL LIST (size: ${circuit.callList.length})`);
+    addLine(`CALL LIST (size: ${circuit.callIDList.length})`);
     addLine('');
-    for (let i = 0; i < circuit.callList.length; i++) {
-        const callRef = circuit.callList[i];
-        if (callRef == 0)
-            break;
-        const funcID = cpu.getDatablockID(callRef);
-        addLine(`${i.toString().padStart(3)}:  ${funcID.toString().padStart(3, '0')}  [${callRef.toString(16).toUpperCase()}]`);
-    }
+    circuit.callIDList.forEach((funcID, i) => {
+        addLine(`${i.toString().padStart(3)}:  ${funcID.toString().padStart(3, '0')}`);
+    });
     return text;
 }
 ///////////////////////////////////////////
