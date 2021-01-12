@@ -263,8 +263,7 @@ export default class SoftController
             inputCount,
             outputCount,
             staticCount: functionCount,
-            funcFlags: 0,
-            reserve: 0
+            functionFlags: 0,
         }
 
         const byteLength = calcCircuitSize(inputCount, outputCount, functionCount);
@@ -471,8 +470,7 @@ export default class SoftController
             inputCount,
             outputCount,
             staticCount,
-            funcFlags: 0,
-            reserve: 0
+            functionFlags: 0,
         }
         
         const byteLength = calcFunctionSize(inputCount, outputCount, staticCount);
@@ -547,8 +545,7 @@ export default class SoftController
             inputCount:     this.bytes[byteOffset + 2],
             outputCount:    this.bytes[byteOffset + 3],
             staticCount:    this.words[(byteOffset + 4) / 2],
-            funcFlags:      this.bytes[byteOffset + 5],
-            reserve:        0
+            functionFlags:  this.words[(byteOffset + 6) / 2]
         }
     }
 

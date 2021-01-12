@@ -2,6 +2,7 @@ import {getFunction, getFunctionName} from '../SoftController/FunctionCollection
 import { IFunction, IO_FLAG, IO_TYPE, getIOType, setIOType } from '../SoftController/SoftTypes.js'
 import { PinType } from './CircuitTypes.js'
 import SoftController from '../SoftController/SoftController.js'
+import IControllerInterface, { ICircuitData, IFunctionBlockData } from '../SoftController/ControllerInterface.js'
 
 type ID = number
 
@@ -90,76 +91,139 @@ export class Output extends FunctionBlockIO
     }
 }
 
+export interface IFunctionBlockController {
+    funcBlockData: IFunctionBlockData
+}
+
+export interface ICircuitController extends IFunctionBlockController {
+    circuitData: ICircuitData
+
+}
+
 export class FunctionBlock
 {
-    constructor(
-        public circuit: Circuit | undefined,
-        public readonly library: number,
-        public readonly opcode: number,
-        numInputs = 0,
-        numOutputs = 0,
-        id: number
-    ) {
+    constructor(funcData: IFunctionBlockData, id?: number)
+    {
+        this.isCircuit = (funcData.library > 0)
+        const func = (this.isCircuit) ? null : getFunction(funcData.library, funcData.opcode)
+        
+        this.funcData = funcData
         this.id = id
-        if (library) {
-            this.func = getFunction(library, opcode)
-            this.name = this.func.name
-            this.defineFunctionTypeIO(this.func, numInputs, numOutputs)
-        } else {
-            this.name = 'Circuit'
-            this.defineCircuitIO(numInputs, numOutputs)
-        }
+        this.name = (this.isCircuit) ? 'Circuit' : func.name
+        this.setupIO(funcData, func)
     }
 
-    defineCircuitIO(numInputs, numOutputs) {
-        let ioNum = 0
-
-        for (let inputNum = 0; inputNum < numInputs; inputNum++) {
-            this.inputs[inputNum] = new Input(this, inputNum.toString(), ioNum++, 0, 0, true)
-        }
-        for (let outputNum = 0; outputNum < numOutputs; outputNum++) {
-            this.outputs[outputNum] = new Output(this, outputNum.toString(), ioNum++, 0, 0, true)
-        }
-    }
-
-    defineFunctionTypeIO(func: IFunction, numInputs: number, numOutputs: number) {
-        numInputs = (numInputs && func.variableInputCount &&
-            numInputs <= func.variableInputCount.max && numInputs >= func.variableInputCount.min) ? numInputs : func.inputs.length
-
-        numOutputs = (numOutputs && func.variableInputCount &&
-            numOutputs <= func.variableInputCount.max && numOutputs >= func.variableInputCount.min) ? numOutputs : func.outputs.length
-
-        let ioNum = 0
-
-        for (let inputNum = 0; inputNum < numInputs; inputNum++) {
-            const input = func.inputs[Math.min(inputNum, func.inputs.length - 1)]
-            this.inputs[inputNum] = new Input(this, input.name, ioNum++, input.flags, input.initValue)
-        }
-        for (let outputNum = 0; outputNum < numOutputs; outputNum++) {
-            const output = func.outputs[Math.min(outputNum, func.outputs.length - 1)]
-            this.outputs[outputNum] = new Output(this, output.name, ioNum++, output.flags, output.initValue)
-        }
-    }
-
+    funcData:   IFunctionBlockData       
+    isCircuit:  boolean
     func?:      IFunction
-    id:         ID
+    id?:        ID
     name:       string
     comment:    string
 
     inputs:     Input[] = []
     outputs:    Output[] = []
+
+    setupIO(data: IFunctionBlockData, func: IFunction) {
+
+        for (let inputNum = 0; inputNum < data.inputCount; inputNum++) {
+            const ioNum = inputNum
+            const name = (func) ? func.inputs[Math.min(inputNum, func.inputs.length - 1)].name : inputNum.toString()
+            this.inputs[inputNum] = new Input(this, name, ioNum, data.ioValues[ioNum], data.ioValues[ioNum], this.isCircuit)
+        }
+        for (let outputNum = 0; outputNum < data.outputCount; outputNum++) {
+            const ioNum = data.inputCount + outputNum
+            const name = (func) ? func.outputs[Math.min(outputNum, func.inputs.length - 1)].name : outputNum.toString()
+            this.outputs[outputNum] = new Output(this, name, ioNum, data.ioValues[ioNum], data.ioValues[ioNum], this.isCircuit)
+        }
+    }
+
+    static createNew(library: number, opcode: number, customInputCount?: number, customOutputCount?: number) {
+        const func = getFunction(library, opcode)
+        if (!func) { console.error('Invalid function library/opcode'); return }
+
+        const inputCount = (customInputCount && func.variableInputCount &&
+            customInputCount <= func.variableInputCount.max && customInputCount >= func.variableInputCount.min) ? customInputCount : func.inputs.length
+
+        const outputCount = (customOutputCount && func.variableOutputCount &&
+            customOutputCount <= func.variableInputCount.max && customOutputCount >= func.variableOutputCount.min) ? customOutputCount : func.outputs.length
+
+        function stretchArray<T>(arr: Array<T>, length: number) {
+            while (arr.length < length) arr.push(arr[arr.length - 1])
+            while (arr.length > length) arr.pop()
+            return arr
+        }
+            
+        const inputValues = stretchArray(func.inputs.map(input => input.initValue), inputCount)
+        const inputFlags = stretchArray(func.inputs.map(input => input.flags), inputCount)
+        
+        const outputValues = stretchArray(func.outputs.map(output => output.initValue), outputCount)
+        const outputFlags = stretchArray(func.outputs.map(output => output.flags), outputCount)
+        
+        const data: IFunctionBlockData = {
+            library,
+            opcode,
+            inputCount,
+            outputCount,
+            staticCount: func.staticCount,
+            functionFlags: 0,
+            ioValues: [...inputValues, ...outputValues],
+            ioFlags: [...inputFlags, ...outputFlags],
+            inputRefs: []
+        }
+
+        return new FunctionBlock(data)
+    }
 }
 
 export class Circuit extends FunctionBlock
 {
-    blocks:     Map<ID, FunctionBlock> = new Map<ID, FunctionBlock>()
-    callList:   ID[] = []
+    constructor(funcData: IFunctionBlockData, circuitData: ICircuitData, id?: number)
+    {
+        super(funcData, id)
+        this.circuitData = circuitData
+    }
 
-    cpu: SoftController | undefined
+    circuitData:    ICircuitData
+    blocks:         FunctionBlock[] = []
+
+    cpu: IControllerInterface | undefined
     onlineID: number
 
-    loadOnlineCircuit(cpu: SoftController, circuitID: SVGAnimatedNumber) {
+    createFunction(library: number, opcode: number, customInputCount?: number, customOutputCount?: number, callIndex?: number) {
+        const funcBlock = FunctionBlock.createNew(library, opcode, customInputCount, customOutputCount)
+        if (!funcBlock) return null
+        const id = this.blocks.length
+        this.blocks.push(funcBlock)
+        funcBlock.id = id
 
+        return funcBlock
+    }
 
+    static createNew() {
+        const funcData: IFunctionBlockData = {
+            library: 0,
+            opcode: 0,
+            inputCount: 0,
+            outputCount: 0,
+            staticCount: 0,
+            functionFlags: 0,
+            ioValues: [],
+            ioFlags: [],
+            inputRefs: []
+        }
+        const circuitData: ICircuitData = {
+            callIDList: [],
+            outputRefs: []
+        }
+
+        return new Circuit(funcData, circuitData)
+    }
+
+    static async loadOnlineCircuit(cpu: IControllerInterface, circuitID: ID) {
+        const funcData = await cpu.getFunctionBlockData(circuitID)
+        const circuitData = await cpu.getCircuitData(circuitID)
+        
+        const circuit = new Circuit(funcData, circuitData)
+        // load blocks..
     }
 }

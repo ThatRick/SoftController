@@ -45,8 +45,7 @@ export type IFunctionHeader =
     inputCount:     number,
     outputCount:    number,
     staticCount:    number,
-    funcFlags:      number,
-    reserve:        number
+    functionFlags:  number,
 }
 
 export const FunctionHeaderStruct: StructDataTypes<IFunctionHeader> =
@@ -56,8 +55,7 @@ export const FunctionHeaderStruct: StructDataTypes<IFunctionHeader> =
     inputCount:     DataType.uint8,
     outputCount:    DataType.uint8,
     staticCount:    DataType.uint16,
-    funcFlags:      DataType.uint8,
-    reserve:        DataType.uint8
+    functionFlags:  DataType.uint16,
 }
 export const functionHeaderByteLength = sizeOfStruct(FunctionHeaderStruct);
 
