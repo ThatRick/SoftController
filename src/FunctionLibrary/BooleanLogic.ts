@@ -1,14 +1,14 @@
-import { IO_FLAG, IO_TYPE } from '../Controller/ControllerTypes.js'
+import { IOFlag, IODataType } from '../Controller/ControllerDataTypes.js'
 import { IFunction, IFunctionLibrary } from '../FunctionCollection.js';
 
 const AND: IFunction =
 {
     name: 'AND',
     inputs: [
-        { initValue: 1, flags: IO_TYPE.BOOL },
-        { initValue: 1, flags: IO_TYPE.BOOL } ],
+        { initValue: 1, flags: IODataType.BINARY },
+        { initValue: 1, flags: IODataType.BINARY } ],
     outputs: [
-        { initValue: 1, flags: IO_TYPE.BOOL } ],
+        { initValue: 1, flags: IODataType.BINARY } ],
 
     variableInputCount: {min: 2, max: 64},
 
@@ -25,10 +25,10 @@ const OR: IFunction =
 {
     name: 'OR',
     inputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL },
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY },
+        { initValue: 0, flags: IODataType.BINARY } ],
     outputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY } ],
 
     variableInputCount: {min: 2, max: 64},
 
@@ -45,10 +45,10 @@ const XOR: IFunction =
 {
     name: 'XOR',
     inputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL },
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY },
+        { initValue: 0, flags: IODataType.BINARY } ],
     outputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY } ],
 
     run(params, values) {
         const a = values[params.input + 0];
@@ -62,9 +62,9 @@ const NOT: IFunction =
 {
     name: 'NOT',
     inputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY } ],
     outputs: [
-        { initValue: 1, flags: IO_TYPE.BOOL } ],
+        { initValue: 1, flags: IODataType.BINARY } ],
 
     run(params, values) {
         values[params.output] = values[params.input] ? 0 : 1;
@@ -75,9 +75,9 @@ const EDGE_UP: IFunction =
 {
     name: '_|‾',
     inputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY } ],
     outputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY } ],
 
     staticCount: 1,
 
@@ -91,9 +91,9 @@ const EDGE_DOWN: IFunction =
 {
     name: '‾|_',
     inputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY } ],
     outputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY } ],
 
     staticCount: 1,
 
@@ -107,10 +107,10 @@ const RS: IFunction =
 {
     name: 'RS',
     inputs: [
-        { name: 'R', initValue: 0, flags: IO_TYPE.BOOL },
-        { name: 'S', initValue: 0, flags: IO_TYPE.BOOL } ],
+        { name: 'R', initValue: 0, flags: IODataType.BINARY },
+        { name: 'S', initValue: 0, flags: IODataType.BINARY } ],
     outputs: [
-        { initValue: 0, flags: IO_TYPE.BOOL } ],
+        { initValue: 0, flags: IODataType.BINARY } ],
     
     staticCount: 1,
 
@@ -124,10 +124,10 @@ const RS: IFunction =
 }
 
 
-export const LogicLib: IFunctionLibrary =
+export const BooleanLogic: IFunctionLibrary =
 {
     name: 'Boolean Logic',
-    functions: {    //   opcode
+    functions: [    //   opcode
         AND,        //      0
         OR,         //      1
         XOR,        //      2
@@ -135,11 +135,5 @@ export const LogicLib: IFunctionLibrary =
         EDGE_UP,    //      4
         EDGE_DOWN,  //      5
         RS          //      6
-    },
-    getFunction(opcode: number) {
-        return Object.values(this.functions)[opcode] as IFunction;
-    },
-    getFunctionName(opcode: number) {
-        return Object.keys(this.functions)[opcode]
-    }
+    ]
 }

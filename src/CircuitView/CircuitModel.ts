@@ -1,15 +1,7 @@
 import { IFunction, getFunction } from '../FunctionCollection.js'
-import { IO_FLAG, IO_TYPE, getIOType, setIOType } from '../Controller/ControllerTypes.js'
+import { IOFlag, IODataType, getIOType, setIOType, IORef, ID } from '../Controller/ControllerDataTypes.js'
 import { PinType } from './CircuitTypes.js'
 import IControllerInterface, { ICircuitData, IFunctionBlockData } from '../Controller/ControllerInterface.js'
-
-type ID = number
-
-interface IO_REF
-{
-    id:         ID
-    ioNum:      number
-}
 
 export abstract class FunctionBlockIO
 {
@@ -35,7 +27,7 @@ export abstract class FunctionBlockIO
     _name: string
     _ioNum: number
     _flags: number
-    _type:  IO_TYPE
+    _type:  IODataType
     _value: number
 
     readonly initValue: number
@@ -63,15 +55,15 @@ export class Input extends FunctionBlockIO
         flags: number,
         value: number,
         isCircuitIO = false,
-        ref: IO_REF = undefined,
+        ref: IORef = undefined,
     ) {
         super(funcBlock, name, ioNum, flags, value, 'input', isCircuitIO)
 
         this._ref = ref
-        this._inverted = !!(flags & IO_FLAG.INVERTED)
+        this._inverted = !!(flags & IOFlag.INVERTED)
     }
 
-    _ref: IO_REF
+    _ref: IORef
     _inverted: boolean
 
 }
@@ -90,24 +82,15 @@ export class Output extends FunctionBlockIO
     }
 }
 
-export interface IFunctionBlockController {
-    funcBlockData: IFunctionBlockData
-}
-
-export interface ICircuitController extends IFunctionBlockController {
-    circuitData: ICircuitData
-
-}
 
 export class FunctionBlock
 {
-    constructor(funcData: IFunctionBlockData, id?: number)
+    constructor(funcData: IFunctionBlockData)
     {
-        this.isCircuit = (funcData.library > 0)
+        this.isCircuit = (funcData.library == 0)
         const func = (this.isCircuit) ? null : getFunction(funcData.library, funcData.opcode)
         
         this.funcData = funcData
-        this.id = id
         this.name = (this.isCircuit) ? 'Circuit' : func.name
         this.setupIO(funcData, func)
     }
@@ -115,24 +98,31 @@ export class FunctionBlock
     funcData:   IFunctionBlockData       
     isCircuit:  boolean
     func?:      IFunction
-    id?:        ID
     name:       string
     comment:    string
-
+    
     inputs:     Input[] = []
     outputs:    Output[] = []
+    
+    id?:        ID
+    cpu:        IControllerInterface
+
+    connectOnline(cpu: IControllerInterface, id: ID) {
+        this.id = id
+        this.cpu = cpu
+    }
 
     setupIO(data: IFunctionBlockData, func: IFunction) {
 
         for (let inputNum = 0; inputNum < data.inputCount; inputNum++) {
             const ioNum = inputNum
             const name = (func) ? func.inputs[Math.min(inputNum, func.inputs.length - 1)].name : inputNum.toString()
-            this.inputs[inputNum] = new Input(this, name, ioNum, data.ioValues[ioNum], data.ioValues[ioNum], this.isCircuit)
+            this.inputs[inputNum] = new Input(this, name, ioNum, data.ioFlags[ioNum], data.ioValues[ioNum], this.isCircuit)
         }
         for (let outputNum = 0; outputNum < data.outputCount; outputNum++) {
             const ioNum = data.inputCount + outputNum
             const name = (func) ? func.outputs[Math.min(outputNum, func.inputs.length - 1)].name : outputNum.toString()
-            this.outputs[outputNum] = new Output(this, name, ioNum, data.ioValues[ioNum], data.ioValues[ioNum], this.isCircuit)
+            this.outputs[outputNum] = new Output(this, name, ioNum, data.ioFlags[ioNum], data.ioValues[ioNum], this.isCircuit)
         }
     }
 
@@ -172,21 +162,26 @@ export class FunctionBlock
 
         return new FunctionBlock(data)
     }
+
+    static async downloadOnline(cpu: IControllerInterface, id: ID) {
+        const funcData = await cpu.getFunctionBlockData(id)
+        const funcBlock = new FunctionBlock(funcData)
+        funcBlock.connectOnline(cpu, id)
+
+        return funcBlock
+    }
 }
 
 export class Circuit extends FunctionBlock
 {
-    constructor(funcData: IFunctionBlockData, circuitData: ICircuitData, id?: number)
+    constructor(funcData: IFunctionBlockData, circuitData: ICircuitData)
     {
-        super(funcData, id)
+        super(funcData)
         this.circuitData = circuitData
     }
 
     circuitData:    ICircuitData
     blocks:         FunctionBlock[] = []
-
-    cpu: IControllerInterface | undefined
-    onlineID: number
 
     createFunction(library: number, opcode: number, customInputCount?: number, customOutputCount?: number, callIndex?: number) {
         const funcBlock = FunctionBlock.createNew(library, opcode, customInputCount, customOutputCount)
@@ -196,6 +191,16 @@ export class Circuit extends FunctionBlock
         funcBlock.id = id
 
         return funcBlock
+    }
+
+    async loadOnlineBlocks() {
+        if (!this.cpu) { console.error('Circuit: Can not load online blocks. no controller connected'); return }
+    
+        this.blocks = await Promise.all(
+            this.circuitData.callIDList.map(funcID => 
+                FunctionBlock.downloadOnline(this.cpu, funcID)
+            )
+        )
     }
 
     static createNew() {
@@ -218,11 +223,14 @@ export class Circuit extends FunctionBlock
         return new Circuit(funcData, circuitData)
     }
 
-    static async loadOnlineCircuit(cpu: IControllerInterface, circuitID: ID) {
+    static async downloadOnline(cpu: IControllerInterface, circuitID: ID, loadBlocks = true) {
         const funcData = await cpu.getFunctionBlockData(circuitID)
         const circuitData = await cpu.getCircuitData(circuitID)
         
         const circuit = new Circuit(funcData, circuitData)
-        // load blocks..
+        circuit.connectOnline(cpu, circuitID)
+        if (loadBlocks) circuit.loadOnlineBlocks()
+
+        return circuit
     }
 }

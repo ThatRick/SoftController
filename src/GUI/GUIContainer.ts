@@ -46,7 +46,6 @@ export default class GUIContainer<T extends IGUIElement> implements IGUIContaine
     }
 
     init(gui: IGUIView) {
-        console.log('GUIContainer init')
         this.gui = gui
         this.uninitializedElements.forEach(elem => this.initChild(elem))
         this.uninitializedElements.clear()

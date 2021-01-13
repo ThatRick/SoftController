@@ -103,15 +103,15 @@ export function alignBytes(addr: number, bytes = BYTES_PER_VALUE) {
     return Math.ceil(addr / bytes) * bytes;
 }
 
-export const enum IO_TYPE
+export const enum IODataType
 {
-    REAL =  0,
-    INT =   1,
-    BOOL =  2,
+    FLOAT =  0,
+    INTEGER =   1,
+    BINARY =  2,
 }
 
 // IO FLAGS
-export const enum IO_FLAG
+export const enum IOFlag
 {
     TYPE_BIT0 =     (1 << 0),
     TYPE_BIT1 =     (1 << 1),
@@ -120,12 +120,12 @@ export const enum IO_FLAG
     HIDDEN =        (1 << 4)
 }
 
-const IOTypeBitMask = (IO_FLAG.TYPE_BIT0 | IO_FLAG.TYPE_BIT1 | IO_FLAG.TYPE_BIT2)
+const IOTypeBitMask = (IOFlag.TYPE_BIT0 | IOFlag.TYPE_BIT1 | IOFlag.TYPE_BIT2)
 
 export function getIOType(flags: number) {
-    return (flags & IOTypeBitMask) as IO_TYPE
+    return (flags & IOTypeBitMask) as IODataType
 }
 
-export function setIOType(flags: number, ioType: IO_TYPE) {
+export function setIOType(flags: number, ioType: IODataType) {
     return (flags & ~IOTypeBitMask) | ioType
 }

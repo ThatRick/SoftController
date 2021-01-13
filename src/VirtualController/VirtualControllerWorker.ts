@@ -1,6 +1,6 @@
 import VirtualController from './VirtualControllerCPU.js'
 import { ICircuitData, IConnectCircuitOutputParams, IConnectFunctionBlockInputParams, ICreateCircuitParams, ICreateControllerParams, ICreateFunctionBlockParams, ICreateTaskParams, IFunctionBlockData, ISetFunctionBlockIOFlagsParams, ISetFunctionBlockIOValueParams, ISetTaskCallTargetParams, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse } from '../Controller/ControllerInterface.js'
-import { DatablockType, ID } from '../Controller/ControllerTypes.js'
+import { DatablockType, ID } from '../Controller/ControllerDataTypes.js'
 
 let cpu: VirtualController
 

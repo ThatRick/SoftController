@@ -1,4 +1,4 @@
-import {alignBytes, BYTES_PER_REF, functionHeaderByteLength, IDatablockHeader, IFunctionHeader, IORef, ITask} from './ControllerTypes.js'
+import {alignBytes, BYTES_PER_REF, functionHeaderByteLength, IDatablockHeader, IFunctionHeader, IORef, ITask} from './ControllerDataTypes.js'
 
 type ID = number
 type REF = number

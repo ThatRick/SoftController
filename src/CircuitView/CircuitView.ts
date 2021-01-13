@@ -3,7 +3,8 @@ import GUIView from '../GUI/GUIView.js'
 import TraceLayer from './TraceLayer.js'
 import CircuitGrid from './CircuitGrid.js'
 import { CircuitElement, CircuitStyle, defaultStyle } from './CircuitTypes.js'
-import { Circuit } from './CircuitModel.js'
+import { Circuit, FunctionBlock } from './CircuitModel.js'
+import FunctionBlockElem from './FunctionBlockElem.js'
 
 const enum DraggingMode {
     NONE,
@@ -36,6 +37,25 @@ export default class CircuitView extends GUIView<CircuitElement>
 
     selectedElements = new Set<CircuitElement>()
 
+
+    loadCircuit(circuit: Circuit) {
+        const margin = vec2(6, 2)
+        const area = vec2(16, 8)
+        const w = (this.size.x - margin.x*2)
+    
+        circuit.blocks.forEach((block, i) => {
+            const n = i * area.x
+            const row = Math.trunc(n / w)
+            const col = n - row * w
+            const y = margin.y + row * area.y
+            const x = margin.x + col
+            this.addFunctionBlock(vec2(x, y), block)
+        })
+    }
+
+    addFunctionBlock(pos: Vec2, funcBlock: FunctionBlock) {
+        const block = new FunctionBlockElem(this.children, pos, funcBlock)
+    }
 
     // Element info to debug string
     elementToString(elem: CircuitElement) {

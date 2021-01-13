@@ -23,7 +23,6 @@ export default class GUIView {
             downPos: vec2(0),
             upPos: vec2(0)
         };
-        console.log('GUI Init');
         this.DOMElement = document.createElement('div');
         parentDOM.appendChild(this.DOMElement);
         const defaultStyle = {

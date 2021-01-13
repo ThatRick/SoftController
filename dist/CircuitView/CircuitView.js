@@ -3,6 +3,7 @@ import GUIView from '../GUI/GUIView.js';
 import TraceLayer from './TraceLayer.js';
 import CircuitGrid from './CircuitGrid.js';
 import { defaultStyle } from './CircuitTypes.js';
+import FunctionBlockElem from './FunctionBlockElem.js';
 export default class CircuitView extends GUIView {
     constructor(parent, size, scale) {
         super(parent, size, scale);
@@ -83,6 +84,22 @@ export default class CircuitView extends GUIView {
             this.draggingMode = 0 /* NONE */;
         };
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale);
+    }
+    loadCircuit(circuit) {
+        const margin = vec2(6, 2);
+        const area = vec2(16, 8);
+        const w = (this.size.x - margin.x * 2);
+        circuit.blocks.forEach((block, i) => {
+            const n = i * area.x;
+            const row = Math.trunc(n / w);
+            const col = n - row * w;
+            const y = margin.y + row * area.y;
+            const x = margin.x + col;
+            this.addFunctionBlock(vec2(x, y), block);
+        });
+    }
+    addFunctionBlock(pos, funcBlock) {
+        const block = new FunctionBlockElem(this.children, pos, funcBlock);
     }
     // Element info to debug string
     elementToString(elem) {

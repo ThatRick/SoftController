@@ -1,7 +1,7 @@
 import GUIElement from '../GUI/GUIElement.js'
 import CircuitView from './CircuitView.js'
 
-export type ElementType = 'block' | 'input' | 'output' | 'traceSegment'
+export type ElementType = 'block' | 'input' | 'output' | 'traceSegment' | 'inputValue' | 'outputValue'
 
 export type PinType = 'input' | 'output'
 
@@ -20,10 +20,16 @@ export interface CircuitStyle
     colorBackground:        string
     colorBlock:             string
     colorBlockHover:        string
-    blockOutlineUnselected: string,
-    blockOutlineSelected:   string,
-    colorPin:               string
+    blockOutlineUnselected: string
+    blockOutlineSelected:   string
     colorPinHover:          string
+    colorPinBinary0:        string
+    colorPinBinary1:        string
+    colorPinInteger:        string
+    colorPinFloat:          string
+    pinValueFieldBg:        string
+    colorFilterDefault:     string
+    colorFilterActive:      string
 }
 
 export const defaultStyle: CircuitStyle =
@@ -33,6 +39,12 @@ export const defaultStyle: CircuitStyle =
     colorBlockHover:        '#558',
     blockOutlineUnselected: 'none',
     blockOutlineSelected:   'thin solid #AAF',
-    colorPin:               '#777',
-    colorPinHover:          '#999',
+    colorPinHover:          '#AAA',
+    colorPinBinary0:        '#888',
+    colorPinBinary1:        '#BB9',
+    colorPinInteger:        '#99D',
+    colorPinFloat:          '#9D9',
+    pinValueFieldBg:        'transparent',
+    colorFilterDefault:     'none',
+    colorFilterActive:      'brightness(150%)'
 }

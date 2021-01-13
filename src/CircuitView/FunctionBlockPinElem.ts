@@ -5,6 +5,8 @@ import { FunctionBlock, FunctionBlockIO } from './CircuitModel.js'
 import { domElement } from '../Lib/HTML.js'
 import { CircuitElement, ElementType, PinType } from './CircuitTypes.js'
 import CircuitView from './CircuitView.js'
+import { IODataType } from '../Controller/ControllerDataTypes.js'
+
 
 export default class FunctionBlockPinElem extends GUIElement implements CircuitElement
 {
@@ -14,18 +16,28 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
 
     io: FunctionBlockIO
     pin: HTMLDivElement
+    valueField: HTMLDivElement
 
     isSelectable = true
+
+    dataType: IODataType
     
     constructor(parent: IGUIContainer, io: FunctionBlockIO, pos: Vec2) {
         super(parent, 'div', pos, vec2(1, 1))
 
         this.io = io
         this.type = io.pinType
+        this.dataType = this.io.type
     }
 
     onInit(gui: CircuitView) {
 
+        this.createPinElement(gui)
+        this.createValueField(gui)
+        this.setColor()
+    }
+
+    createPinElement(gui: CircuitView) {
         const size = vec2(0.5, 0.2)
         const yOffset = 0.5 - size.y / 2
         
@@ -38,9 +50,51 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
             top:        scaledOffset.y + 'px',
             width:      scaledSize.x + 'px',
             height:     scaledSize.y + 'px',
-            backgroundColor: gui.style.colorPin,
             pointerEvents: 'none'
         })
+    }
+
+    createValueField(gui: CircuitView) {
+        const width = (this.dataType == IODataType.BINARY) ? 1 : 5
+        const height = 0.7
+        const size = vec2(width, height)
+        const yOffset = -0.3
+        const xOffset = 0.3
+
+        const textAlign = (this.dataType == IODataType.BINARY) ? 'center' : 'left'
+        
+        const scaledOffset = Vec2.mul((this.type == 'input') ? vec2(1 - width - xOffset, yOffset) : vec2(xOffset, yOffset), gui.scale)
+        const scaledSize = Vec2.mul(size, gui.scale)
+
+        this.valueField = domElement(this.DOMElement, 'div', {
+            position:   'absolute',
+            left:       scaledOffset.x + 'px',
+            top:        scaledOffset.y + 'px',
+            width:      scaledSize.x + 'px',
+            height:     scaledSize.y + 'px',
+            lineHeight: scaledSize.y + 'px',
+            textAlign,
+            backgroundColor: gui.style.pinValueFieldBg,
+            pointerEvents: 'none'
+        })
+        this.valueField.textContent = this.io.value.toString()
+    }
+
+    setColor() {
+        const style = this.gui.style
+        let color: string
+
+        switch (this.dataType) {
+            case IODataType.BINARY:   color = (this.io.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1; break
+            case IODataType.INTEGER:  color = style.colorPinInteger; break
+            case IODataType.FLOAT:    color = style.colorPinFloat; break
+        }
+
+        this.pin.style.backgroundColor = color
+        this.valueField.style.color = color
+    }
+    setValueColor() {
+
     }
 
     selected() {
@@ -52,9 +106,9 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
     }
 
     onPointerEnter = (ev: PointerEvent) => {
-        this.pin.style.backgroundColor = this.gui.style.colorPinHover
+        this.pin.style.filter = this.gui.style.colorFilterActive
     }
     onPointerLeave = (ev: PointerEvent) => {
-        this.pin.style.backgroundColor = this.gui.style.colorPin
+        this.pin.style.filter = 'none'
     }
 }

@@ -1,6 +1,6 @@
 
-import { IFunctionCallParams } from './Controller/ControllerTypes.js';
-import { LogicLib } from './FunctionLibrary/BooleanLogic.js'
+import { IFunctionCallParams } from './Controller/ControllerDataTypes.js';
+import { BooleanLogic } from './FunctionLibrary/BooleanLogic.js'
 
 
 // FUNCTION
@@ -31,42 +31,34 @@ export interface IFunction
 export interface IFunctionLibrary
 {
     name: string
-    functions: {[index: string]: IFunction}
-    getFunction: (opcode: number) => IFunction
-    getFunctionName: (opcode: number) => string
+    functions: IFunction[]
 }
-
 
 // Load function libraries
 const functionLibraries: IFunctionLibrary[] = [
     null,
-    LogicLib
+    BooleanLogic
 ]
 
 export function getFunction(libraryID: number, opcode: number): IFunction
 {
     if (libraryID < 1 || libraryID >= functionLibraries.length) {
-        console.error('Invalid function library id', libraryID); return null;
+        console.error('Invalid function library id', libraryID)
+        return null
     }
-    const library = functionLibraries[libraryID];
+    const library = functionLibraries[libraryID]
 
-    if (opcode >= Object.keys(library.functions).length) {
-        console.error('Invalid function opcode', opcode); return null;
+    if (opcode >= library.functions.length) {
+        console.error('Invalid function opcode', opcode)
+        return null
     }
-    const func = library.getFunction(opcode); 
-    return func;
+    const func = library.functions[opcode]
+    if (!func) console.error('Error getting library function', libraryID, opcode)
+    return func
 }
 
 export function getFunctionName(libraryID: number, opcode: number): string
 {
-    if (libraryID < 1 || libraryID >= functionLibraries.length) {
-        console.error('Invalid function library id', libraryID); return null;
-    }
-    const library = functionLibraries[libraryID];
-
-    if (opcode >= Object.keys(library.functions).length) {
-        console.error('Invalid function opcode', opcode); return null;
-    }
-    const name = library.getFunctionName(opcode); 
-    return name;    
+    const func = getFunction(libraryID, opcode)
+    return func?.name
 }

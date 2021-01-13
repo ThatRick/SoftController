@@ -32,7 +32,6 @@ export default class GUIContainer {
         this.gui.registerElement(elem);
     }
     init(gui) {
-        console.log('GUIContainer init');
         this.gui = gui;
         this.uninitializedElements.forEach(elem => this.initChild(elem));
         this.uninitializedElements.clear();

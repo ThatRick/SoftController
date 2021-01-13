@@ -1,11 +1,10 @@
-import { getFunction, getFunctionName } from './SoftController/FunctionCollection.js';
-import { getIOType } from './SoftController/SoftTypes.js';
+import { getFunction, getFunctionName } from './FunctionCollection.js';
+import { getIOType } from './Controller/ControllerDataTypes.js';
 // import { createControllerBlueprint, getBlueprintResourceNeeded, loadControllerBlueprint } from './SoftController/SoftSerializer.js'
 import CircuitView from './CircuitView/CircuitView.js';
 import { vec2 } from './Lib/Vector2.js';
-import { FunctionBlock } from './CircuitView/CircuitModel.js';
-import FunctionBlockElem from './CircuitView/FunctionBlockElem.js';
-import SoftControllerLink from './SoftController/SoftControllerLink.js';
+import { Circuit } from './CircuitView/CircuitModel.js';
+import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
 function createTerminal(div) {
     return (text) => {
         const pre = document.createElement('pre');
@@ -37,28 +36,12 @@ const CSSGridRowHeights = {
 };
 /////////////////////////
 //  GUI Testing
-async function testGUI(cpu, funcs) {
+async function testGUI(circuit) {
     const guiContainer = document.getElementById('gui');
     const viewSize = vec2(80, 40);
     const viewScale = vec2(14, 20);
     const view = new CircuitView(guiContainer, viewSize, viewScale);
-    const margin = vec2(6, 2);
-    const area = vec2(16, 8);
-    const w = (view.size.x - margin.x * 2);
-    const getBlocks = funcs.map(async (id) => {
-        const header = await cpu.getFunctionBlockHeader(id);
-        if (header)
-            return new FunctionBlock(undefined, header.library, header.opcode, header.inputCount, header.outputCount, id);
-    });
-    const blocks = await Promise.all(getBlocks);
-    const blockElems = blocks.map((block, i) => {
-        const n = i * area.x;
-        const row = Math.trunc(n / w);
-        const col = n - row * w;
-        const y = margin.y + row * area.y;
-        const x = margin.x + col;
-        return new FunctionBlockElem(view.children, vec2(x, y), block);
-    });
+    view.loadCircuit(circuit);
     return view;
 }
 const errorLogger = error => console.error(error);
@@ -69,9 +52,8 @@ window.onload = () => app().catch(rejected => console.error(rejected));
 async function app() {
     const terminal = createTerminal(document.getElementById('terminal'));
     const memSize = 64 * 1024; // bytes
-    const cpu = new SoftControllerLink();
+    const cpu = new VirtualControllerLink();
     const result = await cpu.createController(memSize, 256, 16);
-    console.log('Created controller with result:', result);
     // const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
     terminal(await systemSectorToString(cpu));
@@ -79,18 +61,18 @@ async function app() {
     terminal('');
     terminal('      RUNNING TEST...');
     terminal(await datablockTableToString(cpu));
-    const funcIDs = await createTestBlocks(cpu, 10);
-    const circId = funcIDs[0];
-    const taskId = await cpu.createTask(circId, 20, 5);
-    const view = await testGUI(cpu, funcIDs);
+    const circuitID = await createTestCircuit(cpu, 10);
+    const taskId = await cpu.createTask(circuitID, 20);
     const interval = 10; // ms
-    let ticks = 10;
-    cpu.stepController(interval, ticks).catch(errorLogger).then(async (result) => {
+    const ticks = 10;
+    const circuit = await Circuit.downloadOnline(cpu, circuitID);
+    await cpu.stepController(interval, ticks).catch(errorLogger).then(async (result) => {
         terminal(await taskToString(cpu, taskId));
         terminal(await systemSectorToString(cpu));
         // print(datablockTableToString(cpu));
-        funcIDs.forEach(async (func) => terminal(await functionToString(cpu, func)));
+        circuit.blocks.forEach(async (block) => terminal(await functionToString(cpu, block.id)));
     });
+    const view = await testGUI(circuit);
     createControlButtonBar([
         // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
         // { name: 'Load', fn: () => loadFromJSON(obj => {
@@ -116,21 +98,21 @@ async function app() {
 ////////////////////
 //  CREATE A TEST
 //
-async function createTestBlocks(cpu, blockCount = 10) {
+async function createTestCircuit(cpu, blockCount = 10) {
     // test
-    const circId = await cpu.createCircuit(4, 2, blockCount);
-    if (!circId) {
-        console.error('no circid');
-        return [];
+    const circID = await cpu.createCircuit(4, 2, blockCount);
+    if (!circID) {
+        console.error('Create test circuit: Creation failed miserable');
+        return;
     }
-    const funcs = [circId];
+    const funcs = [circID];
     const maxOpcode = 7;
     const logicLib = 1;
     for (let i = 1; i < blockCount + 1; i++) {
         const opcode = i % maxOpcode;
         const funcType = getFunction(logicLib, opcode);
         const inputCount = funcType.variableInputCount ? 2 + Math.round(Math.random() * 4) : undefined;
-        const funcId = await cpu.createFunctionBlock(logicLib, opcode, circId, undefined, inputCount);
+        const funcId = await cpu.createFunctionBlock(logicLib, opcode, circID, undefined, inputCount);
         funcs.push(funcId);
         const funcInfo = await cpu.getFunctionBlockHeader(funcId);
         const sourceId = funcs[i - 1];
@@ -141,7 +123,7 @@ async function createTestBlocks(cpu, blockCount = 10) {
         await cpu.connectFunctionBlockInput(funcId, inputNum, sourceId, sourceIONum, inverted);
     }
     await cpu.setFunctionBlockIOValue(1, 0, 1);
-    return funcs;
+    return circID;
 }
 ///////////////////////
 //  JSON DATA
@@ -227,7 +209,7 @@ async function functionToString(cpu, funcID) {
     function ioValue(i) {
         const flags = funcBlock.ioFlags[i];
         const ioType = getIOType(flags);
-        const value = (ioType == 2 /* BOOL */ || ioType == 1 /* INT */)
+        const value = (ioType == 2 /* BINARY */ || ioType == 1 /* INTEGER */)
             ? funcBlock.ioValues[i].toFixed(0)
             : funcBlock.ioValues[i].toPrecision(precision);
         return (i < funcBlock.inputCount) ? value.padStart(valueLen) : value.padEnd(valueLen);
@@ -345,7 +327,6 @@ async function taskToString(cpu, taskID) {
         runCount: ['Run Count', (value) => alignValue(value)],
     };
     const task = await cpu.getTask(taskID);
-    console.log(task);
     let text = '';
     const addLine = (line) => text += (line + '\n');
     addLine(breakLine);

@@ -29,7 +29,6 @@ export default class GUIElement {
         this.gui = gui;
         if (this.onInit)
             setTimeout(() => this.onInit(gui));
-        console.log('GUIElement init, children:', this.children);
         this.children?.init(gui);
         this.update(gui, true);
     }

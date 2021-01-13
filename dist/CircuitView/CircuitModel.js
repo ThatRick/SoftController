@@ -1,5 +1,5 @@
-import { getFunction } from '../SoftController/FunctionCollection.js';
-import { getIOType } from '../SoftController/SoftTypes.js';
+import { getFunction } from '../FunctionCollection.js';
+import { getIOType } from '../Controller/ControllerDataTypes.js';
 export class FunctionBlockIO {
     constructor(funcBlock, name, ioNum, flags, value, pinType, isCircuitIO = false) {
         this.funcBlock = funcBlock;
@@ -36,54 +36,119 @@ export class Output extends FunctionBlockIO {
     }
 }
 export class FunctionBlock {
-    constructor(circuit, library, opcode, numInputs = 0, numOutputs = 0, id) {
-        this.circuit = circuit;
-        this.library = library;
-        this.opcode = opcode;
+    constructor(funcData) {
         this.inputs = [];
         this.outputs = [];
+        this.isCircuit = (funcData.library == 0);
+        const func = (this.isCircuit) ? null : getFunction(funcData.library, funcData.opcode);
+        this.funcData = funcData;
+        this.name = (this.isCircuit) ? 'Circuit' : func.name;
+        this.setupIO(funcData, func);
+    }
+    connectOnline(cpu, id) {
         this.id = id;
-        if (library) {
-            this.func = getFunction(library, opcode);
-            this.name = this.func.name;
-            this.defineFunctionTypeIO(this.func, numInputs, numOutputs);
+        this.cpu = cpu;
+    }
+    setupIO(data, func) {
+        for (let inputNum = 0; inputNum < data.inputCount; inputNum++) {
+            const ioNum = inputNum;
+            const name = (func) ? func.inputs[Math.min(inputNum, func.inputs.length - 1)].name : inputNum.toString();
+            this.inputs[inputNum] = new Input(this, name, ioNum, data.ioFlags[ioNum], data.ioValues[ioNum], this.isCircuit);
         }
-        else {
-            this.name = 'Circuit';
-            this.defineCircuitIO(numInputs, numOutputs);
+        for (let outputNum = 0; outputNum < data.outputCount; outputNum++) {
+            const ioNum = data.inputCount + outputNum;
+            const name = (func) ? func.outputs[Math.min(outputNum, func.inputs.length - 1)].name : outputNum.toString();
+            this.outputs[outputNum] = new Output(this, name, ioNum, data.ioFlags[ioNum], data.ioValues[ioNum], this.isCircuit);
         }
     }
-    defineCircuitIO(numInputs, numOutputs) {
-        let ioNum = 0;
-        for (let inputNum = 0; inputNum < numInputs; inputNum++) {
-            this.inputs[inputNum] = new Input(this, inputNum.toString(), ioNum++, 0, 0, true);
+    static createNew(library, opcode, customInputCount, customOutputCount) {
+        const func = getFunction(library, opcode);
+        if (!func) {
+            console.error('Invalid function library/opcode');
+            return;
         }
-        for (let outputNum = 0; outputNum < numOutputs; outputNum++) {
-            this.outputs[outputNum] = new Output(this, outputNum.toString(), ioNum++, 0, 0, true);
+        const inputCount = (customInputCount && func.variableInputCount &&
+            customInputCount <= func.variableInputCount.max && customInputCount >= func.variableInputCount.min) ? customInputCount : func.inputs.length;
+        const outputCount = (customOutputCount && func.variableOutputCount &&
+            customOutputCount <= func.variableInputCount.max && customOutputCount >= func.variableOutputCount.min) ? customOutputCount : func.outputs.length;
+        function stretchArray(arr, length) {
+            while (arr.length < length)
+                arr.push(arr[arr.length - 1]);
+            while (arr.length > length)
+                arr.pop();
+            return arr;
         }
+        const inputValues = stretchArray(func.inputs.map(input => input.initValue), inputCount);
+        const inputFlags = stretchArray(func.inputs.map(input => input.flags), inputCount);
+        const outputValues = stretchArray(func.outputs.map(output => output.initValue), outputCount);
+        const outputFlags = stretchArray(func.outputs.map(output => output.flags), outputCount);
+        const data = {
+            library,
+            opcode,
+            inputCount,
+            outputCount,
+            staticCount: func.staticCount,
+            functionFlags: 0,
+            ioValues: [...inputValues, ...outputValues],
+            ioFlags: [...inputFlags, ...outputFlags],
+            inputRefs: []
+        };
+        return new FunctionBlock(data);
     }
-    defineFunctionTypeIO(func, numInputs, numOutputs) {
-        numInputs = (numInputs && func.variableInputCount &&
-            numInputs <= func.variableInputCount.max && numInputs >= func.variableInputCount.min) ? numInputs : func.inputs.length;
-        numOutputs = (numOutputs && func.variableInputCount &&
-            numOutputs <= func.variableInputCount.max && numOutputs >= func.variableInputCount.min) ? numOutputs : func.outputs.length;
-        let ioNum = 0;
-        for (let inputNum = 0; inputNum < numInputs; inputNum++) {
-            const input = func.inputs[Math.min(inputNum, func.inputs.length - 1)];
-            this.inputs[inputNum] = new Input(this, input.name, ioNum++, input.flags, input.initValue);
-        }
-        for (let outputNum = 0; outputNum < numOutputs; outputNum++) {
-            const output = func.outputs[Math.min(outputNum, func.outputs.length - 1)];
-            this.outputs[outputNum] = new Output(this, output.name, ioNum++, output.flags, output.initValue);
-        }
+    static async downloadOnline(cpu, id) {
+        const funcData = await cpu.getFunctionBlockData(id);
+        const funcBlock = new FunctionBlock(funcData);
+        funcBlock.connectOnline(cpu, id);
+        return funcBlock;
     }
 }
 export class Circuit extends FunctionBlock {
-    constructor() {
-        super(...arguments);
-        this.blocks = new Map();
-        this.callList = [];
+    constructor(funcData, circuitData) {
+        super(funcData);
+        this.blocks = [];
+        this.circuitData = circuitData;
     }
-    loadOnlineCircuit(cpu, circuitID) {
+    createFunction(library, opcode, customInputCount, customOutputCount, callIndex) {
+        const funcBlock = FunctionBlock.createNew(library, opcode, customInputCount, customOutputCount);
+        if (!funcBlock)
+            return null;
+        const id = this.blocks.length;
+        this.blocks.push(funcBlock);
+        funcBlock.id = id;
+        return funcBlock;
+    }
+    async loadOnlineBlocks() {
+        if (!this.cpu) {
+            console.error('Circuit: Can not load online blocks. no controller connected');
+            return;
+        }
+        this.blocks = await Promise.all(this.circuitData.callIDList.map(funcID => FunctionBlock.downloadOnline(this.cpu, funcID)));
+    }
+    static createNew() {
+        const funcData = {
+            library: 0,
+            opcode: 0,
+            inputCount: 0,
+            outputCount: 0,
+            staticCount: 0,
+            functionFlags: 0,
+            ioValues: [],
+            ioFlags: [],
+            inputRefs: []
+        };
+        const circuitData = {
+            callIDList: [],
+            outputRefs: []
+        };
+        return new Circuit(funcData, circuitData);
+    }
+    static async downloadOnline(cpu, circuitID, loadBlocks = true) {
+        const funcData = await cpu.getFunctionBlockData(circuitID);
+        const circuitData = await cpu.getCircuitData(circuitID);
+        const circuit = new Circuit(funcData, circuitData);
+        circuit.connectOnline(cpu, circuitID);
+        if (loadBlocks)
+            circuit.loadOnlineBlocks();
+        return circuit;
     }
 }

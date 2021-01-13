@@ -18,11 +18,11 @@ import IControllerInterface, {
     MessageResponse,
 } from "../Controller/ControllerInterface.js";
 
-import { ID, IDatablockHeader, IFunctionHeader, ITask } from "../Controller/ControllerTypes.js";
+import { ID, IDatablockHeader, IFunctionHeader, ITask } from "../Controller/ControllerDataTypes.js";
 
-const logging = true
-function debug(...args: any[]) { logging && console.log('LINK: ', ...args)}
-function debugError(...args: any[]) { console.error('LINK: ', ...args)}
+const debugLogging = false
+function logInfo(...args: any[]) { debugLogging && console.info('LINK: ', ...args)}
+function logError(...args: any[]) { console.error('LINK: ', ...args)}
 
 type PromiseCallback = (value: any) => void
 
@@ -49,16 +49,16 @@ export default class VirtualControllerLink implements IControllerInterface
 
         this.worker.postMessage(message)
 
-        debug('Sent message:', MessageCodeNames[code], message)
+        logInfo('Sent message:', MessageCodeNames[code], message)
     }
 
     handleResponse(e: MessageEvent) {
         if (!e.data) {
-            debugError('Bad message response, no data found', e)
+            logError('Bad message response, no data found', e)
         }
         const response = e.data as MessageResponse
         
-        (response.success ? debug : debugError)('Received message:', response)
+        (response.success ? logInfo : logError)('Received message:', response)
 
         const callbacks = this.messagesCallbacks.get(response.id)
         this.messagesCallbacks.delete(response.id)

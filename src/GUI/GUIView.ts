@@ -46,8 +46,6 @@ export default class GUIView<T extends IGUIElement> implements IDOMElement, IGUI
         scale: Vec2,
         style?: Partial<CSSStyleDeclaration>
     ) {
-        console.log('GUI Init')
-
         this.DOMElement = document.createElement('div')
         parentDOM.appendChild(this.DOMElement)
 

@@ -14,7 +14,7 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
     }
 
     static getBlockSize(func: FunctionBlock) {
-        const w = (FunctionBlockElem.isMinimal(func) || !func.outputs?.[0]?._name) ? 4 : 6
+        const w = (FunctionBlockElem.isMinimal(func) || !func.outputs?.[0]?._name) ? 3 : 6
         const h = Math.max(func.inputs.length, func.outputs.length)
         return vec2(w, h)
     }
@@ -98,7 +98,6 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
                     color: 'white'
                 },
                 cellIterator: (cell, row, col) => {
-                    console.log('cell iterator:', row, col, this.func)
                     cell.textContent = (col == INPUT) ? (this.func?.inputs[row]?._name ?? ((row == 0 && this.func) ? this.func.name : 'FUNC')) 
                                                       : this.func?.outputs[row]?._name
                     cell.style.textAlign = (col == INPUT) ? 'left' : 'right'
