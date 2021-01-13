@@ -1,13 +1,13 @@
-import SoftController from './SoftController/SoftController.js'
-import { getFunction, getFunctionName } from './SoftController/FunctionCollection.js'
-import { DatablockType, IO_FLAG, IO_TYPE, getIOType, IORef } from './SoftController/SoftTypes.js';
+import VirtualController from './VirtualController/VirtualControllerCPU.js'
+import { getFunction, getFunctionName } from './FunctionCollection.js'
+import { DatablockType, IO_FLAG, IO_TYPE, getIOType, IORef } from './Controller/ControllerTypes.js';
 // import { createControllerBlueprint, getBlueprintResourceNeeded, loadControllerBlueprint } from './SoftController/SoftSerializer.js'
 import CircuitView from './CircuitView/CircuitView.js'
 import Vec2, {vec2} from './Lib/Vector2.js'
 import { FunctionBlock } from './CircuitView/CircuitModel.js';
 import FunctionBlockElem from './CircuitView/FunctionBlockElem.js';
-import SoftControllerLink from './SoftController/SoftControllerLink.js';
-import IControllerInterface from './SoftController/ControllerInterface.js';
+import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
+import IControllerInterface from './Controller/ControllerInterface.js';
 
 function createTerminal(div: HTMLElement) {
     return (text: string) => {
@@ -45,7 +45,7 @@ const CSSGridRowHeights: { [key: string]: number }  =
 
 /////////////////////////
 //  GUI Testing
-async function testGUI(cpu: SoftControllerLink, funcs: number[]) {
+async function testGUI(cpu: VirtualControllerLink, funcs: number[]) {
     
     const guiContainer = document.getElementById('gui')
 
@@ -60,7 +60,7 @@ async function testGUI(cpu: SoftControllerLink, funcs: number[]) {
     
     const getBlocks = funcs.map(async id => {
         const header = await cpu.getFunctionBlockHeader(id)
-        if (header) return new FunctionBlock(undefined, header.library, header.opcode, header.inputCount, header.outputCount, id)
+        if (header) return FunctionBlock.createNew(header.library, header.opcode, header.inputCount, header.outputCount)
     })
 
     const blocks = await Promise.all(getBlocks)
@@ -88,7 +88,7 @@ async function app()
     const terminal = createTerminal(document.getElementById('terminal'));
 
     const memSize = 64 * 1024;  // bytes
-    const cpu = new SoftControllerLink()
+    const cpu = new VirtualControllerLink()
     const result = await cpu.createController(memSize, 256, 16)
     console.log('Created controller with result:', result)
 

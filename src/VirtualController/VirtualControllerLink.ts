@@ -16,9 +16,9 @@ import IControllerInterface, {
     MessageCode,
     MessageCodeNames,
     MessageResponse,
-} from "./ControllerInterface.js";
+} from "../Controller/ControllerInterface.js";
 
-import { ID, IDatablockHeader, IFunctionHeader, ITask } from "./SoftTypes.js";
+import { ID, IDatablockHeader, IFunctionHeader, ITask } from "../Controller/ControllerTypes.js";
 
 const logging = true
 function debug(...args: any[]) { logging && console.log('LINK: ', ...args)}
@@ -26,10 +26,10 @@ function debugError(...args: any[]) { console.error('LINK: ', ...args)}
 
 type PromiseCallback = (value: any) => void
 
-export default class SoftControllerLink implements IControllerInterface
+export default class VirtualControllerLink implements IControllerInterface
 {
     constructor() {
-        this.worker = new Worker('./SoftController/SoftControllerWorker.js', {type: 'module'})
+        this.worker = new Worker('./VirtualController/VirtualControllerWorker.js', {type: 'module'})
 
         this.worker.onmessage = (e) => this.handleResponse(e)
     }

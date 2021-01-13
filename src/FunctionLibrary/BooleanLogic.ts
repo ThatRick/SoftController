@@ -1,4 +1,5 @@
-import {IFunction, IO_FLAG, IO_TYPE, IFunctionLibrary} from './SoftTypes.js'
+import { IO_FLAG, IO_TYPE } from '../Controller/ControllerTypes.js'
+import { IFunction, IFunctionLibrary } from '../FunctionCollection.js';
 
 const AND: IFunction =
 {

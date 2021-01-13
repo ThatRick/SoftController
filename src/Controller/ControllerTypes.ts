@@ -85,7 +85,7 @@ export const taskStructByteLength = sizeOfStruct(TaskStruct)
 
 
 // FUNCTION PARAMETERS
-export interface IFunctionParams
+export interface IFunctionCallParams
 {
     inputCount:     number,
     outputCount:    number,
@@ -94,14 +94,6 @@ export interface IFunctionParams
     output:         number,
     static:         number,
     dt:             number
-}
-
-export function getIOType(flags: number) {
-    return (flags & IOTypeBitMask) as IO_TYPE
-}
-
-export function setIOType(flags: number, ioType: IO_TYPE) {
-    return (flags & ~IOTypeBitMask) | ioType
 }
 
 export const BYTES_PER_VALUE = 4
@@ -130,34 +122,10 @@ export const enum IO_FLAG
 
 const IOTypeBitMask = (IO_FLAG.TYPE_BIT0 | IO_FLAG.TYPE_BIT1 | IO_FLAG.TYPE_BIT2)
 
-interface IOInfo {
-    initValue:  number
-    flags:      number
-    name?:      string
+export function getIOType(flags: number) {
+    return (flags & IOTypeBitMask) as IO_TYPE
 }
 
-// FUNCTION
-export interface IFunction
-{
-    name: string
-    inputs: IOInfo[]
-    outputs: IOInfo[]
-
-    staticCount?: number
-
-    variableInputCount?: {min: number, max: number}
-    variableOutputCount?: {min: number, max: number}
-    variableStaticCount?: {min: number, max: number}
-
-    init?:  (params: IFunctionParams, values: Float32Array) => void
-    run:    (params: IFunctionParams, values: Float32Array) => void
-}
-
-// FUNCTION LIBRARY
-export interface IFunctionLibrary
-{
-    name: string
-    functions: {[index: string]: IFunction}
-    getFunction: (opcode: number) => IFunction
-    getFunctionName: (opcode: number) => string
+export function setIOType(flags: number, ioType: IO_TYPE) {
+    return (flags & ~IOTypeBitMask) | ioType
 }

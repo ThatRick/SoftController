@@ -1,11 +1,11 @@
 
 import {readStruct, setStructElement, writeStruct} from '../Lib/TypedStructs.js'
-import {ID, IORef, IO_FLAG, IO_TYPE, getIOType, setIOType, DatablockType, IFunction, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF} from './SoftTypes.js'
-import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionParams} from './SoftTypes.js'
-import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from './SoftTypes.js'
-import {ITask, TaskStruct, taskStructByteLength} from './SoftTypes.js'
-import {getFunction, getFunctionName} from './FunctionCollection.js'
-import { calcCircuitSize, calcFunctionSize } from './ControllerInterface.js'
+import {ID, IORef, IO_FLAG, IO_TYPE, getIOType, setIOType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF} from '../Controller/ControllerTypes.js'
+import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionCallParams} from '../Controller/ControllerTypes.js'
+import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from '../Controller/ControllerTypes.js'
+import {ITask, TaskStruct, taskStructByteLength} from '../Controller/ControllerTypes.js'
+import {getFunction, getFunctionName} from '../FunctionCollection.js'
+import { calcCircuitSize, calcFunctionSize } from '../Controller/ControllerInterface.js'
 
 
 /*
@@ -34,14 +34,14 @@ const systemSectorLength = 10
 
 
 //////////////////////////////////
-//      Soft Controller
+//      Virtual Controller
 //////////////////////////////////
 
-export default class SoftController
+export default class VirtualController
 {
     static readonly version = 1
 
-    getVersion() { return SoftController.version }
+    getVersion() { return VirtualController.version }
     
     mem:                ArrayBuffer
 
@@ -127,7 +127,7 @@ export default class SoftController
             const dataMemSize = arg
             
             this.id = id;
-            this.version = SoftController.version;
+            this.version = VirtualController.version;
             this.totalMemSize = this.mem.byteLength;
             this.dataMemSize = arg;
             this.datablockTablePtr = datablockTableOffset;
@@ -667,7 +667,7 @@ export default class SoftController
         {
             const func = getFunction(funcHeader.library, funcHeader.opcode);
 
-            const params: IFunctionParams = {
+            const params: IFunctionCallParams = {
                 inputCount:     funcHeader.inputCount,
                 outputCount:    funcHeader.outputCount,
                 staticCount:    funcHeader.staticCount,

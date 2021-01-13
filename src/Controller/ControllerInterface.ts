@@ -1,4 +1,4 @@
-import {alignBytes, BYTES_PER_REF, functionHeaderByteLength, IDatablockHeader, IFunctionHeader, IORef, ITask} from './SoftTypes.js'
+import {alignBytes, BYTES_PER_REF, functionHeaderByteLength, IDatablockHeader, IFunctionHeader, IORef, ITask} from './ControllerTypes.js'
 
 type ID = number
 type REF = number
@@ -45,7 +45,6 @@ export interface MessageResponse
     data?:      unknown
     error?:     string
 }
-
 
 export const enum MessageCode {
     Undefined,

@@ -1,8 +1,8 @@
-import SoftController from './SoftController.js'
-import { ICircuitData, IConnectCircuitOutputParams, IConnectFunctionBlockInputParams, ICreateCircuitParams, ICreateControllerParams, ICreateFunctionBlockParams, ICreateTaskParams, IFunctionBlockData, ISetFunctionBlockIOFlagsParams, ISetFunctionBlockIOValueParams, ISetTaskCallTargetParams, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse } from './ControllerInterface.js'
-import { DatablockType, ID } from './SoftTypes.js'
+import VirtualController from './VirtualControllerCPU.js'
+import { ICircuitData, IConnectCircuitOutputParams, IConnectFunctionBlockInputParams, ICreateCircuitParams, ICreateControllerParams, ICreateFunctionBlockParams, ICreateTaskParams, IFunctionBlockData, ISetFunctionBlockIOFlagsParams, ISetFunctionBlockIOValueParams, ISetTaskCallTargetParams, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse } from '../Controller/ControllerInterface.js'
+import { DatablockType, ID } from '../Controller/ControllerTypes.js'
 
-let cpu: SoftController
+let cpu: VirtualController
 
 type Tickable = { tick: (dt: number) => void }
 
@@ -53,7 +53,7 @@ onmessage = (e) =>
             const params = msg.params as ICreateControllerParams
 
             if (cpu) { error = 'Controller already created.'; break }
-            cpu = new SoftController(
+            cpu = new VirtualController(
                 params.dataMemSize,
                 params.datablockTableLength,
                 params.taskListLength,

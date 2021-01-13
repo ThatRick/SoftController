@@ -1,8 +1,7 @@
-import {getFunction, getFunctionName} from '../SoftController/FunctionCollection.js'
-import { IFunction, IO_FLAG, IO_TYPE, getIOType, setIOType } from '../SoftController/SoftTypes.js'
+import { IFunction, getFunction } from '../FunctionCollection.js'
+import { IO_FLAG, IO_TYPE, getIOType, setIOType } from '../Controller/ControllerTypes.js'
 import { PinType } from './CircuitTypes.js'
-import SoftController from '../SoftController/SoftController.js'
-import IControllerInterface, { ICircuitData, IFunctionBlockData } from '../SoftController/ControllerInterface.js'
+import IControllerInterface, { ICircuitData, IFunctionBlockData } from '../Controller/ControllerInterface.js'
 
 type ID = number
 
