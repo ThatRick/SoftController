@@ -139,9 +139,9 @@ export default class VirtualControllerLink {
         });
         return promise;
     }
-    getDatablockList() {
+    getDatablockTable() {
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(16 /* GetDatablockList */, null, resolve, reject);
+            this.sendMessage(16 /* GetDatablockTable */, null, resolve, reject);
         });
         return promise;
     }

@@ -18,7 +18,7 @@ import IControllerInterface, {
     MessageResponse,
 } from "../Controller/ControllerInterface.js";
 
-import { ID, IDatablockHeader, IFunctionHeader, ITask } from "../Controller/ControllerDataTypes.js";
+import { IDatablockHeader, IFunctionHeader, ITask, ID, REF } from "../Controller/ControllerDataTypes.js";
 
 const debugLogging = false
 function logInfo(...args: any[]) { debugLogging && console.info('LINK: ', ...args)}
@@ -183,9 +183,9 @@ export default class VirtualControllerLink implements IControllerInterface
     })
     return promise
     }
-    getDatablockList(): Promise<ID[]> {
+    getDatablockTable(): Promise<REF[]> {
         const promise = new Promise<[]>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetDatablockList, null, resolve, reject )
+        this.sendMessage( MessageCode.GetDatablockTable, null, resolve, reject )
     })
     return promise
     }

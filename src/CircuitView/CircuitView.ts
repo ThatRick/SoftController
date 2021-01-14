@@ -42,7 +42,7 @@ export default class CircuitView extends GUIView<CircuitElement>
         const margin = vec2(6, 2)
         const area = vec2(16, 8)
         const w = (this.size.x - margin.x*2)
-    
+        
         circuit.blocks.forEach((block, i) => {
             const n = i * area.x
             const row = Math.trunc(n / w)

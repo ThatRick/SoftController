@@ -1,7 +1,4 @@
-import {alignBytes, BYTES_PER_REF, functionHeaderByteLength, IDatablockHeader, IFunctionHeader, IORef, ITask} from './ControllerDataTypes.js'
-
-type ID = number
-type REF = number
+import {alignBytes, BYTES_PER_REF, functionHeaderByteLength, ID, IDatablockHeader, IFunctionHeader, IORef, ITask, REF} from './ControllerDataTypes.js'
 
 export interface IFunctionBlockData extends IFunctionHeader
 {
@@ -70,7 +67,7 @@ export const enum MessageCode {
     GetTaskList,
     GetTask,
 
-    GetDatablockList,
+    GetDatablockTable,
     GetDatablockHeader,
     GetDatablockRef,
     GetDatablockID,
@@ -105,7 +102,7 @@ export const MessageCodeNames = [
     'GetTaskList',
     'GetTask',
 
-    'GetDatablockList',
+    'GetDatablockTable',
     'GetDatablockHeader',
     'GetDatablockRef',
     'GetDatablockID',
@@ -167,7 +164,7 @@ export default interface IControllerInterface
     getTask(id: ID ): Promise<ITask>
     
     // DATA BLOCK
-    getDatablockList(): Promise<ID[]>
+    getDatablockTable(): Promise<REF[]>
     getDatablockHeader(id: ID ): Promise<IDatablockHeader>
     getDatablockRef(id: ID ): Promise<REF>
     getDatablockID(ref: REF ): Promise<ID>

@@ -4,7 +4,6 @@ export class FunctionBlockIO {
     constructor(funcBlock, name, ioNum, flags, value, pinType, isCircuitIO = false) {
         this.funcBlock = funcBlock;
         this.isCircuitIO = isCircuitIO;
-        this.onValueChanged = undefined;
         this._name = name;
         this._ioNum = ioNum;
         this._flags = flags;
@@ -18,9 +17,9 @@ export class FunctionBlockIO {
     get type() { return this._type; }
     get value() { return this._value; }
     get id() { return this.funcBlock.id * 1000 + this._ioNum; }
-    set value(value) {
+    setValue(value) {
         this._value = value;
-        this.onValueChanged?.(this._ioNum, value);
+        this.onValueChanged?.();
     }
 }
 export class Input extends FunctionBlockIO {
@@ -48,6 +47,20 @@ export class FunctionBlock {
     connectOnline(cpu, id) {
         this.id = id;
         this.cpu = cpu;
+    }
+    readOnlineIOValues() {
+        if (!this.cpu)
+            return;
+        this.cpu.getFunctionBlockIOValues(this.id).then(ioValues => {
+            ioValues.forEach((onlineValue, i) => {
+                const currentValues = this.funcData.ioValues;
+                if (onlineValue != currentValues[i]) {
+                    currentValues[i] = onlineValue;
+                    if (i < this.inputs.length)
+                        this.inputs[i].setValue(onlineValue);
+                }
+            });
+        });
     }
     setupIO(data, func) {
         for (let inputNum = 0; inputNum < data.inputCount; inputNum++) {
@@ -124,6 +137,11 @@ export class Circuit extends FunctionBlock {
         }
         this.blocks = await Promise.all(this.circuitData.callIDList.map(funcID => FunctionBlock.downloadOnline(this.cpu, funcID)));
     }
+    async readOnlineIOValues() {
+        super.readOnlineIOValues();
+        console.log('Circuit: load blocks online values');
+        this.blocks.forEach(block => block.readOnlineIOValues());
+    }
     static createNew() {
         const funcData = {
             library: 0,
@@ -148,7 +166,7 @@ export class Circuit extends FunctionBlock {
         const circuit = new Circuit(funcData, circuitData);
         circuit.connectOnline(cpu, circuitID);
         if (loadBlocks)
-            circuit.loadOnlineBlocks();
+            await circuit.loadOnlineBlocks();
         return circuit;
     }
 }

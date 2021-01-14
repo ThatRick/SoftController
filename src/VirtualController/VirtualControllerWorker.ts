@@ -164,7 +164,7 @@ onmessage = (e) =>
             response = cpu.getTaskByID(id)
             break
         }
-        case MessageCode.GetDatablockList:
+        case MessageCode.GetDatablockTable:
         {
             response = cpu.getDatablockTable()
             break

@@ -34,7 +34,8 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
 
         this.createPinElement(gui)
         this.createValueField(gui)
-        this.setColor()
+        this.updatePin()
+        this.io.onValueChanged = this.updatePin.bind(this)
     }
 
     createPinElement(gui: CircuitView) {
@@ -77,10 +78,11 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
             backgroundColor: gui.style.pinValueFieldBg,
             pointerEvents: 'none'
         })
-        this.valueField.textContent = this.io.value.toString()
     }
 
-    setColor() {
+    updatePin() {
+        this.valueField.textContent = this.io.value.toString()
+
         const style = this.gui.style
         let color: string
 
@@ -92,9 +94,6 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
 
         this.pin.style.backgroundColor = color
         this.valueField.style.color = color
-    }
-    setValueColor() {
-
     }
 
     selected() {

@@ -56,7 +56,7 @@ export default class VirtualController
     private ints:       Uint32Array
     private floats:     Float32Array
 
-    logInfo(...args: any[]) { debugLogging && console.info(args) };
+    logInfo(...args: any[]) { debugLogging && console.info('CPU:', ...args) };
 
     set id(value: number)                           { this.systemSector[SystemSector.id] = value }
     set version(value: number)                      { this.systemSector[SystemSector.version] = value }
@@ -154,6 +154,7 @@ export default class VirtualController
     // Process controller tasks
     tick(dt: number)
     {
+        this.logInfo('tick')
         for (const taskRef of this.taskList) {
             if (taskRef == 0) break;
             // read task data
@@ -163,6 +164,7 @@ export default class VirtualController
             if (task.timeAccu > task.interval) {
                 task.timeAccu -= task.interval;
                 // run target function / circuit
+                this.logInfo('run task')
                 const taskStartTime = performance.now();
                 this.runFunction(task.targetRef, task.interval);
                 const elapsedTime = performance.now() - taskStartTime;
@@ -519,7 +521,7 @@ export default class VirtualController
             this.addFunctionCall(circuitID, id, callIndex);
         }
 
-        console.log(`for function ${getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        this.logInfo(`for function ${getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
 
         return id;
     }
@@ -678,7 +680,6 @@ export default class VirtualController
                 static:         pointers.statics,
                 dt
             }
-            // TESTING
             func.run(params, this.floats);
         }
 
@@ -740,7 +741,7 @@ export default class VirtualController
         
         this.bytes.set(dataBytes, offset);      // Write data block body
         
-        console.log(`Created data block id ${allocation.id}, size ${allocation.byteLength} bytes, offset ${allocation.startByteOffset}`)
+        this.logInfo(`Created data block id ${allocation.id}, size ${allocation.byteLength} bytes, offset ${allocation.startByteOffset}`)
 
         return allocation.id;
     }
@@ -815,7 +816,7 @@ export default class VirtualController
         writeStruct(this.mem, ref, DatablockHeaderStruct, header)
         this.datablockTable[id] = ref;
         
-        console.log(`Unallocated block ${id}. prev: ${prevBlockID}, next: ${nextBlockID}, offset: ${ref.toString(16)}`, header);
+        this.logInfo(`Unallocated block ${id}. prev: ${prevBlockID}, next: ${nextBlockID}, offset: ${ref.toString(16)}`, header);
     }
 
     markUnallocatedMemory(startByteOffset: number, byteLength: number) {

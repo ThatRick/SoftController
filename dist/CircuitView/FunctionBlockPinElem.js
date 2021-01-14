@@ -19,7 +19,8 @@ export default class FunctionBlockPinElem extends GUIElement {
     onInit(gui) {
         this.createPinElement(gui);
         this.createValueField(gui);
-        this.setColor();
+        this.updatePin();
+        this.io.onValueChanged = this.updatePin.bind(this);
     }
     createPinElement(gui) {
         const size = vec2(0.5, 0.2);
@@ -55,9 +56,9 @@ export default class FunctionBlockPinElem extends GUIElement {
             backgroundColor: gui.style.pinValueFieldBg,
             pointerEvents: 'none'
         });
-        this.valueField.textContent = this.io.value.toString();
     }
-    setColor() {
+    updatePin() {
+        this.valueField.textContent = this.io.value.toString();
         const style = this.gui.style;
         let color;
         switch (this.dataType) {
@@ -73,8 +74,6 @@ export default class FunctionBlockPinElem extends GUIElement {
         }
         this.pin.style.backgroundColor = color;
         this.valueField.style.color = color;
-    }
-    setValueColor() {
     }
     selected() {
         this.pin.style.outline = this.gui.style.blockOutlineSelected;

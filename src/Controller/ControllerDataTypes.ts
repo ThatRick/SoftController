@@ -1,8 +1,9 @@
 import {DataType, StructDataTypes, sizeOfStruct, sizeOfType, readStruct, writeStruct} from '../Lib/TypedStructs.js'
 
-export type pointer = number
-export type bytesize = number
 export type ID = number
+export type REF = number
+
+type bytesize = number
 
 export const enum DatablockType {
     UNDEFINED,

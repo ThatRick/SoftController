@@ -16,7 +16,7 @@ export const MessageCodeNames = [
     'GetSystemSector',
     'GetTaskList',
     'GetTask',
-    'GetDatablockList',
+    'GetDatablockTable',
     'GetDatablockHeader',
     'GetDatablockRef',
     'GetDatablockID',

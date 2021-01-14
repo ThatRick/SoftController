@@ -38,12 +38,12 @@ export abstract class FunctionBlockIO
     get value() { return this._value }
     get id()    { return this.funcBlock.id * 1000 + this._ioNum }
     
-    set value(value: number) {
+    setValue(value: number) {
         this._value = value
-        this.onValueChanged?.(this._ioNum, value)
+        this.onValueChanged?.()
     }
     
-    onValueChanged?: (ioNum, value) => void = undefined
+    onValueChanged?: () => void
 }
 
 export class Input extends FunctionBlockIO
@@ -110,6 +110,20 @@ export class FunctionBlock
     connectOnline(cpu: IControllerInterface, id: ID) {
         this.id = id
         this.cpu = cpu
+    }
+
+    readOnlineIOValues() {
+        if (!this.cpu) return
+
+        this.cpu.getFunctionBlockIOValues(this.id).then(ioValues => {
+            ioValues.forEach((onlineValue, i) => {
+                const currentValues = this.funcData.ioValues
+                if (onlineValue != currentValues[i]) {
+                    currentValues[i] = onlineValue
+                    if (i < this.inputs.length) this.inputs[i].setValue(onlineValue)
+                }
+            })
+        })
     }
 
     setupIO(data: IFunctionBlockData, func: IFunction) {
@@ -203,6 +217,12 @@ export class Circuit extends FunctionBlock
         )
     }
 
+    async readOnlineIOValues() {
+        super.readOnlineIOValues()
+        console.log('Circuit: load blocks online values')
+        this.blocks.forEach(block => block.readOnlineIOValues())
+    }
+
     static createNew() {
         const funcData: IFunctionBlockData = {
             library: 0,
@@ -229,7 +249,7 @@ export class Circuit extends FunctionBlock
         
         const circuit = new Circuit(funcData, circuitData)
         circuit.connectOnline(cpu, circuitID)
-        if (loadBlocks) circuit.loadOnlineBlocks()
+        if (loadBlocks) await circuit.loadOnlineBlocks()
 
         return circuit
     }

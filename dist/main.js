@@ -7,6 +7,11 @@ import { Circuit } from './CircuitView/CircuitModel.js';
 import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
 function createTerminal(div) {
     return (text) => {
+        if (text == 'CLEAR') {
+            while (div.firstChild)
+                div.lastChild.remove();
+            return;
+        }
         const pre = document.createElement('pre');
         pre.textContent = text;
         div.appendChild(pre);
@@ -56,22 +61,11 @@ async function app() {
     const result = await cpu.createController(memSize, 256, 16);
     // const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
-    terminal(await systemSectorToString(cpu));
-    terminal(breakLine);
-    terminal('');
-    terminal('      RUNNING TEST...');
-    terminal(await datablockTableToString(cpu));
     const circuitID = await createTestCircuit(cpu, 10);
-    const taskId = await cpu.createTask(circuitID, 20);
-    const interval = 10; // ms
-    const ticks = 10;
+    const taskId = await cpu.createTask(circuitID, 20, 10);
+    terminal(await systemSectorToString(cpu));
+    terminal(await datablockTableToString(cpu));
     const circuit = await Circuit.downloadOnline(cpu, circuitID);
-    await cpu.stepController(interval, ticks).catch(errorLogger).then(async (result) => {
-        terminal(await taskToString(cpu, taskId));
-        terminal(await systemSectorToString(cpu));
-        // print(datablockTableToString(cpu));
-        circuit.blocks.forEach(async (block) => terminal(await functionToString(cpu, block.id)));
-    });
     const view = await testGUI(circuit);
     createControlButtonBar([
         // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
@@ -90,10 +84,15 @@ async function app() {
         //     terminal(systemSectorToString(cpuLink));
         //     terminal(datablockTableToString(cpuLink));
         // })},
-        { name: 'Scale + ', fn: () => view.scale = vec2(1.25, 1.25) },
-        { name: 'DUMMY', fn: () => { } },
+        { name: 'Step', fn: async () => {
+                terminal('CLEAR');
+                await cpu.stepController(20);
+                await circuit.readOnlineIOValues();
+                terminal(await taskToString(cpu, taskId));
+                circuit.blocks.forEach(async (block) => terminal(await functionToString(cpu, block.id)));
+            } },
+        { name: 'Clear', fn: () => terminal('CLEAR') },
     ]);
-    return true;
 }
 ////////////////////
 //  CREATE A TEST
@@ -268,11 +267,13 @@ async function datablockTableToString(cpu) {
     const maxTypeNameLength = (typeNames.reduce((a, b) => (a.length > b.length) ? a : b)).length;
     let text = '';
     const addLine = (line) => text += (line + '\n');
-    const datablockTable = await cpu.getDatablockList().catch(error => []);
+    const datablockTable = await cpu.getDatablockTable();
+    if (!datablockTable)
+        return 'Datablock table to string: Could not read datablock table!';
     addLine(breakLine);
     addLine(`DATA BLOCK TABLE (size: ${datablockTable.length})`);
     addLine('');
-    datablockTable.forEach(async (offset, id) => {
+    await Promise.all(datablockTable.map(async (offset, id) => {
         if (offset) {
             const header = await cpu.getDatablockHeader(id);
             const startAddr = offset.toString(16).toUpperCase();
@@ -280,7 +281,7 @@ async function datablockTableToString(cpu) {
             addLine(`${id.toString().padStart(3, '0')}:  ${typeNames[header.type].padEnd(maxTypeNameLength)}  \
 ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  ${(header.parentID) ? 'parent: ' + header.parentID : ''}`);
         }
-    });
+    }));
     return text;
 }
 //////////////////////////////////////////////
@@ -317,8 +318,10 @@ async function systemSectorToString(cpu) {
 //
 async function taskToString(cpu, taskID) {
     const nameLength = 22;
+    async function getBlockID(ref) {
+    }
     const names = {
-        targetRef: ['Target Ref', (value) => `${('0x' + value.toString(16).toUpperCase()).padStart(defaultIntegerPadding)}  (ID: ${cpu.getDatablockID(value)})`],
+        targetRef: ['Target Ref', async (value) => `${('0x' + value.toString(16).toUpperCase()).padStart(defaultIntegerPadding)}  (ID: ${await cpu.getDatablockID(value)})`],
         interval: ['Interval (ms)', (value) => alignValue(value)],
         offset: ['Offset (ms)', (value) => alignValue(value)],
         timeAccu: ['Time Accumulator (ms)', (value) => alignValue(value)],
@@ -334,7 +337,7 @@ async function taskToString(cpu, taskID) {
     addLine('');
     for (const [key, value] of Object.entries(task)) {
         const [name, func] = names[key];
-        addLine(`      ${name.padEnd(nameLength)}  ${func(value)}`);
+        addLine(`      ${name.padEnd(nameLength)}  ${await func(value)}`);
     }
     const totalCPUtime = task.cpuTimeInt + task.cpuTime;
     const avgCPUtime = totalCPUtime / task.runCount;

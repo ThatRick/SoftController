@@ -157,7 +157,7 @@ onmessage = (e) => {
                 response = cpu.getTaskByID(id);
                 break;
             }
-        case 16 /* GetDatablockList */:
+        case 16 /* GetDatablockTable */:
             {
                 response = cpu.getDatablockTable();
                 break;

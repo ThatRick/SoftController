@@ -1,16 +1,18 @@
-import VirtualController from './VirtualController/VirtualControllerCPU.js'
 import { getFunction, getFunctionName } from './FunctionCollection.js'
 import { DatablockType, IOFlag, IODataType, getIOType, IORef } from './Controller/ControllerDataTypes.js';
 // import { createControllerBlueprint, getBlueprintResourceNeeded, loadControllerBlueprint } from './SoftController/SoftSerializer.js'
 import CircuitView from './CircuitView/CircuitView.js'
 import Vec2, {vec2} from './Lib/Vector2.js'
-import { Circuit, FunctionBlock } from './CircuitView/CircuitModel.js';
-import FunctionBlockElem from './CircuitView/FunctionBlockElem.js';
+import { Circuit } from './CircuitView/CircuitModel.js';
 import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
 import IControllerInterface from './Controller/ControllerInterface.js';
 
 function createTerminal(div: HTMLElement) {
     return (text: string) => {
+        if (text == 'CLEAR') {
+            while (div.firstChild) div.lastChild.remove()
+            return
+        }
         const pre = document.createElement('pre');
         pre.textContent = text;
         div.appendChild(pre);
@@ -53,6 +55,7 @@ async function testGUI(circuit: Circuit) {
     const viewScale = vec2(14, 20)
 
     const view = new CircuitView(guiContainer, viewSize, viewScale)
+
     view.loadCircuit(circuit)
 
     return view
@@ -71,33 +74,20 @@ async function app()
 
     const memSize = 64 * 1024;  // bytes
     const cpu = new VirtualControllerLink()
+
     const result = await cpu.createController(memSize, 256, 16)
 
     // const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
     
-    terminal(await systemSectorToString(cpu))
-    terminal(breakLine);
-    terminal('');
-    terminal('      RUNNING TEST...')
-    
-    terminal(await datablockTableToString(cpu));
-
     const circuitID = await createTestCircuit(cpu, 10)
-    const taskId = await cpu.createTask(circuitID, 20)
+    const taskId = await cpu.createTask(circuitID, 20, 10)
     
-    const interval = 10 // ms
-    const ticks = 10
+    terminal(await systemSectorToString(cpu))
+    terminal(await datablockTableToString(cpu));
 
     const circuit = await Circuit.downloadOnline(cpu, circuitID)
     
-    await cpu.stepController(interval, ticks).catch(errorLogger).then(async result => {
-        terminal(await taskToString(cpu, taskId))
-        terminal(await systemSectorToString(cpu));
-        // print(datablockTableToString(cpu));
-        circuit.blocks.forEach(async block => terminal(await functionToString(cpu, block.id)));
-    })
-
     const view = await testGUI(circuit)
 
     createControlButtonBar([
@@ -119,11 +109,15 @@ async function app()
         //     terminal(systemSectorToString(cpuLink));
         //     terminal(datablockTableToString(cpuLink));
         // })},
-        { name: 'Scale + ', fn: () => view.scale = vec2(1.25, 1.25) },
-        { name: 'DUMMY', fn: () => {} },
+        { name: 'Step', fn: async () => {
+            terminal('CLEAR')
+            await cpu.stepController(20)
+            await circuit.readOnlineIOValues()
+            terminal(await taskToString(cpu, taskId))
+            circuit.blocks.forEach(async block => terminal(await functionToString(cpu, block.id)));
+        }},
+        { name: 'Clear', fn: () => terminal('CLEAR') },
     ])
-
-    return true
 }
 
 ////////////////////
@@ -319,14 +313,14 @@ async function datablockTableToString(cpu: IControllerInterface) {
     let text = '';
     const addLine = (line: string) => text += (line + '\n');
     
-    const datablockTable = await cpu.getDatablockList().catch(error => [])
+    const datablockTable = await cpu.getDatablockTable()
+    if (!datablockTable) return 'Datablock table to string: Could not read datablock table!'
 
     addLine(breakLine)
     addLine(`DATA BLOCK TABLE (size: ${datablockTable.length})`)
     addLine('')
 
-
-    datablockTable.forEach(async (offset, id) => {
+    await Promise.all(datablockTable.map(async (offset, id) => {
         if (offset) {
             const header = await cpu.getDatablockHeader(id);
             const startAddr = offset.toString(16).toUpperCase()
@@ -334,7 +328,7 @@ async function datablockTableToString(cpu: IControllerInterface) {
             addLine(`${id.toString().padStart(3, '0')}:  ${typeNames[header.type].padEnd(maxTypeNameLength)}  \
 ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  ${(header.parentID) ? 'parent: '+header.parentID : ''}`);
         }
-    })
+    }))
     return text;
 }
 
@@ -378,9 +372,14 @@ async function systemSectorToString(cpu: IControllerInterface): Promise<string> 
 //
 async function taskToString(cpu: IControllerInterface, taskID: number) {
     const nameLength = 22
-    const names: {[index: string]: [string, (value: number) => string]} =
+
+    async function getBlockID(ref: number) {
+
+    }
+
+    const names: {[index: string]: [string, (value: number) => string | Promise<string>]} =
     {
-        targetRef:   ['Target Ref',             (value) => `${('0x'+value.toString(16).toUpperCase()).padStart(defaultIntegerPadding)}  (ID: ${cpu.getDatablockID(value)})`],
+        targetRef:   ['Target Ref',             async (value) => `${('0x'+value.toString(16).toUpperCase()).padStart(defaultIntegerPadding)}  (ID: ${await cpu.getDatablockID(value)})`],
         interval:    ['Interval (ms)',          (value) => alignValue(value)],
         offset:      ['Offset (ms)',            (value) => alignValue(value)],
         timeAccu:    ['Time Accumulator (ms)',  (value) => alignValue(value)],
@@ -399,7 +398,7 @@ async function taskToString(cpu: IControllerInterface, taskID: number) {
 
     for (const [key, value] of Object.entries(task)) {
         const [name, func] = names[key];
-        addLine(`      ${name.padEnd(nameLength)}  ${func(value)}`);
+        addLine(`      ${name.padEnd(nameLength)}  ${await func(value)}`);
     }
 
     const totalCPUtime = task.cpuTimeInt + task.cpuTime;
