@@ -1,5 +1,8 @@
 import { getFunction } from '../FunctionCollection.js';
 import { getIOType } from '../Controller/ControllerDataTypes.js';
+///////////////////////////////
+//            IO
+///////////////////////////////
 export class FunctionBlockIO {
     constructor(funcBlock, name, ioNum, flags, value, pinType, isCircuitIO = false) {
         this.funcBlock = funcBlock;
@@ -15,54 +18,49 @@ export class FunctionBlockIO {
     get name() { return this._name; }
     get ioNum() { return this._ioNum; }
     get type() { return this._type; }
+    get flags() { return this._flags; }
     get value() { return this._value; }
-    get id() { return this.funcBlock.id * 1000 + this._ioNum; }
+    get id() { return this.funcBlock.offlineID * 1000 + this._ioNum; }
     setValue(value) {
         this._value = value;
         this.onValueChanged?.();
     }
 }
+///////////////////////////////
+//          Input
+///////////////////////////////
 export class Input extends FunctionBlockIO {
-    constructor(funcBlock, name, ioNum, flags, value, isCircuitIO = false, ref = undefined) {
+    constructor(funcBlock, name, ioNum, flags, value, isCircuitIO = false) {
         super(funcBlock, name, ioNum, flags, value, 'input', isCircuitIO);
-        this._ref = ref;
-        this._inverted = !!(flags & 8 /* INVERTED */);
+    }
+    getConnection() { return this._ref; }
+    setConnection(sourceBlockID, outputNum, inverted = false) {
+        this._ref = { sourceBlockID, outputNum, inverted };
     }
 }
+///////////////////////////////
+//          Output
+///////////////////////////////
 export class Output extends FunctionBlockIO {
     constructor(funcBlock, name, ioNum, flags, value, isCircuitIO = false) {
         super(funcBlock, name, ioNum, flags, value, 'output', isCircuitIO);
     }
 }
+///////////////////////////////
+//      Function Block
+///////////////////////////////
 export class FunctionBlock {
-    constructor(funcData) {
+    constructor(funcData, offlineID) {
+        this.offlineID = offlineID;
         this.inputs = [];
         this.outputs = [];
         this.isCircuit = (funcData.library == 0);
         const func = (this.isCircuit) ? null : getFunction(funcData.library, funcData.opcode);
         this.funcData = funcData;
         this.name = (this.isCircuit) ? 'Circuit' : func.name;
-        this.setupIO(funcData, func);
+        this.initIO(funcData, func);
     }
-    connectOnline(cpu, id) {
-        this.id = id;
-        this.cpu = cpu;
-    }
-    readOnlineIOValues() {
-        if (!this.cpu)
-            return;
-        this.cpu.getFunctionBlockIOValues(this.id).then(ioValues => {
-            ioValues.forEach((onlineValue, i) => {
-                const currentValues = this.funcData.ioValues;
-                if (onlineValue != currentValues[i]) {
-                    currentValues[i] = onlineValue;
-                    if (i < this.inputs.length)
-                        this.inputs[i].setValue(onlineValue);
-                }
-            });
-        });
-    }
-    setupIO(data, func) {
+    initIO(data, func) {
         for (let inputNum = 0; inputNum < data.inputCount; inputNum++) {
             const ioNum = inputNum;
             const name = (func) ? func.inputs[Math.min(inputNum, func.inputs.length - 1)].name : inputNum.toString();
@@ -74,7 +72,26 @@ export class FunctionBlock {
             this.outputs[outputNum] = new Output(this, name, ioNum, data.ioFlags[ioNum], data.ioValues[ioNum], this.isCircuit);
         }
     }
-    static createNew(library, opcode, customInputCount, customOutputCount) {
+    connectOnline(cpu, id) {
+        this.onlineID = id;
+        this.cpu = cpu;
+    }
+    readOnlineIOValues() {
+        if (!this.cpu)
+            return;
+        this.cpu.getFunctionBlockIOValues(this.onlineID).then(ioValues => {
+            ioValues.forEach((onlineValue, i) => {
+                const currentValues = this.funcData.ioValues;
+                if (onlineValue != currentValues[i]) {
+                    currentValues[i] = onlineValue;
+                    if (i < this.inputs.length)
+                        this.inputs[i].setValue(onlineValue);
+                }
+            });
+        });
+    }
+    // Create new offline function block data
+    static createNewData(library, opcode, customInputCount, customOutputCount) {
         const func = getFunction(library, opcode);
         if (!func) {
             console.error('Invalid function library/opcode');
@@ -106,41 +123,68 @@ export class FunctionBlock {
             ioFlags: [...inputFlags, ...outputFlags],
             inputRefs: []
         };
-        return new FunctionBlock(data);
+        return data;
     }
-    static async downloadOnline(cpu, id) {
-        const funcData = await cpu.getFunctionBlockData(id);
-        const funcBlock = new FunctionBlock(funcData);
-        funcBlock.connectOnline(cpu, id);
-        return funcBlock;
+    // Download online function block data
+    static async downloadOnlineData(cpu, id) {
+        const data = await cpu.getFunctionBlockData(id);
+        return data;
     }
 }
+///////////////////////////////
+//          Circuit
+///////////////////////////////
 export class Circuit extends FunctionBlock {
     constructor(funcData, circuitData) {
-        super(funcData);
+        super(funcData, 0);
         this.blocks = [];
+        this.onlineBlocks = new Map();
         this.circuitData = circuitData;
     }
     createFunction(library, opcode, customInputCount, customOutputCount, callIndex) {
-        const funcBlock = FunctionBlock.createNew(library, opcode, customInputCount, customOutputCount);
+        const funcData = FunctionBlock.createNewData(library, opcode, customInputCount, customOutputCount);
+        const id = this.blocks.length;
+        const funcBlock = new FunctionBlock(funcData, id);
         if (!funcBlock)
             return null;
-        const id = this.blocks.length;
         this.blocks.push(funcBlock);
-        funcBlock.id = id;
+        funcBlock.onlineID = id;
         return funcBlock;
+    }
+    connectBlockInputRef(block) {
+        block.funcData.inputRefs.forEach((ioRef, i) => {
+            if (ioRef) {
+                const input = block.inputs[i];
+                const sourceBlock = this.onlineBlocks.get(ioRef.id);
+                if (sourceBlock) {
+                    const outputNum = ioRef.ioNum - sourceBlock.inputs.length;
+                    const inverted = !!(input.flags & 8 /* INVERTED */);
+                    input.setConnection(sourceBlock.offlineID, outputNum, inverted);
+                }
+                else
+                    console.error('Connect: source block undefined');
+            }
+        });
     }
     async loadOnlineBlocks() {
         if (!this.cpu) {
             console.error('Circuit: Can not load online blocks. no controller connected');
             return;
         }
-        this.blocks = await Promise.all(this.circuitData.callIDList.map(funcID => FunctionBlock.downloadOnline(this.cpu, funcID)));
+        let id = this.blocks.length;
+        this.blocks = await Promise.all(this.circuitData.callIDList.map(async (onlineID) => {
+            const data = await FunctionBlock.downloadOnlineData(this.cpu, onlineID);
+            const block = new FunctionBlock(data, id++);
+            block.connectOnline(this.cpu, onlineID);
+            this.onlineBlocks.set(onlineID, block);
+            return block;
+        }));
+        this.onlineBlocks.set(this.onlineID, this);
+        this.blocks.forEach(block => this.connectBlockInputRef(block));
     }
     async readOnlineIOValues() {
-        super.readOnlineIOValues();
-        console.log('Circuit: load blocks online values');
-        this.blocks.forEach(block => block.readOnlineIOValues());
+        await super.readOnlineIOValues();
+        this.blocks.forEach(async (block) => await block.readOnlineIOValues());
     }
     static createNew() {
         const funcData = {

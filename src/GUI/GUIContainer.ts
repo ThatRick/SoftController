@@ -1,16 +1,17 @@
-import {IDOMElement, IGUIElement, IGUIContainer, IGUIView} from './GUITypes.js'
+import {IElementGUI, IChildElementGUI, IViewContainerGUI, IWindowGUI, Vec2, IStyleGUI} from './GUITypes.js'
 
-export default class GUIContainer<T extends IGUIElement> implements IGUIContainer
+export default class GUIContainer<T extends IChildElementGUI> implements IViewContainerGUI
 {
     DOMElement: HTMLElement
     elements = new Set<T>()
     uninitializedElements = new Set<T>()
 
-    gui: IGUIView
+    gui: IWindowGUI
 
-    constructor(private parent: IDOMElement)
+    constructor(private parent: IElementGUI)
     {
         this.DOMElement = parent.DOMElement
+        this.gui = parent.gui
     }
 
     get pos() { return this.parent.pos }
@@ -20,12 +21,11 @@ export default class GUIContainer<T extends IGUIElement> implements IGUIContaine
     attachChildElement(elem: T) {
         this.DOMElement.appendChild(elem.DOMElement)
         this.elements.add(elem)
-        elem.parent = this
 
-        if (this.gui)
-            this.initChild(elem)
-        else
-            this.uninitializedElements.add(elem)  
+        elem.parentContainer = this
+        elem.gui = this.gui
+
+        this.gui.registerElement(elem)
     }
 
     removeChildElement(elem: T) {
@@ -36,24 +36,20 @@ export default class GUIContainer<T extends IGUIElement> implements IGUIContaine
 
         this.DOMElement.removeChild(elem.DOMElement)
         this.elements.delete(elem)
-        elem.parent = undefined
+        elem.parentContainer = undefined
         this.gui.unregisterElement(elem)
     }
 
-    initChild(elem) {
-        elem.init(this.gui)
-        this.gui.registerElement(elem)
-    }
-
-    init(gui: IGUIView) {
-        this.gui = gui
-        this.uninitializedElements.forEach(elem => this.initChild(elem))
-        this.uninitializedElements.clear()
-    }
-
-    update(gui: IGUIView, force) {
-        this.elements.forEach(elem => elem.update(gui, force))
+    update(force = false) {
+        this.elements.forEach(elem => elem.update(force))
         return false
     }
-
+    rescale(scale: Vec2) {
+        this.elements.forEach(elem => elem.rescale(scale))
+        return false
+    }
+    restyle(style: IStyleGUI) {
+        this.elements.forEach(elem => elem.restyle(style))
+        return false
+    }
 }

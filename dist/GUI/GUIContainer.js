@@ -4,6 +4,7 @@ export default class GUIContainer {
         this.elements = new Set();
         this.uninitializedElements = new Set();
         this.DOMElement = parent.DOMElement;
+        this.gui = parent.gui;
     }
     get pos() { return this.parent.pos; }
     get absPos() { return this.parent.absPos; }
@@ -11,11 +12,9 @@ export default class GUIContainer {
     attachChildElement(elem) {
         this.DOMElement.appendChild(elem.DOMElement);
         this.elements.add(elem);
-        elem.parent = this;
-        if (this.gui)
-            this.initChild(elem);
-        else
-            this.uninitializedElements.add(elem);
+        elem.parentContainer = this;
+        elem.gui = this.gui;
+        this.gui.registerElement(elem);
     }
     removeChildElement(elem) {
         if (!this.gui) {
@@ -24,20 +23,19 @@ export default class GUIContainer {
         }
         this.DOMElement.removeChild(elem.DOMElement);
         this.elements.delete(elem);
-        elem.parent = undefined;
+        elem.parentContainer = undefined;
         this.gui.unregisterElement(elem);
     }
-    initChild(elem) {
-        elem.init(this.gui);
-        this.gui.registerElement(elem);
+    update(force = false) {
+        this.elements.forEach(elem => elem.update(force));
+        return false;
     }
-    init(gui) {
-        this.gui = gui;
-        this.uninitializedElements.forEach(elem => this.initChild(elem));
-        this.uninitializedElements.clear();
+    rescale(scale) {
+        this.elements.forEach(elem => elem.rescale(scale));
+        return false;
     }
-    update(gui, force) {
-        this.elements.forEach(elem => elem.update(gui, force));
+    restyle(style) {
+        this.elements.forEach(elem => elem.restyle(style));
         return false;
     }
 }

@@ -1,5 +1,5 @@
-import GUIElement from '../GUI/GUIElement.js'
-import { IGUIContainer, IGUIView } from '../GUI/GUITypes.js'
+import GUIElement from '../GUI/GUIChildElement.js'
+import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock, FunctionBlockIO } from './CircuitModel.js'
 import { domElement } from '../Lib/HTML.js'
@@ -8,30 +8,32 @@ import CircuitView from './CircuitView.js'
 import { IODataType } from '../Controller/ControllerDataTypes.js'
 
 
-export default class FunctionBlockPinElem extends GUIElement implements CircuitElement
+export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUIElement implements CircuitElement
 {
     type: ElementType
     get id(): number { return this.io.id }
     gui: CircuitView
 
-    io: FunctionBlockIO
+    isSelectable = true
+
+    io: T
     pin: HTMLDivElement
     valueField: HTMLDivElement
 
-    isSelectable = true
-
     dataType: IODataType
     
-    constructor(parent: IGUIContainer, io: FunctionBlockIO, pos: Vec2) {
+    constructor(parent: IViewContainerGUI, io: T, pos: Vec2) {
         super(parent, 'div', pos, vec2(1, 1))
 
         this.io = io
         this.type = io.pinType
         this.dataType = this.io.type
+
+        this.create(this.gui)
     }
 
-    onInit(gui: CircuitView) {
-
+    private create(gui: CircuitView) {
+        console.log('Pin element: onInit()')
         this.createPinElement(gui)
         this.createValueField(gui)
         this.updatePin()
@@ -107,6 +109,7 @@ export default class FunctionBlockPinElem extends GUIElement implements CircuitE
     onPointerEnter = (ev: PointerEvent) => {
         this.pin.style.filter = this.gui.style.colorFilterActive
     }
+
     onPointerLeave = (ev: PointerEvent) => {
         this.pin.style.filter = 'none'
     }

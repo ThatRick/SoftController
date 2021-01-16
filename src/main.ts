@@ -47,7 +47,7 @@ const CSSGridRowHeights: { [key: string]: number }  =
 
 /////////////////////////
 //  GUI Testing
-async function testGUI(circuit: Circuit) {
+function testGUI(circuit: Circuit) {
     
     const guiContainer = document.getElementById('gui')
 
@@ -57,7 +57,7 @@ async function testGUI(circuit: Circuit) {
     const view = new CircuitView(guiContainer, viewSize, viewScale)
 
     view.loadCircuit(circuit)
-
+    
     return view
 }
 
@@ -88,7 +88,8 @@ async function app()
 
     const circuit = await Circuit.downloadOnline(cpu, circuitID)
     
-    const view = await testGUI(circuit)
+
+    const view = testGUI(circuit)
 
     createControlButtonBar([
         // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
@@ -114,7 +115,7 @@ async function app()
             await cpu.stepController(20)
             await circuit.readOnlineIOValues()
             terminal(await taskToString(cpu, taskId))
-            circuit.blocks.forEach(async block => terminal(await functionToString(cpu, block.id)));
+            circuit.blocks.forEach(async block => terminal(await functionToString(cpu, block.onlineID)));
         }},
         { name: 'Clear', fn: () => terminal('CLEAR') },
     ])

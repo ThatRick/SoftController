@@ -1,40 +1,27 @@
-import GUIElement from '../GUI/GUIElement.js'
-import { IGUIContainer, IGUIView } from '../GUI/GUITypes.js'
+import GUIElement from '../GUI/GUIChildElement.js'
+import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
-import { FunctionBlock } from './CircuitModel.js'
+import { FunctionBlock, Input, Output } from './CircuitModel.js'
 import CircuitView from './CircuitView.js'
 import { Table } from '../Lib/HTML.js'
-import FunctionBlockPinElem from './FunctionBlockPinElem.js'
+import FunctionBlockPinView from './FunctionBlockPinView.js'
 import { CircuitElement, ElementType } from './CircuitTypes.js'
 
-export default class FunctionBlockElem extends GUIElement implements CircuitElement
+export default class FunctionBlockView extends GUIElement implements CircuitElement
 {
     static isMinimal(func: FunctionBlock) {
-        return (func.inputs[0]._name == undefined)
+        return (func.inputs[0].name == undefined)
     }
 
     static getBlockSize(func: FunctionBlock) {
-        const w = (FunctionBlockElem.isMinimal(func) || !func.outputs?.[0]?._name) ? 3 : 6
+        const w = (FunctionBlockView.isMinimal(func) || !func.outputs?.[0]?.name) ? 3 : 6
         const h = Math.max(func.inputs.length, func.outputs.length)
         return vec2(w, h)
     }
 
     type: ElementType = 'block'
-    get id(): number { return this.func.id }
+    get id(): number { return this.func.onlineID }
     gui: CircuitView
-
-    constructor(circuitView: IGUIContainer, pos: Vec2, funcBlock: FunctionBlock)
-    {
-        super(circuitView, 'div', pos, FunctionBlockElem.getBlockSize(funcBlock), {
-            color: 'white',
-            boxSizing: 'border-box',
-            fontFamily: 'monospace',
-            userSelect: 'none'
-        }, true)
-        
-        this.func = funcBlock
-        this.isMinimal = FunctionBlockElem.isMinimal(funcBlock)
-    }
 
     isDraggable = true
     isSelectable = true
@@ -42,33 +29,48 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
 
     func: FunctionBlock
     isMinimal: boolean
-    IONameTable: Table
+    
+    inputPins: FunctionBlockPinView<Input>[] = []
+    outputPins: FunctionBlockPinView<Output>[] = []
+    
+    private IONameTable: Table
 
-    inputPins: FunctionBlockPinElem[] = []
-    outputPins: FunctionBlockPinElem[] = []
+    constructor(circuitView: IViewContainerGUI, pos: Vec2, funcBlock: FunctionBlock)
+    {
+        super(circuitView, 'div', pos, FunctionBlockView.getBlockSize(funcBlock), {
+            color: 'white',
+            boxSizing: 'border-box',
+            fontFamily: 'monospace',
+            userSelect: 'none'
+        }, true)
+        
+        this.func = funcBlock
+        this.isMinimal = FunctionBlockView.isMinimal(funcBlock)
 
-    onInit(gui: CircuitView) {
+        this.build(this.gui)
+    }
 
+    private build(gui: CircuitView) {
         this.setStyle({
             backgroundColor: this.gui.style.colorBlock,
             fontSize: Math.round(gui.scale.y * 0.65)+'px'
         })
 
-        this.createNames(gui)
+        this.createIONames(gui)
         this.createPins(gui)
     }
 
     createPins(gui: CircuitView) {
 
         this.func.inputs.forEach((input, i) => {
-            this.inputPins[i] = new FunctionBlockPinElem(this.children, input, vec2(-1, i))
+            this.inputPins[i] = new FunctionBlockPinView(this.children, input, vec2(-1, i))
         })
         this.func.outputs.forEach((output, i) => {
-            this.outputPins[i] = new FunctionBlockPinElem(this.children, output, vec2(this.size.x, i))
+            this.outputPins[i] = new FunctionBlockPinView(this.children, output, vec2(this.size.x, i))
         })
     }
 
-    createNames(gui: CircuitView) {
+    createIONames(gui: CircuitView) {
         if (this.isMinimal) {
             this.DOMElement.textContent = this.func.name
             this.setStyle({
@@ -98,8 +100,8 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
                     color: 'white'
                 },
                 cellIterator: (cell, row, col) => {
-                    cell.textContent = (col == INPUT) ? (this.func?.inputs[row]?._name ?? ((row == 0 && this.func) ? this.func.name : 'FUNC')) 
-                                                      : this.func?.outputs[row]?._name
+                    cell.textContent = (col == INPUT) ? (this.func?.inputs[row]?.name ?? ((row == 0 && this.func) ? this.func.name : 'FUNC')) 
+                                                      : this.func?.outputs[row]?.name
                     cell.style.textAlign = (col == INPUT) ? 'left' : 'right'
                     cell.style[(col == INPUT ? 'paddingLeft' : 'paddingRight')] = Math.round(gui.scale.x * 0.3)+'px'
                 }
@@ -116,12 +118,13 @@ export default class FunctionBlockElem extends GUIElement implements CircuitElem
     }
 
     toFront() {
-        this.parent.DOMElement.appendChild(this.DOMElement)
+        this.parentContainer.DOMElement.appendChild(this.DOMElement)
     }
 
     onPointerEnter = () => {
         this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover
     }
+
     onPointerLeave = () => {
         this.DOMElement.style.backgroundColor = this.gui.style.colorBlock
     }

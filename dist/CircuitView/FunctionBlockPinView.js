@@ -1,7 +1,7 @@
-import GUIElement from '../GUI/GUIElement.js';
+import GUIElement from '../GUI/GUIChildElement.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import { domElement } from '../Lib/HTML.js';
-export default class FunctionBlockPinElem extends GUIElement {
+export default class FunctionBlockPinView extends GUIElement {
     constructor(parent, io, pos) {
         super(parent, 'div', pos, vec2(1, 1));
         this.isSelectable = true;
@@ -14,9 +14,10 @@ export default class FunctionBlockPinElem extends GUIElement {
         this.io = io;
         this.type = io.pinType;
         this.dataType = this.io.type;
+        this.create(this.gui);
     }
     get id() { return this.io.id; }
-    onInit(gui) {
+    create(gui) {
         console.log('Pin element: onInit()');
         this.createPinElement(gui);
         this.createValueField(gui);

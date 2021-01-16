@@ -1,10 +1,10 @@
-import GUIElement from '../GUI/GUIElement.js';
+import GUIElement from '../GUI/GUIChildElement.js';
 import { vec2 } from '../Lib/Vector2.js';
 import { Table } from '../Lib/HTML.js';
-import FunctionBlockPinElem from './FunctionBlockPinElem.js';
-export default class FunctionBlockElem extends GUIElement {
+import FunctionBlockPinView from './FunctionBlockPinView.js';
+export default class FunctionBlockView extends GUIElement {
     constructor(circuitView, pos, funcBlock) {
-        super(circuitView, 'div', pos, FunctionBlockElem.getBlockSize(funcBlock), {
+        super(circuitView, 'div', pos, FunctionBlockView.getBlockSize(funcBlock), {
             color: 'white',
             boxSizing: 'border-box',
             fontFamily: 'monospace',
@@ -23,34 +23,35 @@ export default class FunctionBlockElem extends GUIElement {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
         };
         this.func = funcBlock;
-        this.isMinimal = FunctionBlockElem.isMinimal(funcBlock);
+        this.isMinimal = FunctionBlockView.isMinimal(funcBlock);
+        this.build(this.gui);
     }
     static isMinimal(func) {
         return (func.inputs[0].name == undefined);
     }
     static getBlockSize(func) {
-        const w = (FunctionBlockElem.isMinimal(func) || !func.outputs?.[0]?.name) ? 3 : 6;
+        const w = (FunctionBlockView.isMinimal(func) || !func.outputs?.[0]?.name) ? 3 : 6;
         const h = Math.max(func.inputs.length, func.outputs.length);
         return vec2(w, h);
     }
     get id() { return this.func.onlineID; }
-    onInit(gui) {
+    build(gui) {
         this.setStyle({
             backgroundColor: this.gui.style.colorBlock,
             fontSize: Math.round(gui.scale.y * 0.65) + 'px'
         });
-        this.createNames(gui);
+        this.createIONames(gui);
         this.createPins(gui);
     }
     createPins(gui) {
         this.func.inputs.forEach((input, i) => {
-            this.inputPins[i] = new FunctionBlockPinElem(this.children, input, vec2(-1, i));
+            this.inputPins[i] = new FunctionBlockPinView(this.children, input, vec2(-1, i));
         });
         this.func.outputs.forEach((output, i) => {
-            this.outputPins[i] = new FunctionBlockPinElem(this.children, output, vec2(this.size.x, i));
+            this.outputPins[i] = new FunctionBlockPinView(this.children, output, vec2(this.size.x, i));
         });
     }
-    createNames(gui) {
+    createIONames(gui) {
         if (this.isMinimal) {
             this.DOMElement.textContent = this.func.name;
             this.setStyle({
@@ -93,6 +94,6 @@ export default class FunctionBlockElem extends GUIElement {
         this.DOMElement.style.outline = this.gui.style.blockOutlineUnselected;
     }
     toFront() {
-        this.parent.DOMElement.appendChild(this.DOMElement);
+        this.parentContainer.DOMElement.appendChild(this.DOMElement);
     }
 }

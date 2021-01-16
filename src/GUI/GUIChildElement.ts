@@ -1,24 +1,23 @@
 import GUIContainer from './GUIContainer.js'
-import {IGUIElement, IGUIContainer, IGUIView, GUIPointerState, Vec2, EventHandlerFn} from './GUITypes.js'
+import {IChildElementGUI, IViewContainerGUI, IWindowGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI} from './GUITypes.js'
 
-export default class GUIElement implements IGUIElement{
+export default class GUIElement implements IChildElementGUI{
     DOMElement: HTMLElement
 
-    parent?: IGUIContainer
-    children?: IGUIContainer
+    parentContainer?: IViewContainerGUI
+    children?: IViewContainerGUI
 
     isDraggable?: boolean
     isSelectable?: boolean
     isMultiSelectable?: boolean
 
-    gui: IGUIView
-
+    gui: IWindowGUI
 
     ////////////////////////////
     //      Constructor
     ////////////////////////////
     constructor(
-        parent: IGUIContainer | undefined,
+        parent: IViewContainerGUI,
         elem:   HTMLElement | 'div',
         pos:    Vec2,
         size?:  Vec2,
@@ -38,44 +37,45 @@ export default class GUIElement implements IGUIElement{
             position: 'absolute'
         }
         Object.assign(this.DOMElement.style, defaultStyle, style)
-
-        this.parent = parent
-
-        if (hasChildren) this.children = new GUIContainer(this)
-
-        if (this.parent) this.parent.attachChildElement(this)
         
+        
+        this.parentContainer = parent
+        this.parentContainer.attachChildElement(this)
+        
+        if (hasChildren) this.children = new GUIContainer(this)
+        
+        this.update(true)
     }
 
-    init(gui: IGUIView): void
-    {
-        this.gui = gui
-        if (this.onInit) setTimeout(() => this.onInit(gui))
-        this.children?.init(gui)
-        this.update(gui, true)
-    }
-
-    onInit?(gui: IGUIView): void
-
-    update(gui: IGUIView, force?: boolean)
+    update(force?: boolean)
     {
         if (this._posHasChanged || force) {
             this._posHasChanged = false;
-            this._posScaled = Vec2.mul(this._pos, gui.scale)
+            this._posScaled = Vec2.mul(this._pos, this.gui.scale)
             this.DOMElement.style.left =    this._posScaled.x + 'px'
             this.DOMElement.style.top =     this._posScaled.y + 'px'
         }
         if (this._size && this._sizeHasChanged || force) {
             this._sizeHasChanged = false;
-            this._sizeScaled = Vec2.mul(this._size, gui.scale)
+            this._sizeScaled = Vec2.mul(this._size, this.gui.scale)
             this.DOMElement.style.width =   this._sizeScaled.x + 'px'
             this.DOMElement.style.height =  this._sizeScaled.y + 'px'
         }
-        this.onUpdate?.(gui)
+        this.onUpdate?.(force)
         return false
     }
 
-    onUpdate?(gui: IGUIView): void
+    rescale(scale: Vec2) {
+        this.update(true)
+        this.onRescale?.(scale)
+    }
+    restyle(style: IStyleGUI) {
+        this.onRestyle?.(style)
+    }
+
+    onUpdate?(force?: boolean): void
+    onRescale?(scale: Vec2): void
+    onRestyle?(style: IStyleGUI): void
 
     requestUpdate() {
         if (this.gui) this.gui.requestElementUpdate(this)
@@ -97,7 +97,7 @@ export default class GUIElement implements IGUIElement{
     // Absolute position
     get absPos() {
         const absPos = this.pos
-        this.parent && absPos.add(this.parent.pos)
+        this.parentContainer && absPos.add(this.parentContainer.pos)
         return absPos
     }
 

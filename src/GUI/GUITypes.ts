@@ -3,7 +3,7 @@ import Vec2 from '../Lib/Vector2.js'
 
 export {Vec2}
 
-export interface GUIPointerState<T extends IGUIElement>
+export interface GUIPointerState<T extends IChildElementGUI>
 {
     isDown:             boolean
     isDragging:         boolean
@@ -18,10 +18,11 @@ export interface GUIPointerState<T extends IGUIElement>
 
     pos:                Vec2
     downPos:            Vec2
-    upPos:              Vec2  
+    upPos:              Vec2
+    relativeDownPos:    Vec2
 }
 
-export type EventHandlerFn = (ev: PointerEvent, pointer?: GUIPointerState<IGUIElement>) => void
+export type EventHandlerFn = (ev: PointerEvent, pointer?: GUIPointerState<IChildElementGUI>) => void
 
 export interface GUIPointerEventHandler
 {
@@ -36,42 +37,44 @@ export interface GUIPointerEventHandler
     onDragEnded?:    EventHandlerFn
 }
 
-
-export interface IGUIView {
-    scale: Vec2
-    size: Vec2
-
-    registerElement(elem: IGUIElement)
-    unregisterElement(elem: IGUIElement)
-    requestElementUpdate(elem: IGUIElement)
+export interface IStyleGUI {
+    [index: string]: any
 }
 
-export interface IDOMElement {
+export interface IElementGUI {
     DOMElement: HTMLElement
+    gui: IWindowGUI
     pos: Vec2
     absPos: Vec2
     size?: Vec2
+
+    update(force?: boolean): boolean
+    rescale(scale: Vec2)
+    restyle(style: IStyleGUI)
 }
 
-export interface IGUIElement extends IDOMElement, GUIPointerEventHandler
+export interface IWindowGUI extends IElementGUI {
+    scale: Vec2
+    style: IStyleGUI
+
+    registerElement(elem: IChildElementGUI)
+    unregisterElement(elem: IChildElementGUI)
+    requestElementUpdate(elem: IChildElementGUI)
+}
+
+export interface IChildElementGUI extends IElementGUI, GUIPointerEventHandler
 {
-    parent?: IGUIContainer
-    children?: IGUIContainer
+    parentContainer?: IViewContainerGUI
+    children?: IViewContainerGUI
 
     isDraggable?: boolean
     isSelectable?: boolean
     isMultiSelectable?: boolean
-
-    init(gui: IGUIView): void
-    update(gui: IGUIView, force?: boolean): boolean
 }
 
-
-export interface IGUIContainer extends IDOMElement
+export interface IViewContainerGUI extends IElementGUI
 {
-    elements: Set<IGUIElement>
-    attachChildElement(elem: IGUIElement): void
-    removeChildElement(elem: IGUIElement): void
-    init(gui: IGUIView): void
-    update(gui: IGUIView, force?: boolean): boolean
+    elements: Set<IChildElementGUI>
+    attachChildElement(elem: IChildElementGUI): void
+    removeChildElement(elem: IChildElementGUI): void
 }

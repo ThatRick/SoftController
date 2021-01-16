@@ -20,7 +20,7 @@ export interface Trace
     segments: SVGLineElement[]
 }
 
-export default class TraceLayer
+export default class TraceLayerRectangular
 {
     svg: SVGSVGElement
     scale: Vec2

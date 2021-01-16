@@ -1,4 +1,4 @@
-import GUIElement from '../GUI/GUIElement.js'
+import GUIElement from '../GUI/GUIChildElement.js'
 import CircuitView from './CircuitView.js'
 
 export type ElementType = 'block' | 'input' | 'output' | 'traceSegment' | 'inputValue' | 'outputValue'

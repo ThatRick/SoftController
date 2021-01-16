@@ -23,6 +23,7 @@ export default class GUIElement {
         this.parentContainer.attachChildElement(this);
         if (hasChildren)
             this.children = new GUIContainer(this);
+        this.update(true);
     }
     update(force) {
         if (this._posHasChanged || force) {

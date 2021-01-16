@@ -1,8 +1,9 @@
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 export default class GUIView {
-    constructor(parentDOM, size, scale, style) {
+    constructor(parentDOM, size, scale, style, css) {
         this.parentDOM = parentDOM;
+        this.gui = this;
         this.eventTargetMap = new Map();
         this.updateRequests = new Set();
         this.pos = vec2(0, 0);
@@ -21,7 +22,8 @@ export default class GUIView {
             dragTargetInitPos: undefined,
             pos: vec2(0),
             downPos: vec2(0),
-            upPos: vec2(0)
+            upPos: vec2(0),
+            relativeDownPos: vec2(0)
         };
         this.DOMElement = document.createElement('div');
         parentDOM.appendChild(this.DOMElement);
@@ -30,56 +32,56 @@ export default class GUIView {
             top: '0px',
             left: '0px',
         };
-        Object.assign(this.DOMElement.style, defaultStyle, style);
+        Object.assign(this.DOMElement.style, defaultStyle, css);
         this._size = size;
-        this._scale = scale;
-        this.resize();
+        this.rescale(scale);
+        this.restyle(style);
         this.children = new GUIContainer(this);
         this.setupPointerHandlers();
-        this.setup();
-        this.children.init(this);
+        this.setup?.();
         requestAnimationFrame(this.update.bind(this));
     }
-    set scale(v) {
-        if (this._scale?.equal(v))
-            return;
-        this._scale = Object.freeze(v.copy());
-        this.resize();
-        this.update(true);
-    }
-    get scale() { return this._scale; }
     set size(v) {
         if (this._size?.equal(v))
             return;
         this._size = Object.freeze(v.copy());
-        this.resize();
+        this._resize();
         this.update(true);
     }
     get size() { return this._size; }
-    resize() {
+    _resize() {
         this.DOMElement.style.width = this._size.x * this._scale.x + 'px';
         this.DOMElement.style.height = this._size.y * this._scale.y + 'px';
     }
+    rescale(scale) {
+        if (this._scale?.equal(scale))
+            return;
+        this._scale = Object.freeze(scale.copy());
+        this._resize();
+        this.children?.rescale(scale);
+    }
+    get scale() { return this._scale; }
+    restyle(style) {
+        this._style = Object.freeze(style);
+        this.children?.restyle(style);
+    }
+    get style() { return this._style; }
     update(force = false) {
         if (force) {
-            this.children.update(this, force);
+            this.children.update(force);
             this.updateRequests.clear();
         }
         else {
             this.updateRequests.forEach(elem => {
-                const keep = elem.update(this);
+                const keep = elem.update();
                 if (!keep)
                     this.updateRequests.delete(elem);
             });
         }
-        this.loop();
+        this.loop?.();
         requestAnimationFrame(this.update.bind(this));
+        return false;
     }
-    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
-    //   User defined functions
-    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
-    setup() { }
-    loop() { }
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     //     Element handling
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
@@ -101,6 +103,9 @@ export default class GUIView {
             ev.preventDefault();
             this.pointer.isDown = true;
             this.pointer.downPos.set(ev.x, ev.y);
+            const elem = ev.target;
+            const bounds = elem.getBoundingClientRect();
+            this.pointer.relativeDownPos.set(ev.x - bounds.x, ev.y - bounds.y);
             this.pointer.eventTarget = ev.target;
             this.pointer.targetElem = this.getPointerTargetElem?.(ev);
             this.pointer.downTargetElem = this.pointer.targetElem;

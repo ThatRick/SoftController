@@ -1,50 +1,57 @@
-import { IGUIContainer, IGUIElement, GUIPointerState, IDOMElement, IGUIView } from './GUITypes.js'
+import { IViewContainerGUI, IChildElementGUI, GUIPointerState, IElementGUI, IWindowGUI, IStyleGUI } from './GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
 
-export default class GUIView<T extends IGUIElement> implements IDOMElement, IGUIView { 
+export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI> implements IElementGUI, IWindowGUI { 
 
     DOMElement: HTMLElement
 
+    gui = this
     children: GUIContainer<T>
 
     eventTargetMap = new Map<EventTarget, T>()
     updateRequests = new Set<T>()
-    
-    private _scale: Vec2
-    private _size: Vec2
 
-    set scale(v: Vec2) {
-        if (this._scale?.equal(v)) return
-        this._scale = Object.freeze(v.copy())
-        this.resize()
-        this.update(true)
-    }
-    
-    get scale() { return this._scale }
-    
     pos = vec2(0, 0)
     absPos = vec2(0, 0)
     
+    private _size: Vec2
     set size(v: Vec2) {
         if (this._size?.equal(v)) return
         this._size = Object.freeze(v.copy())
-        this.resize()
+        this._resize()
         this.update(true)
     }
-
     get size() { return this._size }
 
-    private resize() {
+    private _resize() {
         this.DOMElement.style.width = this._size.x * this._scale.x + 'px'
         this.DOMElement.style.height = this._size.y * this._scale.y + 'px'
     }
+    
+    private _scale: Vec2
+    rescale(scale: Vec2) {
+        if (this._scale?.equal(scale)) return
+        this._scale = Object.freeze(scale.copy())
+        this._resize()
+        this.children?.rescale(scale)
+    }
+    get scale() { return this._scale }
+    
+    private _style: IStyleGUI
+    restyle(style: IStyleGUI) {
+        this._style = Object.freeze(style)
+        this.children?.restyle(style)
+    }
+    get style(): IStyleGUI { return this._style }
+
 
     constructor(
         public parentDOM: HTMLElement,
         size: Vec2,
         scale: Vec2,
-        style?: Partial<CSSStyleDeclaration>
+        style: Style,
+        css?: Partial<CSSStyleDeclaration>
     ) {
         this.DOMElement = document.createElement('div')
         parentDOM.appendChild(this.DOMElement)
@@ -55,46 +62,45 @@ export default class GUIView<T extends IGUIElement> implements IDOMElement, IGUI
             left: '0px',
         }
  
-        Object.assign(this.DOMElement.style, defaultStyle, style)
+        Object.assign(this.DOMElement.style, defaultStyle, css)
 
         this._size = size
-        this._scale = scale
-        this.resize()
+        this.rescale(scale)
+        this.restyle(style)
 
         this.children = new GUIContainer(this)
 
         this.setupPointerHandlers()
-        
-        this.setup()
-
-        this.children.init(this)
-
+        this.setup?.()
+                
         requestAnimationFrame(this.update.bind(this))
     }
 
     update(force = false) {
         if (force) {
-            this.children.update(this, force)
+            this.children.update(force)
             this.updateRequests.clear()
         }
         else {
             this.updateRequests.forEach(elem => {
-                const keep = elem.update(this)
+                const keep = elem.update()
                 if (!keep) this.updateRequests.delete(elem)
             })
         }
-        this.loop()
+        this.loop?.()
 
         requestAnimationFrame(this.update.bind(this))
+
+        return false
     }
 
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     //   User defined functions
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-    setup() {}
+    setup?(): void
 
-    loop() {}
+    loop?(): void
 
 
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
@@ -131,7 +137,8 @@ export default class GUIView<T extends IGUIElement> implements IDOMElement, IGUI
     
         pos:                vec2(0),
         downPos:            vec2(0),
-        upPos:              vec2(0)
+        upPos:              vec2(0),
+        relativeDownPos:    vec2(0)
     }
 
     getPointerTargetElem(ev: PointerEvent) {
@@ -154,6 +161,10 @@ export default class GUIView<T extends IGUIElement> implements IDOMElement, IGUI
             ev.preventDefault()
             this.pointer.isDown = true
             this.pointer.downPos.set(ev.x, ev.y)
+            const elem = ev.target as HTMLElement
+            const bounds = elem.getBoundingClientRect();
+
+            this.pointer.relativeDownPos.set(ev.x - bounds.x, ev.y - bounds.y)
     
             this.pointer.eventTarget = ev.target
             this.pointer.targetElem = this.getPointerTargetElem?.(ev)
