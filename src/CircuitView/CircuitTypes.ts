@@ -1,18 +1,18 @@
-import GUIElement from '../GUI/GUIChildElement.js'
+import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import CircuitView from './CircuitView.js'
 
-export type ElementType = 'block' | 'input' | 'output' | 'traceSegment' | 'inputValue' | 'outputValue'
+export type ElementType = 'circuitArea' | 'inputArea' | 'outputArea' | 'block' | 'input' | 'output' | 'traceSegment' | 'inputValue' | 'outputValue'
 
 export type PinType = 'input' | 'output'
 
-export interface CircuitElement extends GUIElement
+export interface CircuitElement extends GUIChildElement
 {
     type:   ElementType
     id:     number
     gui:    CircuitView
 
-    selected(): void
-    unselected(): void
+    selected?(): void
+    unselected?(): void
 }
 
 export interface CircuitStyle
@@ -30,21 +30,27 @@ export interface CircuitStyle
     pinValueFieldBg:        string
     colorFilterDefault:     string
     colorFilterActive:      string
+    traceWidth:             number
+    colorTraceSelected:     string
+    IOAreaWidth:            number
 }
 
 export const defaultStyle: CircuitStyle =
 {
-    colorBackground:        '#224',
+    colorBackground:        '#101030',
     colorBlock:             '#447',
     colorBlockHover:        '#558',
     blockOutlineUnselected: 'none',
     blockOutlineSelected:   'thin solid #AAF',
     colorPinHover:          '#AAA',
-    colorPinBinary0:        '#888',
-    colorPinBinary1:        '#BB9',
+    colorPinBinary0:        '#666',
+    colorPinBinary1:        '#CC9',
     colorPinInteger:        '#99D',
     colorPinFloat:          '#9D9',
     pinValueFieldBg:        'transparent',
     colorFilterDefault:     'none',
-    colorFilterActive:      'brightness(150%)'
+    colorFilterActive:      'brightness(150%)',
+    traceWidth:             0.10,
+    colorTraceSelected:     '#AAF',
+    IOAreaWidth:            6
 }

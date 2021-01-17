@@ -80,6 +80,7 @@ export class Input extends FunctionBlockIO
     getConnection() { return this._ref }
     setConnection(sourceBlockID: ID, outputNum: number, inverted = false) {
         this._ref = { sourceBlockID, outputNum, inverted }
+        console.log('set connection:', this._ref)
     }
 }
 
@@ -156,6 +157,7 @@ export class FunctionBlock
                 if (onlineValue != currentValues[i]) {
                     currentValues[i] = onlineValue
                     if (i < this.inputs.length) this.inputs[i].setValue(onlineValue)
+                    else this.outputs[i-this.inputs.length].setValue(onlineValue)
                 }
             })
         })
@@ -214,7 +216,7 @@ export class Circuit extends FunctionBlock
 {
     constructor(funcData: IFunctionBlockData, circuitData: ICircuitData)
     {
-        super(funcData, 0)
+        super(funcData, -1)
         this.circuitData = circuitData
     }
 
@@ -228,7 +230,6 @@ export class Circuit extends FunctionBlock
         const funcBlock = new FunctionBlock(funcData, id)
         if (!funcBlock) return null
         this.blocks.push(funcBlock)
-        funcBlock.onlineID = id
 
         return funcBlock
     }
@@ -236,6 +237,7 @@ export class Circuit extends FunctionBlock
     connectBlockInputRef(block: FunctionBlock) {
         block.funcData.inputRefs.forEach((ioRef, i) => {
             if (ioRef) {
+                console.log('connect input to ref (online):', ioRef)
                 const input = block.inputs[i]
                 const sourceBlock = this.onlineBlocks.get(ioRef.id)
                 if (sourceBlock) {

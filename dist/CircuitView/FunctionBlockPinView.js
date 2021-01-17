@@ -1,15 +1,15 @@
-import GUIElement from '../GUI/GUIChildElement.js';
+import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import { domElement } from '../Lib/HTML.js';
-export default class FunctionBlockPinView extends GUIElement {
+export default class FunctionBlockPinView extends GUIChildElement {
     constructor(parent, io, pos) {
         super(parent, 'div', pos, vec2(1, 1));
         this.isSelectable = true;
         this.onPointerEnter = (ev) => {
-            this.pin.style.filter = this.gui.style.colorFilterActive;
+            this.DOMElement.style.filter = this.gui.style.colorFilterActive;
         };
         this.onPointerLeave = (ev) => {
-            this.pin.style.filter = 'none';
+            this.DOMElement.style.filter = 'none';
         };
         this.io = io;
         this.type = io.pinType;
@@ -17,15 +17,17 @@ export default class FunctionBlockPinView extends GUIElement {
         this.create(this.gui);
     }
     get id() { return this.io.id; }
+    get blockID() {
+        return this.io.funcBlock.offlineID;
+    }
     create(gui) {
-        console.log('Pin element: onInit()');
         this.createPinElement(gui);
         this.createValueField(gui);
         this.updatePin();
         this.io.onValueChanged = this.updatePin.bind(this);
     }
     createPinElement(gui) {
-        const size = vec2(0.5, 0.2);
+        const size = vec2(0.5, gui.style.traceWidth);
         const yOffset = 0.5 - size.y / 2;
         const scaledOffset = Vec2.mul((this.type == 'input') ? vec2(1 - size.x, yOffset) : vec2(0, yOffset), gui.scale);
         const scaledSize = Vec2.mul(size, gui.scale);
@@ -60,22 +62,23 @@ export default class FunctionBlockPinView extends GUIElement {
         });
     }
     updatePin() {
+        console.log('update pin:', this.id, this.io.value, this.onPinUpdated);
         this.valueField.textContent = this.io.value.toString();
         const style = this.gui.style;
-        let color;
         switch (this.dataType) {
             case 2 /* BINARY */:
-                color = (this.io.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1;
+                this.color = (this.io.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1;
                 break;
             case 1 /* INTEGER */:
-                color = style.colorPinInteger;
+                this.color = style.colorPinInteger;
                 break;
             case 0 /* FLOAT */:
-                color = style.colorPinFloat;
+                this.color = style.colorPinFloat;
                 break;
         }
-        this.pin.style.backgroundColor = color;
-        this.valueField.style.color = color;
+        this.pin.style.backgroundColor = this.color;
+        this.valueField.style.color = this.color;
+        this.onPinUpdated?.();
     }
     selected() {
         this.pin.style.outline = this.gui.style.blockOutlineSelected;

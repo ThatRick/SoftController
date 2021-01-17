@@ -46,7 +46,6 @@ export default class GUIView {
             return;
         this._size = Object.freeze(v.copy());
         this._resize();
-        this.update(true);
     }
     get size() { return this._size; }
     _resize() {
@@ -66,18 +65,12 @@ export default class GUIView {
         this.children?.restyle(style);
     }
     get style() { return this._style; }
-    update(force = false) {
-        if (force) {
-            this.children.update(force);
-            this.updateRequests.clear();
-        }
-        else {
-            this.updateRequests.forEach(elem => {
-                const keep = elem.update();
-                if (!keep)
-                    this.updateRequests.delete(elem);
-            });
-        }
+    update() {
+        this.updateRequests.forEach(elem => {
+            const keep = elem.update();
+            if (!keep)
+                this.updateRequests.delete(elem);
+        });
         this.loop?.();
         requestAnimationFrame(this.update.bind(this));
         return false;

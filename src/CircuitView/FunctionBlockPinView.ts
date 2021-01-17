@@ -1,4 +1,4 @@
-import GUIElement from '../GUI/GUIChildElement.js'
+import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock, FunctionBlockIO } from './CircuitModel.js'
@@ -8,7 +8,7 @@ import CircuitView from './CircuitView.js'
 import { IODataType } from '../Controller/ControllerDataTypes.js'
 
 
-export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUIElement implements CircuitElement
+export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUIChildElement implements CircuitElement
 {
     type: ElementType
     get id(): number { return this.io.id }
@@ -20,7 +20,13 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
     pin: HTMLDivElement
     valueField: HTMLDivElement
 
+    color: string
+
     dataType: IODataType
+
+    get blockID() {
+        return this.io.funcBlock.offlineID
+    }
     
     constructor(parent: IViewContainerGUI, io: T, pos: Vec2) {
         super(parent, 'div', pos, vec2(1, 1))
@@ -33,7 +39,6 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
     }
 
     private create(gui: CircuitView) {
-        console.log('Pin element: onInit()')
         this.createPinElement(gui)
         this.createValueField(gui)
         this.updatePin()
@@ -41,7 +46,7 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
     }
 
     createPinElement(gui: CircuitView) {
-        const size = vec2(0.5, 0.2)
+        const size = vec2(0.5, gui.style.traceWidth)
         const yOffset = 0.5 - size.y / 2
         
         const scaledOffset = Vec2.mul((this.type == 'input') ? vec2(1-size.x, yOffset) : vec2(0, yOffset), gui.scale)
@@ -83,20 +88,24 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
     }
 
     updatePin() {
+        console.log('update pin:', this.id, this.io.value, this.onPinUpdated)
         this.valueField.textContent = this.io.value.toString()
 
         const style = this.gui.style
-        let color: string
 
         switch (this.dataType) {
-            case IODataType.BINARY:   color = (this.io.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1; break
-            case IODataType.INTEGER:  color = style.colorPinInteger; break
-            case IODataType.FLOAT:    color = style.colorPinFloat; break
+            case IODataType.BINARY:   this.color = (this.io.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1; break
+            case IODataType.INTEGER:  this.color = style.colorPinInteger; break
+            case IODataType.FLOAT:    this.color = style.colorPinFloat; break
         }
 
-        this.pin.style.backgroundColor = color
-        this.valueField.style.color = color
+        this.pin.style.backgroundColor = this.color
+        this.valueField.style.color = this.color
+
+        this.onPinUpdated?.()
     }
+
+    onPinUpdated?(): void
 
     selected() {
         this.pin.style.outline = this.gui.style.blockOutlineSelected
@@ -107,10 +116,10 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
     }
 
     onPointerEnter = (ev: PointerEvent) => {
-        this.pin.style.filter = this.gui.style.colorFilterActive
+        this.DOMElement.style.filter = this.gui.style.colorFilterActive
     }
 
     onPointerLeave = (ev: PointerEvent) => {
-        this.pin.style.filter = 'none'
+        this.DOMElement.style.filter = 'none'
     }
 }

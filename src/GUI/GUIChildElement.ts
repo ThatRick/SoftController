@@ -1,7 +1,7 @@
 import GUIContainer from './GUIContainer.js'
-import {IChildElementGUI, IViewContainerGUI, IWindowGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI} from './GUITypes.js'
+import { IChildElementGUI, IViewContainerGUI, IWindowGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
 
-export default class GUIElement implements IChildElementGUI{
+export class GUIChildElement implements IChildElementGUI{
     DOMElement: HTMLElement
 
     parentContainer?: IViewContainerGUI
@@ -47,6 +47,44 @@ export default class GUIElement implements IChildElementGUI{
         this.update(true)
     }
 
+
+
+    // Position
+    protected _pos: Vec2
+    protected _posScaled: Vec2
+    protected _posHasChanged = false
+
+    set pos(p: Vec2) {
+        if (this._pos.equal(p)) return
+        this._pos.set(p)
+        this._posHasChanged = true
+        this.requestUpdate()
+    }
+    get pos() { return this._pos.copy() }
+
+    // Absolute position
+    get absPos() {
+        const absPos = Vec2.add(this._pos, this.parentContainer.absPos)
+        return absPos
+    }
+
+    // Size
+    protected _size: Vec2
+    protected _sizeScaled: Vec2
+    protected _sizeHasChanged = false
+
+    set size(s: Vec2) {
+        if (this._size.equal(s)) return
+        this._size.set(s)
+        this._sizeHasChanged = true
+        this.requestUpdate()
+    }
+    get size() { return this._size?.copy() }
+
+    setStyle(style: Partial<CSSStyleDeclaration>) {
+        Object.assign(this.DOMElement.style, style)
+    }
+
     update(force?: boolean)
     {
         if (this._posHasChanged || force) {
@@ -78,44 +116,7 @@ export default class GUIElement implements IChildElementGUI{
     onRestyle?(style: IStyleGUI): void
 
     requestUpdate() {
-        if (this.gui) this.gui.requestElementUpdate(this)
-    }
-
-    // Position
-    protected _pos: Vec2
-    protected _posScaled: Vec2
-    protected _posHasChanged = false
-
-    set pos(p: Vec2) {
-        if (this._pos.equal(p)) return
-        this._pos.set(p)
-        this._posHasChanged = true
-        this.requestUpdate()
-    }
-    get pos() { return this._pos.copy() }
-
-    // Absolute position
-    get absPos() {
-        const absPos = this.pos
-        this.parentContainer && absPos.add(this.parentContainer.pos)
-        return absPos
-    }
-
-    // Size
-    protected _size: Vec2
-    protected _sizeScaled: Vec2
-    protected _sizeHasChanged = false
-
-    set size(s: Vec2) {
-        if (this._size.equal(s)) return
-        this._size.set(s)
-        this._sizeHasChanged = true
-        this.requestUpdate()
-    }
-    get size() { return this._size?.copy() }
-
-    setStyle(style: Partial<CSSStyleDeclaration>) {
-        Object.assign(this.DOMElement.style, style)
+        this.gui.requestElementUpdate(this)
     }
 
     // Event receivers

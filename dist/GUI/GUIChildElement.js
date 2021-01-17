@@ -1,6 +1,6 @@
 import GUIContainer from './GUIContainer.js';
 import { Vec2 } from './GUITypes.js';
-export default class GUIElement {
+export class GUIChildElement {
     ////////////////////////////
     //      Constructor
     ////////////////////////////
@@ -24,6 +24,30 @@ export default class GUIElement {
         if (hasChildren)
             this.children = new GUIContainer(this);
         this.update(true);
+    }
+    set pos(p) {
+        if (this._pos.equal(p))
+            return;
+        this._pos.set(p);
+        this._posHasChanged = true;
+        this.requestUpdate();
+    }
+    get pos() { return this._pos.copy(); }
+    // Absolute position
+    get absPos() {
+        const absPos = Vec2.add(this._pos, this.parentContainer.absPos);
+        return absPos;
+    }
+    set size(s) {
+        if (this._size.equal(s))
+            return;
+        this._size.set(s);
+        this._sizeHasChanged = true;
+        this.requestUpdate();
+    }
+    get size() { return this._size?.copy(); }
+    setStyle(style) {
+        Object.assign(this.DOMElement.style, style);
     }
     update(force) {
         if (this._posHasChanged || force) {
@@ -49,32 +73,6 @@ export default class GUIElement {
         this.onRestyle?.(style);
     }
     requestUpdate() {
-        if (this.gui)
-            this.gui.requestElementUpdate(this);
-    }
-    set pos(p) {
-        if (this._pos.equal(p))
-            return;
-        this._pos.set(p);
-        this._posHasChanged = true;
-        this.requestUpdate();
-    }
-    get pos() { return this._pos.copy(); }
-    // Absolute position
-    get absPos() {
-        const absPos = this.pos;
-        this.parentContainer && absPos.add(this.parentContainer.pos);
-        return absPos;
-    }
-    set size(s) {
-        if (this._size.equal(s))
-            return;
-        this._size.set(s);
-        this._sizeHasChanged = true;
-        this.requestUpdate();
-    }
-    get size() { return this._size?.copy(); }
-    setStyle(style) {
-        Object.assign(this.DOMElement.style, style);
+        this.gui.requestElementUpdate(this);
     }
 }

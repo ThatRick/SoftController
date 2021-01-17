@@ -1,8 +1,8 @@
-import GUIElement from '../GUI/GUIChildElement.js';
+import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import { vec2 } from '../Lib/Vector2.js';
 import { Table } from '../Lib/HTML.js';
 import FunctionBlockPinView from './FunctionBlockPinView.js';
-export default class FunctionBlockView extends GUIElement {
+export default class FunctionBlockView extends GUIChildElement {
     constructor(circuitView, pos, funcBlock) {
         super(circuitView, 'div', pos, FunctionBlockView.getBlockSize(funcBlock), {
             color: 'white',
@@ -34,7 +34,7 @@ export default class FunctionBlockView extends GUIElement {
         const h = Math.max(func.inputs.length, func.outputs.length);
         return vec2(w, h);
     }
-    get id() { return this.func.onlineID; }
+    get id() { return this.func.offlineID; }
     build(gui) {
         this.setStyle({
             backgroundColor: this.gui.style.colorBlock,

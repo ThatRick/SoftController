@@ -2,6 +2,10 @@ import { IViewContainerGUI, IChildElementGUI, GUIPointerState, IElementGUI, IWin
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
 
+interface Updateable {
+    update(force?: boolean): boolean
+}
+
 export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI> implements IElementGUI, IWindowGUI { 
 
     DOMElement: HTMLElement
@@ -10,7 +14,7 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
     children: GUIContainer<T>
 
     eventTargetMap = new Map<EventTarget, T>()
-    updateRequests = new Set<T>()
+    updateRequests = new Set<Updateable>()
 
     pos = vec2(0, 0)
     absPos = vec2(0, 0)
@@ -20,7 +24,6 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
         if (this._size?.equal(v)) return
         this._size = Object.freeze(v.copy())
         this._resize()
-        this.update(true)
     }
     get size() { return this._size }
 
@@ -38,12 +41,12 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
     }
     get scale() { return this._scale }
     
-    private _style: IStyleGUI
-    restyle(style: IStyleGUI) {
+    private _style: Style
+    restyle(style: Style) {
         this._style = Object.freeze(style)
         this.children?.restyle(style)
     }
-    get style(): IStyleGUI { return this._style }
+    get style(): Style { return this._style }
 
 
     constructor(
@@ -76,17 +79,12 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
         requestAnimationFrame(this.update.bind(this))
     }
 
-    update(force = false) {
-        if (force) {
-            this.children.update(force)
-            this.updateRequests.clear()
-        }
-        else {
-            this.updateRequests.forEach(elem => {
-                const keep = elem.update()
-                if (!keep) this.updateRequests.delete(elem)
-            })
-        }
+    update() {
+        this.updateRequests.forEach(elem => {
+            const keep = elem.update()
+            if (!keep) this.updateRequests.delete(elem)
+        })
+
         this.loop?.()
 
         requestAnimationFrame(this.update.bind(this))

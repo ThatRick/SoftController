@@ -1,4 +1,4 @@
-import GUIElement from '../GUI/GUIChildElement.js'
+import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock, Input, Output } from './CircuitModel.js'
@@ -7,7 +7,7 @@ import { Table } from '../Lib/HTML.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'
 import { CircuitElement, ElementType } from './CircuitTypes.js'
 
-export default class FunctionBlockView extends GUIElement implements CircuitElement
+export default class FunctionBlockView extends GUIChildElement implements CircuitElement
 {
     static isMinimal(func: FunctionBlock) {
         return (func.inputs[0].name == undefined)
@@ -20,7 +20,7 @@ export default class FunctionBlockView extends GUIElement implements CircuitElem
     }
 
     type: ElementType = 'block'
-    get id(): number { return this.func.onlineID }
+    get id(): number { return this.func.offlineID }
     gui: CircuitView
 
     isDraggable = true
