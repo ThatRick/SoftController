@@ -7,17 +7,18 @@ import * as HTML from '../Lib/HTML.js';
 import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import TraceLayerBezier from './TraceLayerBezier.js';
 import { CircuitTrace } from './CircuitTrace.js';
+import CircuitIOView from './CircuitIOView.js';
 class IOArea extends GUIChildElement {
     constructor(view, type) {
-        super(view.children, 'div', vec2(0, 0), vec2(view.style.IOAreaWidth, view.size.y), {
+        super(view.children, 'div', (type == 'inputArea') ? vec2(0, 0) : vec2(view.size.x - view.style.IOAreaWidth, 0), vec2(view.style.IOAreaWidth, view.size.y), {
             backgroundColor: '#215'
         }, true);
-        this.ioPins = [];
+        this.ioViews = [];
+        this.type = type;
     }
     addCircuitIO(circuit) {
-        if (this.type == 'inputArea') {
-            //this.ioPins = circuit.inputs.map((input, i) => return new FunctionBlockPinView<input(this.DOMElement, ))
-        }
+        const ioList = (this.type == 'inputArea') ? circuit.inputs : circuit.outputs;
+        this.ioViews = ioList.map((io, i) => new CircuitIOView(this.children, io, vec2(0, i + 2)));
     }
     get id() { return this.circuit.offlineID; }
 }
@@ -34,6 +35,9 @@ class BlockArea extends GUIChildElement {
 export default class CircuitView extends GUIView {
     constructor(parent, size, scale) {
         super(parent, Vec2.add(size, vec2(defaultStyle.IOAreaWidth * 2, 0)), scale, defaultStyle);
+        this.blockArea = new BlockArea(this);
+        this.inputArea = new IOArea(this, 'inputArea');
+        this.outputArea = new IOArea(this, 'outputArea');
         this.gridMap = new CircuitGrid();
         this.selectedElements = new Set();
         this.selectedElementsInitPos = new Map();
@@ -141,7 +145,6 @@ export default class CircuitView extends GUIView {
             this.draggingMode = 0 /* NONE */;
         };
         parent.style.backgroundColor = this.gui.style.colorBackground;
-        this.blockArea = new BlockArea(this);
         this.traceLayer = new TraceLayerBezier(this.DOMElement, this.scale, this.gui.style);
     }
     loadCircuit(circuit) {
@@ -149,6 +152,9 @@ export default class CircuitView extends GUIView {
         const margin = vec2(6, 2);
         const area = vec2(16, 8);
         const w = (this.size.x - margin.x * 2);
+        // io
+        this.inputArea.addCircuitIO(circuit);
+        this.outputArea.addCircuitIO(circuit);
         // blocks
         circuit.blocks.forEach((block, i) => {
             const n = i * area.x;

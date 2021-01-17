@@ -11,6 +11,7 @@ import { ID } from '../Controller/ControllerDataTypes.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'
 import GUIContainer from '../GUI/GUIContainer.js'
 import { CircuitTrace, ICircuitTraceLayer } from './CircuitTrace.js'
+import CircuitIOView from './CircuitIOView.js'
 
 const enum DraggingMode {
     NONE,
@@ -25,23 +26,28 @@ const enum MouseButton {
     MIDDLE = 4
 }
 
-class IOArea<IOType extends FunctionBlockIO> extends GUIChildElement implements CircuitElement {
-    constructor(view: CircuitView, type: 'inputArea' | 'outputArea') {
-        super(view.children, 'div', vec2(0, 0), vec2(view.style.IOAreaWidth, view.size.y), {
-            backgroundColor: '#215'
-        }, true)
+class IOArea extends GUIChildElement implements CircuitElement {
+    constructor(view: CircuitView, type: 'inputArea' | 'outputArea')
+    {
+        super(view.children, 'div',
+            (type == 'inputArea') ? vec2(0, 0) : vec2(view.size.x - view.style.IOAreaWidth, 0),
+            vec2(view.style.IOAreaWidth, view.size.y), {
+                backgroundColor: '#215'
+            }, true)
+    
+        this.type = type
     }
     addCircuitIO(circuit: Circuit) {
-        if (this.type == 'inputArea') {
-            //this.ioPins = circuit.inputs.map((input, i) => return new FunctionBlockPinView<input(this.DOMElement, ))
-        }
+        const ioList = (this.type == 'inputArea') ? circuit.inputs : circuit.outputs
+        this.ioViews = ioList.map((io, i) => new CircuitIOView(this.children, io, vec2(0, i + 2) ))
     }
     circuit: Circuit
     type: ElementType
-    ioPins: FunctionBlockPinView<IOType>[] = []
+    ioViews: CircuitIOView<FunctionBlockIO>[] = []
     get id(): number { return this.circuit.offlineID }
     gui: CircuitView
 }
+
 
 class BlockArea extends GUIChildElement implements CircuitElement {
     constructor(view: CircuitView) {
@@ -68,11 +74,12 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         super(parent, Vec2.add(size, vec2(defaultStyle.IOAreaWidth*2, 0)), scale, defaultStyle)
         parent.style.backgroundColor = this.gui.style.colorBackground
 
-        this.blockArea = new BlockArea(this)
         this.traceLayer = new TraceLayerBezier(this.DOMElement, this.scale, this.gui.style)
     }
 
-    blockArea: CircuitElement
+    blockArea = new BlockArea(this)
+    inputArea = new IOArea(this, 'inputArea')
+    outputArea = new IOArea(this, 'outputArea')
 
     gridMap = new CircuitGrid()
 
@@ -96,7 +103,10 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         const margin = vec2(6, 2)
         const area = vec2(16, 8)
         const w = (this.size.x - margin.x*2)
-        
+        // io
+        this.inputArea.addCircuitIO(circuit)
+        this.outputArea.addCircuitIO(circuit)
+
         // blocks
         circuit.blocks.forEach((block, i) => {
             const n = i * area.x

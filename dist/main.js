@@ -100,6 +100,8 @@ async function app() {
 async function createTestCircuit(cpu, blockCount = 10) {
     // test
     const circID = await cpu.createCircuit(4, 2, blockCount);
+    for (let i = 0; i < 4 + 2; i++)
+        cpu.setFunctionBlockIOFlags(circID, i, 2 /* BINARY */);
     if (!circID) {
         console.error('Create test circuit: Creation failed miserable');
         return;
