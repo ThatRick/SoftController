@@ -24,17 +24,21 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
 
     dataType: IODataType
 
+    isInternalCircuitIO: boolean
+    leftSide: boolean
+
     get blockID() {
         return this.io.funcBlock.offlineID
     }
     
-    constructor(parent: IViewContainerGUI, io: T, pos: Vec2) {
+    constructor(parent: IViewContainerGUI, io: T, pos: Vec2, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1))
 
         this.io = io
         this.type = io.pinType
         this.dataType = this.io.type
-
+        this.isInternalCircuitIO = isInternalCircuitIO
+        this.leftSide = (this.type == 'input' && !this.isInternalCircuitIO || this.type == 'output' && this.isInternalCircuitIO)
         this.create(this.gui)
     }
 
@@ -49,7 +53,7 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
         const size = vec2(0.5, gui.style.traceWidth)
         const yOffset = 0.5 - size.y / 2
         
-        const scaledOffset = Vec2.mul((this.type == 'input') ? vec2(1-size.x, yOffset) : vec2(0, yOffset), gui.scale)
+        const scaledOffset = Vec2.mul((this.leftSide) ? vec2(1-size.x, yOffset) : vec2(0, yOffset), gui.scale)
         const scaledSize = Vec2.mul(size, gui.scale)
 
         this.pin = domElement(this.DOMElement, 'div', {
@@ -71,7 +75,7 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
 
         const textAlign = (this.dataType == IODataType.BINARY) ? 'center' : 'left'
         
-        const scaledOffset = Vec2.mul((this.type == 'input') ? vec2(1 - width - xOffset, yOffset) : vec2(xOffset, yOffset), gui.scale)
+        const scaledOffset = Vec2.mul((this.leftSide) ? vec2(1 - width - xOffset, yOffset) : vec2(xOffset, yOffset), gui.scale)
         const scaledSize = Vec2.mul(size, gui.scale)
 
         this.valueField = domElement(this.DOMElement, 'div', {

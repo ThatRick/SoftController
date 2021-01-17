@@ -2,7 +2,7 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import { domElement } from '../Lib/HTML.js';
 export default class FunctionBlockPinView extends GUIChildElement {
-    constructor(parent, io, pos) {
+    constructor(parent, io, pos, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1));
         this.isSelectable = true;
         this.onPointerEnter = (ev) => {
@@ -14,6 +14,8 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.io = io;
         this.type = io.pinType;
         this.dataType = this.io.type;
+        this.isInternalCircuitIO = isInternalCircuitIO;
+        this.leftSide = (this.type == 'input' && !this.isInternalCircuitIO || this.type == 'output' && this.isInternalCircuitIO);
         this.create(this.gui);
     }
     get id() { return this.io.id; }
@@ -29,7 +31,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
     createPinElement(gui) {
         const size = vec2(0.5, gui.style.traceWidth);
         const yOffset = 0.5 - size.y / 2;
-        const scaledOffset = Vec2.mul((this.type == 'input') ? vec2(1 - size.x, yOffset) : vec2(0, yOffset), gui.scale);
+        const scaledOffset = Vec2.mul((this.leftSide) ? vec2(1 - size.x, yOffset) : vec2(0, yOffset), gui.scale);
         const scaledSize = Vec2.mul(size, gui.scale);
         this.pin = domElement(this.DOMElement, 'div', {
             position: 'absolute',
@@ -47,7 +49,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
         const yOffset = -0.3;
         const xOffset = 0.3;
         const textAlign = (this.dataType == 2 /* BINARY */) ? 'center' : 'left';
-        const scaledOffset = Vec2.mul((this.type == 'input') ? vec2(1 - width - xOffset, yOffset) : vec2(xOffset, yOffset), gui.scale);
+        const scaledOffset = Vec2.mul((this.leftSide) ? vec2(1 - width - xOffset, yOffset) : vec2(xOffset, yOffset), gui.scale);
         const scaledSize = Vec2.mul(size, gui.scale);
         this.valueField = domElement(this.DOMElement, 'div', {
             position: 'absolute',

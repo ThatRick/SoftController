@@ -1,8 +1,8 @@
 import Vec2, { vec2 } from '../Lib/Vector2.js'
 import GUIView from '../GUI/GUIView.js'
 import CircuitGrid from './CircuitGrid.js'
-import { CircuitElement, CircuitStyle, defaultStyle } from './CircuitTypes.js'
-import { Circuit, FunctionBlock, Input, IOConnection, Output } from './CircuitModel.js'
+import { CircuitElement, CircuitStyle, defaultStyle, ElementType } from './CircuitTypes.js'
+import { Circuit, FunctionBlock, FunctionBlockIO, Input, IOConnection, Output } from './CircuitModel.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import * as HTML from '../Lib/HTML.js'
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
@@ -10,6 +10,7 @@ import TraceLayerBezier from './TraceLayerBezier.js'
 import { ID } from '../Controller/ControllerDataTypes.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'
 import GUIContainer from '../GUI/GUIContainer.js'
+import { CircuitTrace, ICircuitTraceLayer } from './CircuitTrace.js'
 
 const enum DraggingMode {
     NONE,
@@ -24,57 +25,35 @@ const enum MouseButton {
     MIDDLE = 4
 }
 
-
-export interface ICircuitTraceLayer {
-    addTrace(id: number, outputPos: Vec2, inputPos: Vec2, color: string)
-    updateTrace(id: number, outputPos: Vec2, inputPos: Vec2)
-    deleteTrace(id: number)
-    setTraceColor(id: number, color: string)
-    onTraceSelected: (id: number) => void
-}
-
-
-class CircuitTrace {
-    constructor(
-        public layer: ICircuitTraceLayer,
-        public outputPin: FunctionBlockPinView<Output>,
-        public inputPin: FunctionBlockPinView<Input>
-    ) {
-        this.id = inputPin.id
-        layer.addTrace(this.id, outputPin.absPos, inputPin.absPos, outputPin.color)
-        outputPin.onPinUpdated = this.updateColor.bind(this)
+class IOArea<IOType extends FunctionBlockIO> extends GUIChildElement implements CircuitElement {
+    constructor(view: CircuitView, type: 'inputArea' | 'outputArea') {
+        super(view.children, 'div', vec2(0, 0), vec2(view.style.IOAreaWidth, view.size.y), {
+            backgroundColor: '#215'
+        }, true)
     }
-    id: ID
-
-    updateColor() {
-        console.log('CircuitTrace: update pin color', this.id, this.outputPin.color)
-        this.layer.setTraceColor(this.id, this.outputPin.color)
+    addCircuitIO(circuit: Circuit) {
+        if (this.type == 'inputArea') {
+            //this.ioPins = circuit.inputs.map((input, i) => return new FunctionBlockPinView<input(this.DOMElement, ))
+        }
     }
-
-    update() {
-        this.layer.updateTrace(this.id, this.outputPin.absPos, this.inputPin.absPos)
-        return false
-    }
-    delete() {
-
-    }
-    isConnectedTo(block: CircuitElement) {
-        const isConnected = (this.inputPin.blockID == block.id || this.outputPin.blockID == block.id)
-        return isConnected
-    }
+    circuit: Circuit
+    type: ElementType
+    ioPins: FunctionBlockPinView<IOType>[] = []
+    get id(): number { return this.circuit.offlineID }
+    gui: CircuitView
 }
 
 class BlockArea extends GUIChildElement implements CircuitElement {
-    constructor(parent: GUIContainer<CircuitElement>, pos: Vec2, size: Vec2) {
-        super(parent, 'div', vec2(6, 0), size, {
+    constructor(view: CircuitView) {
+        super(view.children, 'div',
+            vec2(view.style.IOAreaWidth, 0),
+            Vec2.sub(view.size, vec2(view.style.IOAreaWidth*2, 0)), {
             backgroundColor: '#104'
         }, true)
     }
-    type: 'circuitArea'
+    type: 'blockArea'
     id: ID
     gui: CircuitView
-
-    get absPos() { return vec2(0, 0) }
 }
 
 
@@ -89,14 +68,11 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         super(parent, Vec2.add(size, vec2(defaultStyle.IOAreaWidth*2, 0)), scale, defaultStyle)
         parent.style.backgroundColor = this.gui.style.colorBackground
 
-        this.circuitArea = new BlockArea(this.children,
-            vec2(this.gui.style.IOAreaWidth, 0),
-            size
-        )
-        this.traceLayer = new TraceLayerBezier(this.circuitArea.DOMElement, this.scale, this.gui.style)
+        this.blockArea = new BlockArea(this)
+        this.traceLayer = new TraceLayerBezier(this.DOMElement, this.scale, this.gui.style)
     }
 
-    circuitArea: CircuitElement
+    blockArea: CircuitElement
 
     gridMap = new CircuitGrid()
 
@@ -163,7 +139,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     }
 
     addFunctionBlock(pos: Vec2, funcBlock: FunctionBlock) {
-        const block = new FunctionBlockView(this.circuitArea.children, pos, funcBlock)
+        const block = new FunctionBlockView(this.blockArea.children, pos, funcBlock)
         this.blocks.set(funcBlock.offlineID, block)
     }
 
@@ -262,15 +238,15 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     onDragStarted = (ev: PointerEvent) => {
         // Start scrolling view
-        if (this.pointer.targetElem == this.circuitArea && ev.buttons == MouseButton.RIGHT) {
+        if (this.pointer.targetElem == this.blockArea && ev.buttons == MouseButton.RIGHT) {
             this.draggingMode = DraggingMode.SCROLL_VIEW
             this.scrollStartPos = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop)
             this.DOMElement.style.cursor = 'grab'
         }
         // Start selection box
-        else if (this.pointer.targetElem == this.circuitArea && ev.buttons == MouseButton.LEFT) { 
+        else if (this.pointer.targetElem == this.blockArea && ev.buttons == MouseButton.LEFT) { 
             this.draggingMode = DraggingMode.SELECTION_BOX
-            this.selectionBox = HTML.domElement(this.circuitArea.DOMElement, 'div', {
+            this.selectionBox = HTML.domElement(this.blockArea.DOMElement, 'div', {
                 position: 'absolute',
                 backgroundColor: 'rgba(128,128,255,0.2)',
                 border: 'thin solid #88F',
@@ -327,7 +303,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
                         this.selectElement(block)
                     }
                 })
-                this.circuitArea.DOMElement.removeChild(this.selectionBox)
+                this.blockArea.DOMElement.removeChild(this.selectionBox)
                 break
 
             case DraggingMode.DRAG_ELEMENT:

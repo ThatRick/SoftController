@@ -1,7 +1,7 @@
 import { IStyleGUI } from '../GUI/GUITypes.js';
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { CircuitStyle } from './CircuitTypes.js';
-import { ICircuitTraceLayer } from './CircuitView.js';
+import { ICircuitTraceLayer } from './CircuitTrace.js';
 
 const xmlns = 'http://www.w3.org/2000/svg'
 

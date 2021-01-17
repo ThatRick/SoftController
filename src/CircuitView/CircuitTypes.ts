@@ -1,7 +1,10 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import CircuitView from './CircuitView.js'
 
-export type ElementType = 'circuitArea' | 'inputArea' | 'outputArea' | 'block' | 'input' | 'output' | 'traceSegment' | 'inputValue' | 'outputValue'
+export type ElementType = 
+    'blockArea' | 'inputArea' | 'outputArea' | 
+    'block' | 'input' | 'output' | 'inputValue' | 'outputValue' |
+    'traceSegment'
 
 export type PinType = 'input' | 'output'
 
