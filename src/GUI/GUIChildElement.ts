@@ -54,7 +54,7 @@ export class GUIChildElement implements IChildElementGUI{
     protected _posScaled: Vec2
     protected _posHasChanged = false
 
-    set pos(p: Vec2) {
+    setPos(p: Vec2) {
         if (this._pos.equal(p)) return
         this._pos.set(p)
         this._posHasChanged = true

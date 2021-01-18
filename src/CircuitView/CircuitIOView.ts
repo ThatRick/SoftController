@@ -9,7 +9,7 @@ import { CircuitElement, ElementType } from './CircuitTypes.js'
 
 export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildElement implements CircuitElement
 {
-    type: ElementType = 'block'
+    type: ElementType
     get id(): number { return this.io.id }
     gui: CircuitView
 
@@ -19,17 +19,25 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
     io: T
     ioPin: FunctionBlockPinView<T>
 
+    // Restrict horizontal movement
+    setPos(v: Vec2) {
+        v.x = this._pos.x
+        super.setPos(v)
+    }
+
     constructor(parent: IViewContainerGUI, io: T, pos: Vec2)
     {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
-            backgroundColor: parent.gui.style.colorBlock,
+            border: '1px solid',
+            borderColor: parent.gui.style.colorBlock,
             fontSize: Math.round(parent.gui.scale.y * 0.65)+'px',
             color: 'white',
-            boxSizing: 'border-box',
+            boxSizing: 'content-box',
             fontFamily: 'monospace',
             userSelect: 'none',
         }, true)
         this.io = io
+        this.type = (this.io.pinType == 'inputPin') ? 'circuitInput' : 'circuitOutput'
 
         this.build()
     }
@@ -40,7 +48,7 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
     }
 
     createPin() {
-        const pos = (this.io.pinType == 'input') ? vec2(this.gui.style.IOAreaWidth, 0) : vec2(-1, 0)
+        const pos = (this.io.pinType == 'inputPin') ? vec2(this.gui.style.IOAreaWidth, 0) : vec2(-1, 0)
         this.ioPin = new FunctionBlockPinView(this.children, this.io, pos, true)
     }
 
@@ -54,11 +62,11 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
     }
 
     selected() {
-        this.DOMElement.style.outline = this.gui.style.blockOutlineSelected
+        this.DOMElement.style.borderColor = this.gui.style.colorSelected
     }
 
     unselected() {
-        this.DOMElement.style.outline = this.gui.style.blockOutlineUnselected
+        this.DOMElement.style.borderColor = this.gui.style.colorBlock
     }
 
     toFront() {
@@ -70,6 +78,6 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
     }
 
     onPointerLeave = () => {
-        this.DOMElement.style.backgroundColor = this.gui.style.colorBlock
+        this.DOMElement.style.backgroundColor = 'transparent'
     }
 }

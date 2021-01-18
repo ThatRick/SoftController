@@ -37,7 +37,9 @@ export class CircuitTrace {
 
     }
     isConnectedTo(block: CircuitElement) {
-        const isConnected = (this.inputPin.blockID == block.id || this.outputPin.blockID == block.id)
+        const isConnected = (block.type == 'circuitInput' || block.type == 'circuitOutput')
+            ? (this.inputPin.id == block.id || this.outputPin.id == block.id)
+            : (this.inputPin.blockID == block.id || this.outputPin.blockID == block.id)
         return isConnected
     }
 }

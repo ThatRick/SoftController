@@ -3,10 +3,12 @@ import CircuitView from './CircuitView.js'
 
 export type ElementType = 
     'blockArea' | 'inputArea' | 'outputArea' | 
-    'block' | 'input' | 'output' | 'inputValue' | 'outputValue' |
+    'block' | 'circuitInput' | 'circuitOutput' |
+    'inputPin' | 'outputPin' |
+    'inputValue' | 'outputValue' |
     'traceSegment'
 
-export type PinType = 'input' | 'output'
+export type PinType = 'inputPin' | 'outputPin'
 
 export interface CircuitElement extends GUIChildElement
 {
@@ -21,6 +23,7 @@ export interface CircuitElement extends GUIChildElement
 export interface CircuitStyle
 {
     colorBackground:        string
+    colorGridLine:          string
     colorBlock:             string
     colorBlockHover:        string
     blockOutlineUnselected: string
@@ -33,14 +36,15 @@ export interface CircuitStyle
     pinValueFieldBg:        string
     colorFilterDefault:     string
     colorFilterActive:      string
-    traceWidth:             number
-    colorTraceSelected:     string
+    traceWidth:             number          
+    colorSelected:          string
     IOAreaWidth:            number
 }
 
 export const defaultStyle: CircuitStyle =
 {
     colorBackground:        '#101030',
+    colorGridLine:          '#161640',
     colorBlock:             '#447',
     colorBlockHover:        '#558',
     blockOutlineUnselected: 'none',
@@ -54,6 +58,6 @@ export const defaultStyle: CircuitStyle =
     colorFilterDefault:     'none',
     colorFilterActive:      'brightness(150%)',
     traceWidth:             0.10,
-    colorTraceSelected:     '#AAF',
+    colorSelected:          '#AAF',
     IOAreaWidth:            6
 }

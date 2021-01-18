@@ -26,6 +26,24 @@ const enum MouseButton {
     MIDDLE = 4
 }
 
+
+function backgroundGridStyle(scale: Vec2, lineColor: string) {
+    return {
+        //backgroundPosition: '-2 px -2 px', 
+        backgroundImage: `linear-gradient(to right, ${lineColor} 1px, transparent 1px), linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)`,
+        backgroundSize: `${scale.x}px ${scale.y}px`
+    } as Partial<CSSStyleDeclaration>
+}
+function backgroundDotStyle(scale: Vec2, lineColor: string) {
+    return {
+        backgroundImage: `radial-gradient(circle, ${lineColor} 1px, transparent 1px)`,
+        backgroundSize: `${scale.x}px ${scale.y}px`
+    } as Partial<CSSStyleDeclaration>
+}
+
+////////////////////////////////////
+//    Circuit Input/Output Area
+////////////////////////////////////
 class IOArea extends GUIChildElement implements CircuitElement {
     constructor(view: CircuitView, type: 'inputArea' | 'outputArea')
     {
@@ -34,10 +52,10 @@ class IOArea extends GUIChildElement implements CircuitElement {
             vec2(view.style.IOAreaWidth, view.size.y), {
                 backgroundColor: '#215'
             }, true)
-    
         this.type = type
     }
     addCircuitIO(circuit: Circuit) {
+        this.circuit = circuit
         const ioList = (this.type == 'inputArea') ? circuit.inputs : circuit.outputs
         this.ioViews = ioList.map((io, i) => new CircuitIOView(this.children, io, vec2(0, i + 2) ))
     }
@@ -48,14 +66,17 @@ class IOArea extends GUIChildElement implements CircuitElement {
     gui: CircuitView
 }
 
-
+/////////////////////////////
+//    Circuit Block Area
+/////////////////////////////
 class BlockArea extends GUIChildElement implements CircuitElement {
     constructor(view: CircuitView) {
         super(view.children, 'div',
             vec2(view.style.IOAreaWidth, 0),
             Vec2.sub(view.size, vec2(view.style.IOAreaWidth*2, 0)), {
-            backgroundColor: '#104'
-        }, true)
+                backgroundColor: view.style.colorBackground,
+                ...backgroundGridStyle(view.scale, view.style.colorGridLine)
+            }, true)
     }
     type: 'blockArea'
     id: ID
@@ -95,9 +116,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     blocks = new Map<ID, FunctionBlockView>()
     traces = new Map<ID, CircuitTrace>()
 
-    internalInputPins: FunctionBlockPinView<Output>[] = []
-    internalOutputPins: FunctionBlockPinView<Input>[] = []
-
     loadCircuit(circuit: Circuit) {
         console.log('CircuitView: Load circuit')
         const margin = vec2(6, 2)
@@ -116,15 +134,14 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
             const x = margin.x + col
             this.addFunctionBlock(vec2(x, y), block)
         })
-
-        // Late initialization vittuun! GUIView on aina olemassa kun elementtiä luodaan. Turhaa kikkailua ja johtaa tähän paskaan:
-        setTimeout(() => this.createCircuitTraces(), 10)
+        this.createCircuitTraces()
     }
 
     getConnectionSourcePin(conn: IOConnection) {
         let outputPin: FunctionBlockPinView<Output>
         if (conn.sourceBlockID == -1) {
-            outputPin = this.internalInputPins[conn.outputNum]
+            outputPin = this.inputArea.ioViews[conn.outputNum].ioPin
+            console.log('Conn to circuit pin:', outputPin)
         }
         else {
             const sourceBlockElem = this.blocks.get(conn.sourceBlockID)
@@ -170,22 +187,18 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     
     draggingElement(elem: CircuitElement, startPos: Vec2, offset: Vec2, currentPos: Vec2) {
         switch(elem.type) {
+            case 'circuitInput':
+            case 'circuitOutput': 
             case 'block': {
-                elem.pos = currentPos
+                elem.setPos(currentPos)
                 this.traces.forEach((trace, id) => (trace.isConnectedTo(elem)) && this.updateRequests.add(trace))
-                break
-            }
-            case 'input': {
-                break
-            }
-            case 'output': {
                 break
             }
         }
     }
 
     dragElementEnded(elem: CircuitElement, startPos: Vec2, offset: Vec2, currentPos: Vec2) {
-        elem.pos = Vec2.round(elem.pos)
+        elem.setPos(Vec2.round(elem.pos))
         this.traces.forEach((trace, id) => (trace.isConnectedTo(elem)) && this.updateRequests.add(trace))
     }
 
@@ -199,8 +212,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
         switch(elem.type) {
             case 'block': {}
-            case 'input': {}
-            case 'output': {}
         }
     }
     unselectElement(elem: CircuitElement) {
@@ -209,8 +220,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         
         switch(elem.type) {
             case 'block': {}
-            case 'input': {}
-            case 'output': {}
         }
     }
     unselectAll() {

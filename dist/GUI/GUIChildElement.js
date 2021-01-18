@@ -25,7 +25,7 @@ export class GUIChildElement {
             this.children = new GUIContainer(this);
         this.update(true);
     }
-    set pos(p) {
+    setPos(p) {
         if (this._pos.equal(p))
             return;
         this._pos.set(p);

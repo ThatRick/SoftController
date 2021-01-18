@@ -1,5 +1,6 @@
 export const defaultStyle = {
     colorBackground: '#101030',
+    colorGridLine: '#161640',
     colorBlock: '#447',
     colorBlockHover: '#558',
     blockOutlineUnselected: 'none',
@@ -13,6 +14,6 @@ export const defaultStyle = {
     colorFilterDefault: 'none',
     colorFilterActive: 'brightness(150%)',
     traceWidth: 0.10,
-    colorTraceSelected: '#AAF',
+    colorSelected: '#AAF',
     IOAreaWidth: 6
 };

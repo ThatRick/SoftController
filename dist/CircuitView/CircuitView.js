@@ -8,6 +8,22 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import TraceLayerBezier from './TraceLayerBezier.js';
 import { CircuitTrace } from './CircuitTrace.js';
 import CircuitIOView from './CircuitIOView.js';
+function backgroundGridStyle(scale, lineColor) {
+    return {
+        //backgroundPosition: '-2 px -2 px', 
+        backgroundImage: `linear-gradient(to right, ${lineColor} 1px, transparent 1px), linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)`,
+        backgroundSize: `${scale.x}px ${scale.y}px`
+    };
+}
+function backgroundDotStyle(scale, lineColor) {
+    return {
+        backgroundImage: `radial-gradient(circle, ${lineColor} 1px, transparent 1px)`,
+        backgroundSize: `${scale.x}px ${scale.y}px`
+    };
+}
+////////////////////////////////////
+//    Circuit Input/Output Area
+////////////////////////////////////
 class IOArea extends GUIChildElement {
     constructor(view, type) {
         super(view.children, 'div', (type == 'inputArea') ? vec2(0, 0) : vec2(view.size.x - view.style.IOAreaWidth, 0), vec2(view.style.IOAreaWidth, view.size.y), {
@@ -17,15 +33,20 @@ class IOArea extends GUIChildElement {
         this.type = type;
     }
     addCircuitIO(circuit) {
+        this.circuit = circuit;
         const ioList = (this.type == 'inputArea') ? circuit.inputs : circuit.outputs;
         this.ioViews = ioList.map((io, i) => new CircuitIOView(this.children, io, vec2(0, i + 2)));
     }
     get id() { return this.circuit.offlineID; }
 }
+/////////////////////////////
+//    Circuit Block Area
+/////////////////////////////
 class BlockArea extends GUIChildElement {
     constructor(view) {
         super(view.children, 'div', vec2(view.style.IOAreaWidth, 0), Vec2.sub(view.size, vec2(view.style.IOAreaWidth * 2, 0)), {
-            backgroundColor: '#104'
+            backgroundColor: view.style.colorBackground,
+            ...backgroundGridStyle(view.scale, view.style.colorGridLine)
         }, true);
     }
 }
@@ -43,8 +64,6 @@ export default class CircuitView extends GUIView {
         this.selectedElementsInitPos = new Map();
         this.blocks = new Map();
         this.traces = new Map();
-        this.internalInputPins = [];
-        this.internalOutputPins = [];
         ////////////////////////////////
         //      POINTER HANDLING
         ////////////////////////////////
@@ -164,13 +183,13 @@ export default class CircuitView extends GUIView {
             const x = margin.x + col;
             this.addFunctionBlock(vec2(x, y), block);
         });
-        // Late initialization vittuun! GUIView on aina olemassa kun elementtiä luodaan. Turhaa kikkailua ja johtaa tähän paskaan:
-        setTimeout(() => this.createCircuitTraces(), 10);
+        this.createCircuitTraces();
     }
     getConnectionSourcePin(conn) {
         let outputPin;
         if (conn.sourceBlockID == -1) {
-            outputPin = this.internalInputPins[conn.outputNum];
+            outputPin = this.inputArea.ioViews[conn.outputNum].ioPin;
+            console.log('Conn to circuit pin:', outputPin);
         }
         else {
             const sourceBlockElem = this.blocks.get(conn.sourceBlockID);
@@ -208,21 +227,17 @@ export default class CircuitView extends GUIView {
     }
     draggingElement(elem, startPos, offset, currentPos) {
         switch (elem.type) {
+            case 'circuitInput':
+            case 'circuitOutput':
             case 'block': {
-                elem.pos = currentPos;
+                elem.setPos(currentPos);
                 this.traces.forEach((trace, id) => (trace.isConnectedTo(elem)) && this.updateRequests.add(trace));
-                break;
-            }
-            case 'input': {
-                break;
-            }
-            case 'output': {
                 break;
             }
         }
     }
     dragElementEnded(elem, startPos, offset, currentPos) {
-        elem.pos = Vec2.round(elem.pos);
+        elem.setPos(Vec2.round(elem.pos));
         this.traces.forEach((trace, id) => (trace.isConnectedTo(elem)) && this.updateRequests.add(trace));
     }
     /////////////////////////
@@ -233,8 +248,6 @@ export default class CircuitView extends GUIView {
         elem.selected();
         switch (elem.type) {
             case 'block': { }
-            case 'input': { }
-            case 'output': { }
         }
     }
     unselectElement(elem) {
@@ -242,8 +255,6 @@ export default class CircuitView extends GUIView {
         elem.unselected();
         switch (elem.type) {
             case 'block': { }
-            case 'input': { }
-            case 'output': { }
         }
     }
     unselectAll() {

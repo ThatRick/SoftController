@@ -30,7 +30,7 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
     get blockID() {
         return this.io.funcBlock.offlineID
     }
-    
+
     constructor(parent: IViewContainerGUI, io: T, pos: Vec2, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1))
 
@@ -38,7 +38,7 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
         this.type = io.pinType
         this.dataType = this.io.type
         this.isInternalCircuitIO = isInternalCircuitIO
-        this.leftSide = (this.type == 'input' && !this.isInternalCircuitIO || this.type == 'output' && this.isInternalCircuitIO)
+        this.leftSide = (this.type == 'inputPin' && !this.isInternalCircuitIO || this.type == 'outputPin' && this.isInternalCircuitIO)
         this.create(this.gui)
     }
 

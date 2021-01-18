@@ -72,7 +72,7 @@ export class Input extends FunctionBlockIO
         value: number,
         isCircuitIO = false,
     ) {
-        super(funcBlock, name, ioNum, flags, value, 'input', isCircuitIO)
+        super(funcBlock, name, ioNum, flags, value, 'inputPin', isCircuitIO)
     }
 
     private _ref: IOConnection
@@ -97,7 +97,7 @@ export class Output extends FunctionBlockIO
         value: number,
         isCircuitIO = false,
     ) {
-        super(funcBlock, name, ioNum, flags, value, 'output', isCircuitIO)
+        super(funcBlock, name, ioNum, flags, value, 'outputPin', isCircuitIO)
     }
 }
 

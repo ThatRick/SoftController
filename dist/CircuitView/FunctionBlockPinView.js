@@ -15,7 +15,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.type = io.pinType;
         this.dataType = this.io.type;
         this.isInternalCircuitIO = isInternalCircuitIO;
-        this.leftSide = (this.type == 'input' && !this.isInternalCircuitIO || this.type == 'output' && this.isInternalCircuitIO);
+        this.leftSide = (this.type == 'inputPin' && !this.isInternalCircuitIO || this.type == 'outputPin' && this.isInternalCircuitIO);
         this.create(this.gui);
     }
     get id() { return this.io.id; }

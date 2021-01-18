@@ -31,7 +31,7 @@ export class FunctionBlockIO {
 ///////////////////////////////
 export class Input extends FunctionBlockIO {
     constructor(funcBlock, name, ioNum, flags, value, isCircuitIO = false) {
-        super(funcBlock, name, ioNum, flags, value, 'input', isCircuitIO);
+        super(funcBlock, name, ioNum, flags, value, 'inputPin', isCircuitIO);
     }
     getConnection() { return this._ref; }
     setConnection(sourceBlockID, outputNum, inverted = false) {
@@ -44,7 +44,7 @@ export class Input extends FunctionBlockIO {
 ///////////////////////////////
 export class Output extends FunctionBlockIO {
     constructor(funcBlock, name, ioNum, flags, value, isCircuitIO = false) {
-        super(funcBlock, name, ioNum, flags, value, 'output', isCircuitIO);
+        super(funcBlock, name, ioNum, flags, value, 'outputPin', isCircuitIO);
     }
 }
 ///////////////////////////////
