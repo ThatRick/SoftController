@@ -1,8 +1,11 @@
 export const defaultStyle = {
-    colorBackground: '#101030',
-    colorGridLine: '#161640',
+    colorBackground: '#181820',
+    colorGridLine: '#202040',
+    colorPanel: '#202040',
+    colorPanelLines: '#303050',
     colorBlock: '#447',
     colorBlockHover: '#558',
+    colorSelected: '#AAF',
     blockOutlineUnselected: 'none',
     blockOutlineSelected: 'thin solid #AAF',
     colorPinHover: '#AAA',
@@ -11,9 +14,8 @@ export const defaultStyle = {
     colorPinInteger: '#99D',
     colorPinFloat: '#9D9',
     pinValueFieldBg: 'transparent',
-    colorFilterDefault: 'none',
-    colorFilterActive: 'brightness(150%)',
+    filterDefault: 'none',
+    filterActive: 'brightness(150%)',
     traceWidth: 0.10,
-    colorSelected: '#AAF',
     IOAreaWidth: 6
 };

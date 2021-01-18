@@ -28,11 +28,12 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
     constructor(parent: IViewContainerGUI, io: T, pos: Vec2)
     {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
-            border: '1px solid',
-            borderColor: parent.gui.style.colorBlock,
+            borderBottom: '1px solid',
+            borderColor: parent.gui.style.colorPanelLines,
+            backgroundColor: parent.gui.style.colorBlock,
             fontSize: Math.round(parent.gui.scale.y * 0.65)+'px',
             color: 'white',
-            boxSizing: 'content-box',
+            boxSizing: 'border-box',
             fontFamily: 'monospace',
             userSelect: 'none',
         }, true)
@@ -62,11 +63,11 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
     }
 
     selected() {
-        this.DOMElement.style.borderColor = this.gui.style.colorSelected
+        this.DOMElement.style.backgroundColor = this.gui.style.colorSelected
     }
 
     unselected() {
-        this.DOMElement.style.borderColor = this.gui.style.colorBlock
+        this.DOMElement.style.backgroundColor = this.gui.style.colorBlock
     }
 
     toFront() {
@@ -78,6 +79,6 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
     }
 
     onPointerLeave = () => {
-        this.DOMElement.style.backgroundColor = 'transparent'
+        this.DOMElement.style.backgroundColor = this.gui.style.colorBlock
     }
 }

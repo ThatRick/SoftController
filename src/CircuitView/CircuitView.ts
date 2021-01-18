@@ -29,8 +29,13 @@ const enum MouseButton {
 
 function backgroundGridStyle(scale: Vec2, lineColor: string) {
     return {
-        //backgroundPosition: '-2 px -2 px', 
         backgroundImage: `linear-gradient(to right, ${lineColor} 1px, transparent 1px), linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)`,
+        backgroundSize: `${scale.x}px ${scale.y}px`
+    } as Partial<CSSStyleDeclaration>
+}
+function backgroundLinesStyle(scale: Vec2, lineColor: string) {
+    return {
+        backgroundImage: `linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)`,
         backgroundSize: `${scale.x}px ${scale.y}px`
     } as Partial<CSSStyleDeclaration>
 }
@@ -50,7 +55,9 @@ class IOArea extends GUIChildElement implements CircuitElement {
         super(view.children, 'div',
             (type == 'inputArea') ? vec2(0, 0) : vec2(view.size.x - view.style.IOAreaWidth, 0),
             vec2(view.style.IOAreaWidth, view.size.y), {
-                backgroundColor: '#215'
+                //borderRight: '1px solid '+view.style.colorPanelLines,
+                backgroundColor: view.style.colorPanel,
+                ...backgroundLinesStyle(Vec2.mul(vec2(view.style.IOAreaWidth, 1), view.scale), view.style.colorPanelLines)
             }, true)
         this.type = type
     }
@@ -74,8 +81,7 @@ class BlockArea extends GUIChildElement implements CircuitElement {
         super(view.children, 'div',
             vec2(view.style.IOAreaWidth, 0),
             Vec2.sub(view.size, vec2(view.style.IOAreaWidth*2, 0)), {
-                backgroundColor: view.style.colorBackground,
-                ...backgroundGridStyle(view.scale, view.style.colorGridLine)
+
             }, true)
     }
     type: 'blockArea'
@@ -90,24 +96,28 @@ class BlockArea extends GUIChildElement implements CircuitElement {
 
 export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 {
-    constructor(parent: HTMLElement, size: Vec2, scale: Vec2)
+    constructor(parent: HTMLElement, size: Vec2, scale: Vec2, style: CircuitStyle)
     {
-        super(parent, Vec2.add(size, vec2(defaultStyle.IOAreaWidth*2, 0)), scale, defaultStyle)
-        parent.style.backgroundColor = this.gui.style.colorBackground
+        super(parent, Vec2.add(size, vec2(style.IOAreaWidth*2, 0)), scale, style, {
+            backgroundColor: style.colorBackground,
+            ...backgroundGridStyle(scale, style.colorGridLine)
+        })
 
         this.traceLayer = new TraceLayerBezier(this.DOMElement, this.scale, this.gui.style)
+        this.blockArea = new BlockArea(this)
+        this.inputArea = new IOArea(this, 'inputArea')
+        this.outputArea = new IOArea(this, 'outputArea')
     }
-
-    blockArea = new BlockArea(this)
-    inputArea = new IOArea(this, 'inputArea')
-    outputArea = new IOArea(this, 'outputArea')
-
     gridMap = new CircuitGrid()
-
     traceLayer: ICircuitTraceLayer
 
-    scrollStartPos: Vec2
+    blockArea: BlockArea
+    inputArea: IOArea
+    outputArea: IOArea
+
     draggingMode: DraggingMode
+    scrollStartPos: Vec2
+    connectingTrace: ID = -1
 
     selectedElements = new Set<CircuitElement>()
     selectedElementsInitPos = new Map<CircuitElement, Vec2>()
@@ -140,20 +150,18 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     getConnectionSourcePin(conn: IOConnection) {
         let outputPin: FunctionBlockPinView<Output>
         if (conn.sourceBlockID == -1) {
-            outputPin = this.inputArea.ioViews[conn.outputNum].ioPin
+            outputPin = this.inputArea.ioViews[conn.ioNum].ioPin
             console.log('Conn to circuit pin:', outputPin)
         }
         else {
             const sourceBlockElem = this.blocks.get(conn.sourceBlockID)
-            outputPin = sourceBlockElem.outputPins[conn.outputNum]
+            outputPin = sourceBlockElem.outputPins[conn.ioNum - sourceBlockElem.inputPins.length]
         }
         return outputPin
     }
 
     createCircuitTraces() {
         console.log('CircuitView: Create traces')
-        // draw traces
-        interface Connection { outputPin: FunctionBlockPinView<Output>, inputPin: FunctionBlockPinView<Input> }
         this.blocks.forEach(funcBlockElem => {
             funcBlockElem.inputPins.forEach(inputPin => {
                 const conn = inputPin.io.getConnection()
@@ -170,6 +178,11 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         this.blocks.set(funcBlock.offlineID, block)
     }
 
+    addConnection(outputPin: FunctionBlockPinView<Output>, inputPin: FunctionBlockPinView<Input>) {
+
+        this.traces.set(inputPin.id, new CircuitTrace(this.traceLayer, outputPin, inputPin))
+    }
+
     // Element info to debug string
     elementToString(elem: CircuitElement) {
         if (!elem) return 'undefined'
@@ -182,7 +195,16 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     /////////////////////////
 
     dragElementStarted(elem: CircuitElement) {
-        this.selectedElementsInitPos.set(elem, elem.pos.copy())
+        switch(elem.type) {
+            case 'block':
+                this.selectedElementsInitPos.set(elem, elem.pos.copy())
+                break
+            case 'inputPin':
+            case 'outputPin':
+                this.selectedElementsInitPos.set(elem, elem.pos.copy())
+                this.traceLayer.addTrace(this.connectingTrace, elem.absPos, elem.absPos, this.style.colorPinHover)
+                break
+        }
     }
     
     draggingElement(elem: CircuitElement, startPos: Vec2, offset: Vec2, currentPos: Vec2) {
@@ -194,12 +216,49 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
                 this.traces.forEach((trace, id) => (trace.isConnectedTo(elem)) && this.updateRequests.add(trace))
                 break
             }
+            case 'inputPin': {
+                const absPos = Vec2.div(this.pointer.relativeDownPos, this.scale).add(offset)
+                this.traceLayer.updateTrace(this.connectingTrace, absPos, elem.absPos)
+                break
+            }
+            case 'outputPin': {
+                const absPos = Vec2.div(this.pointer.relativeDownPos, this.scale).add(offset)
+                this.traceLayer.updateTrace(this.connectingTrace, elem.absPos, absPos)
+                break
+            }
         }
     }
 
     dragElementEnded(elem: CircuitElement, startPos: Vec2, offset: Vec2, currentPos: Vec2) {
-        elem.setPos(Vec2.round(elem.pos))
-        this.traces.forEach((trace, id) => (trace.isConnectedTo(elem)) && this.updateRequests.add(trace))
+        switch(elem.type) {
+            case 'block': {
+                elem.setPos(Vec2.round(elem.pos))
+                this.traces.forEach((trace, id) => (trace.isConnectedTo(elem)) && this.updateRequests.add(trace))
+                break
+            }
+            case 'inputPin': {
+                const targetElem = this.pointer.targetElem
+                if (targetElem?.type == 'outputPin') {
+                    const outputPin = targetElem as FunctionBlockPinView<Output>
+                    const inputPin = elem as FunctionBlockPinView<Input>
+                    this.addConnection(outputPin, inputPin)
+                }
+                this.traceLayer.deleteTrace(this.connectingTrace)
+                this.unselectAll()
+                break
+            }
+            case 'outputPin': {
+                const targetElem = this.pointer.targetElem
+                if (targetElem?.type == 'inputPin') {
+                    const outputPin = elem as FunctionBlockPinView<Output>
+                    const inputPin = targetElem as FunctionBlockPinView<Input>
+                    this.addConnection(outputPin, inputPin)
+                }
+                this.traceLayer.deleteTrace(this.connectingTrace)
+                this.unselectAll()
+                break
+            }
+        }
     }
 
     /////////////////////////
@@ -252,7 +311,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
             this.unselectAll()
         }
 
-        console.log('Clicked:', this.elementToString(elem))
+        console.log('Clicked:', this.elementToString(elem), this.pointer.relativeDownPos)
     }
 
     onDragStarted = (ev: PointerEvent) => {

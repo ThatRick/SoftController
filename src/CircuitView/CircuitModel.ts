@@ -7,7 +7,7 @@ import IControllerInterface, { ICircuitData, IFunctionBlockData } from '../Contr
 export interface IOConnection
 {
     sourceBlockID:  number
-    outputNum:      number
+    ioNum:          number
     inverted:       boolean
 }
 
@@ -78,8 +78,8 @@ export class Input extends FunctionBlockIO
     private _ref: IOConnection
 
     getConnection() { return this._ref }
-    setConnection(sourceBlockID: ID, outputNum: number, inverted = false) {
-        this._ref = { sourceBlockID, outputNum, inverted }
+    setConnection(sourceBlockID: ID, ioNum: number, inverted = false) {
+        this._ref = { sourceBlockID, ioNum: ioNum, inverted }
         console.log('set connection:', this._ref)
     }
 }
@@ -241,9 +241,8 @@ export class Circuit extends FunctionBlock
                 const input = block.inputs[i]
                 const sourceBlock = this.onlineBlocks.get(ioRef.id)
                 if (sourceBlock) {
-                    const outputNum = ioRef.ioNum - sourceBlock.inputs.length
                     const inverted = !!(input.flags & IOFlag.INVERTED)
-                    input.setConnection(sourceBlock.offlineID, outputNum, inverted)
+                    input.setConnection(sourceBlock.offlineID, ioRef.ioNum, inverted)
                 } else console.error('Connect: source block undefined')
             }
         })

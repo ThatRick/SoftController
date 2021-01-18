@@ -97,7 +97,7 @@ export default class GUIView {
             this.pointer.isDown = true;
             this.pointer.downPos.set(ev.x, ev.y);
             const elem = ev.target;
-            const bounds = elem.getBoundingClientRect();
+            const bounds = this.DOMElement.getBoundingClientRect();
             this.pointer.relativeDownPos.set(ev.x - bounds.x, ev.y - bounds.y);
             this.pointer.eventTarget = ev.target;
             this.pointer.targetElem = this.getPointerTargetElem?.(ev);

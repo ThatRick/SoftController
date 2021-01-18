@@ -5,6 +5,7 @@ import CircuitView from './CircuitView/CircuitView.js';
 import { vec2 } from './Lib/Vector2.js';
 import { Circuit } from './CircuitView/CircuitModel.js';
 import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
+import { defaultStyle } from './CircuitView/CircuitTypes.js';
 function createTerminal(div) {
     return (text) => {
         if (text == 'CLEAR') {
@@ -45,7 +46,7 @@ function testGUI(circuit) {
     const guiContainer = document.getElementById('gui');
     const viewSize = vec2(80, 40);
     const viewScale = vec2(14, 20);
-    const view = new CircuitView(guiContainer, viewSize, viewScale);
+    const view = new CircuitView(guiContainer, viewSize, viewScale, defaultStyle);
     view.loadCircuit(circuit);
     return view;
 }
@@ -119,7 +120,7 @@ async function createTestCircuit(cpu, blockCount = 10) {
         const sourceId = funcs[i - 1];
         const sourceInfo = await cpu.getFunctionBlockHeader(sourceId);
         const inputNum = i % funcInfo.inputCount;
-        const sourceIONum = sourceInfo.inputCount;
+        const sourceIONum = (i == 1) ? 1 : sourceInfo.inputCount;
         const inverted = !(i % 2);
         await cpu.connectFunctionBlockInput(funcId, inputNum, sourceId, sourceIONum, inverted);
     }

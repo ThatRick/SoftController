@@ -4,11 +4,12 @@ import FunctionBlockPinView from './FunctionBlockPinView.js';
 export default class CircuitIOView extends GUIChildElement {
     constructor(parent, io, pos) {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
-            border: '1px solid',
-            borderColor: parent.gui.style.colorBlock,
+            borderBottom: '1px solid',
+            borderColor: parent.gui.style.colorPanelLines,
+            backgroundColor: parent.gui.style.colorBlock,
             fontSize: Math.round(parent.gui.scale.y * 0.65) + 'px',
             color: 'white',
-            boxSizing: 'content-box',
+            boxSizing: 'border-box',
             fontFamily: 'monospace',
             userSelect: 'none',
         }, true);
@@ -18,7 +19,7 @@ export default class CircuitIOView extends GUIChildElement {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
         };
         this.onPointerLeave = () => {
-            this.DOMElement.style.backgroundColor = 'transparent';
+            this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
         };
         this.io = io;
         this.type = (this.io.pinType == 'inputPin') ? 'circuitInput' : 'circuitOutput';
@@ -47,10 +48,10 @@ export default class CircuitIOView extends GUIChildElement {
         });
     }
     selected() {
-        this.DOMElement.style.borderColor = this.gui.style.colorSelected;
+        this.DOMElement.style.backgroundColor = this.gui.style.colorSelected;
     }
     unselected() {
-        this.DOMElement.style.borderColor = this.gui.style.colorBlock;
+        this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
     }
     toFront() {
         this.parentContainer.DOMElement.appendChild(this.DOMElement);

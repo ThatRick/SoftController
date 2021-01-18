@@ -160,7 +160,7 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
             this.pointer.isDown = true
             this.pointer.downPos.set(ev.x, ev.y)
             const elem = ev.target as HTMLElement
-            const bounds = elem.getBoundingClientRect();
+            const bounds = this.DOMElement.getBoundingClientRect();
 
             this.pointer.relativeDownPos.set(ev.x - bounds.x, ev.y - bounds.y)
     
