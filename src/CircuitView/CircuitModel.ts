@@ -183,7 +183,7 @@ export class FunctionBlock
             io.onValueChanged?.()
 
             if (isOfflineModification && this.cpu) {
-                this.parentCircuit?.modified(io.setValue, ModificationType.SET_IO_VALUE, this.offlineID, ioNum)
+                this.parentCircuit?.modified(io, ModificationType.SET_IO_VALUE, this.offlineID, ioNum)
             }
         }
     }
@@ -278,7 +278,7 @@ export class Circuit extends FunctionBlock
         const input = targetBlock.inputs[inputNum]
         input.defineConnection(sourceBlock.offlineID, sourceIONum, inverted)
         
-        if (this.cpu) this.modified(input.connect, ModificationType.CONNECT_FUNCTION_INPUT, targetBlock.offlineID, input.ioNum)
+        if (this.cpu) this.modified(input, ModificationType.CONNECT_FUNCTION_INPUT, targetBlock.offlineID, input.ioNum)
     }
 
 
