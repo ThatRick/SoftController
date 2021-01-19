@@ -21,7 +21,7 @@ export default class TraceBezierLayer implements ICircuitTraceLayer
         this.scale = scale
         this.style = style
         this.cellOffset = Vec2.scale(this.scale, 0.5)
-        this.controlOffset = this.scale.x * 6 
+        this.minControlOffset = this.scale.x * 2 
 
         Object.assign(svg.style, {
             position: 'absolute',
@@ -37,7 +37,7 @@ export default class TraceBezierLayer implements ICircuitTraceLayer
     scale: Vec2
     style: CircuitStyle
     cellOffset: Vec2
-    controlOffset: number
+    minControlOffset: number
 
     traces = new Map<number, SVGPathElement>()
 
@@ -104,7 +104,7 @@ export default class TraceBezierLayer implements ICircuitTraceLayer
     cubicCurve(a: Vec2, b: Vec2) {
         const point = (v: Vec2) => v.x + ' ' + v.y
 
-        const dx = Math.max(Math.round(Math.abs(b.x - a.x) / 2), this.controlOffset)
+        const dx = Math.max(Math.round(Math.abs(b.x - a.x) / 2), this.minControlOffset)
         const ac = Vec2.add(a, vec2(dx, 0))
         const bc = Vec2.add(b, vec2(-dx, 0))
 

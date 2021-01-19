@@ -38,7 +38,7 @@ class IOArea extends GUIChildElement {
         this.ioViews = [];
         this.type = type;
     }
-    addCircuitIO(circuit) {
+    defineCircuitIO(circuit) {
         this.circuit = circuit;
         const ioList = (this.type == 'inputArea') ? circuit.inputs : circuit.outputs;
         this.ioViews = ioList.map((io, i) => new CircuitIOView(this.children, io, vec2(0, i + 2)));
@@ -177,20 +177,53 @@ export default class CircuitView extends GUIView {
         const margin = vec2(6, 2);
         const area = vec2(16, 8);
         const w = (this.size.x - margin.x * 2);
-        // io
-        this.inputArea.addCircuitIO(circuit);
-        this.outputArea.addCircuitIO(circuit);
-        // blocks
+        // Define circuit IO
+        this.inputArea.defineCircuitIO(circuit);
+        this.outputArea.defineCircuitIO(circuit);
+        // Create function block views
         circuit.blocks.forEach((block, i) => {
             const n = i * area.x;
             const row = Math.trunc(n / w);
             const col = n - row * w;
             const y = margin.y + row * area.y;
             const x = margin.x + col;
-            this.addFunctionBlock(vec2(x, y), block);
+            this.createFunctionBlockView(block, vec2(x, y));
         });
-        this.createCircuitTraces();
+        // Create connection traces
+        this.blocks.forEach(funcBlockElem => {
+            funcBlockElem.inputPins.forEach(inputPin => {
+                const conn = inputPin.io.connection;
+                if (conn) {
+                    const outputPin = this.getConnectionSourcePin(conn);
+                    this.createConnectionTrace(outputPin, inputPin, conn.inverted);
+                }
+            });
+        });
     }
+    createFunctionBlockView(funcBlock, pos) {
+        const block = new FunctionBlockView(this.blockArea.children, pos, funcBlock);
+        this.blocks.set(funcBlock.offlineID, block);
+    }
+    connect(outputPin, inputPin) {
+    }
+    createConnectionTrace(outputPin, inputPin, inverted = false) {
+        const trace = new CircuitTrace(this.traceLayer, outputPin, inputPin);
+        if (inputPin.io.connection) {
+            for (const [id, trace] of this.traces) {
+                if (trace.inputPin == inputPin) {
+                    this.deleteConnectionTrace(id);
+                    break;
+                }
+            }
+        }
+        this.traces.set(inputPin.id, trace);
+    }
+    deleteConnectionTrace(id) {
+        const trace = this.traces.get(id);
+        trace.delete();
+        this.traces.delete(id);
+    }
+    // Get connection source pin element
     getConnectionSourcePin(conn) {
         let outputPin;
         if (conn.sourceBlockID == -1) {
@@ -203,25 +236,6 @@ export default class CircuitView extends GUIView {
         }
         return outputPin;
     }
-    createCircuitTraces() {
-        console.log('CircuitView: Create traces');
-        this.blocks.forEach(funcBlockElem => {
-            funcBlockElem.inputPins.forEach(inputPin => {
-                const conn = inputPin.io.getConnection();
-                if (conn) {
-                    const outputPin = this.getConnectionSourcePin(conn);
-                    outputPin && this.traces.set(inputPin.id, new CircuitTrace(this.traceLayer, outputPin, inputPin));
-                }
-            });
-        });
-    }
-    addFunctionBlock(pos, funcBlock) {
-        const block = new FunctionBlockView(this.blockArea.children, pos, funcBlock);
-        this.blocks.set(funcBlock.offlineID, block);
-    }
-    addConnection(outputPin, inputPin) {
-        this.traces.set(inputPin.id, new CircuitTrace(this.traceLayer, outputPin, inputPin));
-    }
     // Element info to debug string
     elementToString(elem) {
         if (!elem)
@@ -233,6 +247,8 @@ export default class CircuitView extends GUIView {
     /////////////////////////
     dragElementStarted(elem) {
         switch (elem.type) {
+            case 'circuitInput':
+            case 'circuitOutput':
             case 'block':
                 this.selectedElementsInitPos.set(elem, elem.pos.copy());
                 break;
@@ -266,6 +282,8 @@ export default class CircuitView extends GUIView {
     }
     dragElementEnded(elem, startPos, offset, currentPos) {
         switch (elem.type) {
+            case 'circuitInput':
+            case 'circuitOutput':
             case 'block': {
                 elem.setPos(Vec2.round(elem.pos));
                 this.traces.forEach((trace, id) => (trace.isConnectedTo(elem)) && this.updateRequests.add(trace));
@@ -276,7 +294,7 @@ export default class CircuitView extends GUIView {
                 if (targetElem?.type == 'outputPin') {
                     const outputPin = targetElem;
                     const inputPin = elem;
-                    this.addConnection(outputPin, inputPin);
+                    this.connect(outputPin, inputPin);
                 }
                 this.traceLayer.deleteTrace(this.connectingTrace);
                 this.unselectAll();
@@ -287,7 +305,7 @@ export default class CircuitView extends GUIView {
                 if (targetElem?.type == 'inputPin') {
                     const outputPin = elem;
                     const inputPin = targetElem;
-                    this.addConnection(outputPin, inputPin);
+                    this.connect(outputPin, inputPin);
                 }
                 this.traceLayer.deleteTrace(this.connectingTrace);
                 this.unselectAll();
