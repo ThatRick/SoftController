@@ -105,7 +105,7 @@ export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUI
         this.pin.style.backgroundColor = this.color
         this.valueField.style.color = this.color
         
-        console.log('update pin:', this.id, this.io.value, this.onPinUpdated)
+        //console.log('update pin:', this.id, this.io.value, this.onPinUpdated)
         this.onPinUpdated?.()
     }
 

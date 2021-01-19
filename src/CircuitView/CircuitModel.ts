@@ -89,7 +89,6 @@ export class Input extends FunctionBlockIO
     get connection() { return this._ref }
     defineConnection(sourceBlockID: ID, ioNum: number, inverted = false) {
         this._ref = { sourceBlockID, ioNum: ioNum, inverted }
-        console.log('set connection:', this._ref)
     }
     connect(sourceBlockID: ID, ioNum: number, inverted = false) {
         this.defineConnection(sourceBlockID, ioNum, inverted)
@@ -274,9 +273,10 @@ export class Circuit extends FunctionBlock
         return funcBlock
     }
 
-    connectFunctionBlockInput(targetBlock: FunctionBlock, inputNum: number, sourceBlock: FunctionBlock, sourceIONum: number, inverted: boolean) {
+    connectFunctionBlockInput(targetBlockID: ID, inputNum: number, sourceBlockID: ID, sourceIONum: number, inverted = false) {
+        const targetBlock = this.blocks[targetBlockID]
         const input = targetBlock.inputs[inputNum]
-        input.defineConnection(sourceBlock.offlineID, sourceIONum, inverted)
+        input.defineConnection(sourceBlockID, sourceIONum, inverted)
         
         if (this.cpu) this.modified(input, ModificationType.CONNECT_FUNCTION_INPUT, targetBlock.offlineID, input.ioNum)
     }
@@ -309,7 +309,6 @@ export class Circuit extends FunctionBlock
         this.blocks.forEach(block => {
             block.funcData.inputRefs.forEach((ioRef, i) => {
                 if (ioRef) {
-                    console.log('connect input to ref (online):', ioRef)
                     const input = block.inputs[i]
                     const sourceBlock = this.onlineBlocks.get(ioRef.id)
                     if (sourceBlock) {
@@ -324,9 +323,10 @@ export class Circuit extends FunctionBlock
     async uploadChanges() {
         if (!this.cpu) { console.error('Upload changes: No online CPU connection'); return }
 
-        this.modifications.forEach(async modification => {
+        for (const modification of this.modifications.values()) {
             await this.uploadModification(modification.type, modification.blockID, modification.ioNum)
-        })
+        }
+        this.modifications.clear()
     }
 
     async uploadModification(type: ModificationType, blockOfflineID: ID, ioNum?: number) {
@@ -362,7 +362,7 @@ export class Circuit extends FunctionBlock
                 const targetBlock = this.blocks[blockOfflineID]
                 const targetInput = targetBlock.inputs[ioNum]
                 const connection = targetInput.connection
-                const sourceBlock = this.blocks[connection.sourceBlockID]
+                const sourceBlock = (connection.sourceBlockID == -1) ? this : this.blocks[connection.sourceBlockID]
 
                 const targetOnlineID = targetBlock.onlineID
                 const sourceOnlineID = sourceBlock.onlineID
@@ -376,6 +376,7 @@ export class Circuit extends FunctionBlock
         }
 
         this.onModificationUploaded?.(type, success, blockOfflineID, ioNum)
+        return success
     }
 
     ///////////////////////////////

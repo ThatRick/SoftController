@@ -4,6 +4,34 @@ export function domElement(parentDOM, tagName, style) {
     parentDOM?.appendChild(elem);
     return elem;
 }
+export class Button {
+    constructor(parentElement, text, charWidth, action) {
+        this.elem = domElement(parentElement, 'div', {
+            color: 'white',
+            margin: '2px',
+            backgroundColor: '#557',
+            border: '1px solid #779',
+            width: text.length * charWidth + 'px',
+            borderRadius: '10%',
+            fontSize: '1em',
+            fontFamily: 'monospace',
+            textAlign: 'center',
+            display: 'inline-block',
+            userSelect: 'none',
+            cursor: 'pointer'
+        });
+        this.elem.textContent = text;
+        this.elem.onpointerenter = ev => this.elem.style.backgroundColor = '#779';
+        this.elem.onpointerleave = ev => this.elem.style.backgroundColor = '#557';
+        this.elem.onclick = (ev) => {
+            this.elem.style.backgroundColor = '#99A';
+            setTimeout(() => {
+                this.elem.style.backgroundColor = '#557';
+            }, 30);
+            action();
+        };
+    }
+}
 export class Table {
     constructor(options) {
         this.rows = [];

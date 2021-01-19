@@ -23,21 +23,6 @@ body {
         'splitBar'
         'terminal';
 }
-button {
-    color: white;
-    margin: 1px;
-    background-color: var(--buttonColor);
-    height: 100%;
-    font-family: monospace;
-    font-size: 1.2em;
-}
-button:hover {
-    background: #458;
-}
-
-button:active {
-    background: #0044aa;
-}
 
 ::-webkit-scrollbar {
     width: 8px;

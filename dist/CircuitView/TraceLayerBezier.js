@@ -43,14 +43,13 @@ export default class TraceBezierLayer {
     setTraceColor(id, color) {
         const trace = this.traces.get(id);
         const currentColor = trace.style.stroke;
-        console.log('maybe set trace color:', id, color, currentColor);
         if (color != currentColor) {
             trace.style.stroke = color;
-            console.log('did set trace color:', id, color, trace.style.stroke);
         }
     }
     deleteTrace(id) {
         const trace = this.traces.get(id);
+        console.log('Trace layer delete trace', id, trace);
         this.svg.removeChild(trace);
     }
     get size() {

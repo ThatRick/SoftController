@@ -36,7 +36,6 @@ export class Input extends FunctionBlockIO {
     get connection() { return this._ref; }
     defineConnection(sourceBlockID, ioNum, inverted = false) {
         this._ref = { sourceBlockID, ioNum: ioNum, inverted };
-        console.log('set connection:', this._ref);
     }
     connect(sourceBlockID, ioNum, inverted = false) {
         this.defineConnection(sourceBlockID, ioNum, inverted);
@@ -102,7 +101,7 @@ export class FunctionBlock {
                 io = this.outputs[ioNum - this.inputs.length];
             io.onValueChanged?.();
             if (isOfflineModification && this.cpu) {
-                this.parentCircuit?.modified(io.setValue, 3 /* SET_IO_VALUE */, this.offlineID, ioNum);
+                this.parentCircuit?.modified(io, 3 /* SET_IO_VALUE */, this.offlineID, ioNum);
             }
         }
     }
@@ -176,11 +175,12 @@ export class Circuit extends FunctionBlock {
             this.modified(funcBlock, 0 /* ADD_BLOCK */, offlineID);
         return funcBlock;
     }
-    connectFunctionBlockInput(targetBlock, inputNum, sourceBlock, sourceIONum, inverted) {
+    connectFunctionBlockInput(targetBlockID, inputNum, sourceBlockID, sourceIONum, inverted = false) {
+        const targetBlock = this.blocks[targetBlockID];
         const input = targetBlock.inputs[inputNum];
-        input.defineConnection(sourceBlock.offlineID, sourceIONum, inverted);
+        input.defineConnection(sourceBlockID, sourceIONum, inverted);
         if (this.cpu)
-            this.modified(input.connect, 4 /* CONNECT_FUNCTION_INPUT */, targetBlock.offlineID, input.ioNum);
+            this.modified(input, 4 /* CONNECT_FUNCTION_INPUT */, targetBlock.offlineID, input.ioNum);
     }
     // Read IO values from online CPU
     async readOnlineIOValues() {
@@ -209,7 +209,6 @@ export class Circuit extends FunctionBlock {
         this.blocks.forEach(block => {
             block.funcData.inputRefs.forEach((ioRef, i) => {
                 if (ioRef) {
-                    console.log('connect input to ref (online):', ioRef);
                     const input = block.inputs[i];
                     const sourceBlock = this.onlineBlocks.get(ioRef.id);
                     if (sourceBlock) {
@@ -227,9 +226,10 @@ export class Circuit extends FunctionBlock {
             console.error('Upload changes: No online CPU connection');
             return;
         }
-        this.modifications.forEach(async (modification) => {
+        for (const modification of this.modifications.values()) {
             await this.uploadModification(modification.type, modification.blockID, modification.ioNum);
-        });
+        }
+        this.modifications.clear();
     }
     async uploadModification(type, blockOfflineID, ioNum) {
         let success;
@@ -258,7 +258,7 @@ export class Circuit extends FunctionBlock {
                     const targetBlock = this.blocks[blockOfflineID];
                     const targetInput = targetBlock.inputs[ioNum];
                     const connection = targetInput.connection;
-                    const sourceBlock = this.blocks[connection.sourceBlockID];
+                    const sourceBlock = (connection.sourceBlockID == -1) ? this : this.blocks[connection.sourceBlockID];
                     const targetOnlineID = targetBlock.onlineID;
                     const sourceOnlineID = sourceBlock.onlineID;
                     if (!targetOnlineID || !sourceOnlineID) {
@@ -270,6 +270,7 @@ export class Circuit extends FunctionBlock {
                 }
         }
         this.onModificationUploaded?.(type, success, blockOfflineID, ioNum);
+        return success;
     }
     ///////////////////////////////
     //      STATIC FUNCTIONS

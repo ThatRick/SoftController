@@ -8,7 +8,6 @@ export class CircuitTrace {
         outputPin.onPinUpdated = this.updateColor.bind(this);
     }
     updateColor() {
-        console.log('CircuitTrace: update pin color', this.id, this.outputPin.color);
         this.layer.setTraceColor(this.id, this.outputPin.color);
     }
     update() {

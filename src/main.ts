@@ -7,6 +7,7 @@ import { Circuit } from './CircuitView/CircuitModel.js';
 import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
 import IControllerInterface from './Controller/ControllerInterface.js';
 import { defaultStyle } from './CircuitView/CircuitTypes.js';
+import * as HTML from './lib/HTML.js'
 
 function createTerminal(div: HTMLElement) {
     return (text: string) => {
@@ -23,13 +24,7 @@ function createTerminal(div: HTMLElement) {
 function createControlButtonBar(buttons: {name: string, fn: () => void}[]) {
     const nav = document.getElementById('navi');
     buttons.forEach(btn => {
-        const elem = document.createElement('button') as HTMLButtonElement;
-        elem.textContent = btn.name;
-        elem.onclick = ev => {
-            ev.preventDefault()
-            btn.fn()
-        };
-        nav.appendChild(elem)
+        const button = new HTML.Button(nav, btn.name, 10, btn.fn)
     })
 }
 
@@ -89,8 +84,10 @@ async function app()
 
     const circuit = await Circuit.downloadOnline(cpu, circuitID)
     
-
     const view = testGUI(circuit)
+
+    await cpu.stepController(20)
+    await circuit.readOnlineIOValues()
 
     createControlButtonBar([
         // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
@@ -112,9 +109,21 @@ async function app()
         //     terminal(datablockTableToString(cpuLink));
         // })},
         { name: 'Step', fn: async () => {
-            terminal('CLEAR')
             await cpu.stepController(20)
             await circuit.readOnlineIOValues()
+        }},
+        { name: 'Upload', fn: async () => {
+            console.log('Upload changes')
+            await circuit.uploadChanges()
+            console.log('Step controller')
+            await cpu.stepController(20)
+            console.log('Read online values')
+            await circuit.readOnlineIOValues()
+        }},
+        { name: 'debug', fn: async () => {
+            await circuit.readOnlineIOValues()
+            terminal(await systemSectorToString(cpu))
+            terminal(await datablockTableToString(cpu))
             terminal(await taskToString(cpu, taskId))
             circuit.blocks.forEach(async block => terminal(await functionToString(cpu, block.onlineID)));
         }},

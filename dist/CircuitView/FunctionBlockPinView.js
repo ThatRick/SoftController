@@ -80,7 +80,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
         }
         this.pin.style.backgroundColor = this.color;
         this.valueField.style.color = this.color;
-        console.log('update pin:', this.id, this.io.value, this.onPinUpdated);
+        //console.log('update pin:', this.id, this.io.value, this.onPinUpdated)
         this.onPinUpdated?.();
     }
     selected() {

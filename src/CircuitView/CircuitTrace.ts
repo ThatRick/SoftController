@@ -25,7 +25,6 @@ export class CircuitTrace {
     id: ID
 
     updateColor() {
-        console.log('CircuitTrace: update pin color', this.id, this.outputPin.color)
         this.layer.setTraceColor(this.id, this.outputPin.color)
     }
 

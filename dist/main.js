@@ -6,6 +6,7 @@ import { vec2 } from './Lib/Vector2.js';
 import { Circuit } from './CircuitView/CircuitModel.js';
 import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
 import { defaultStyle } from './CircuitView/CircuitTypes.js';
+import * as HTML from './lib/HTML.js';
 function createTerminal(div) {
     return (text) => {
         if (text == 'CLEAR') {
@@ -21,13 +22,7 @@ function createTerminal(div) {
 function createControlButtonBar(buttons) {
     const nav = document.getElementById('navi');
     buttons.forEach(btn => {
-        const elem = document.createElement('button');
-        elem.textContent = btn.name;
-        elem.onclick = ev => {
-            ev.preventDefault();
-            btn.fn();
-        };
-        nav.appendChild(elem);
+        const button = new HTML.Button(nav, btn.name, 10, btn.fn);
     });
 }
 function setGridTemplateRows(gridContainer, gridRowHeights) {
@@ -68,6 +63,8 @@ async function app() {
     terminal(await datablockTableToString(cpu));
     const circuit = await Circuit.downloadOnline(cpu, circuitID);
     const view = testGUI(circuit);
+    await cpu.stepController(20);
+    await circuit.readOnlineIOValues();
     createControlButtonBar([
         // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
         // { name: 'Load', fn: () => loadFromJSON(obj => {
@@ -86,9 +83,21 @@ async function app() {
         //     terminal(datablockTableToString(cpuLink));
         // })},
         { name: 'Step', fn: async () => {
-                terminal('CLEAR');
                 await cpu.stepController(20);
                 await circuit.readOnlineIOValues();
+            } },
+        { name: 'Upload', fn: async () => {
+                console.log('Upload changes');
+                await circuit.uploadChanges();
+                console.log('Step controller');
+                await cpu.stepController(20);
+                console.log('Read online values');
+                await circuit.readOnlineIOValues();
+            } },
+        { name: 'debug', fn: async () => {
+                await circuit.readOnlineIOValues();
+                terminal(await systemSectorToString(cpu));
+                terminal(await datablockTableToString(cpu));
                 terminal(await taskToString(cpu, taskId));
                 circuit.blocks.forEach(async (block) => terminal(await functionToString(cpu, block.onlineID)));
             } },

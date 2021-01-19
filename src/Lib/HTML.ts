@@ -8,6 +8,38 @@ export function domElement<K extends keyof HTMLElementTagNameMap>(parentDOM: HTM
 
 type TableCellIterator = (cell: HTMLTableCellElement, row: number, col: number) => void
 
+export class Button
+{
+    elem: HTMLDivElement
+    constructor(parentElement: HTMLElement, text: string, charWidth: number, action: () => void) {
+        this.elem = domElement(parentElement, 'div', {
+            color: 'white',
+            margin: '2px',
+            backgroundColor: '#557',
+            border: '1px solid #779',
+            width: text.length * charWidth + 'px',
+            borderRadius: '10%',
+            fontSize: '1em',
+            fontFamily: 'monospace',
+            textAlign: 'center',
+            display: 'inline-block',
+            userSelect: 'none',
+            cursor: 'pointer'
+        })
+        this.elem.textContent = text
+        this.elem.onpointerenter = ev => this.elem.style.backgroundColor = '#779'
+        this.elem.onpointerleave = ev => this.elem.style.backgroundColor = '#557'
+        this.elem.onclick = (ev) => {
+            this.elem.style.backgroundColor = '#99A'
+            setTimeout(() => {
+                this.elem.style.backgroundColor = '#557'
+            }, 30)
+            action()
+        }
+    }
+
+}
+
 export class Table
 {
     table: HTMLTableElement
