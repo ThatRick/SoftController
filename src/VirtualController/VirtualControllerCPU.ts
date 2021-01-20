@@ -1,6 +1,6 @@
 
 import {readStruct, setStructElement, writeStruct} from '../Lib/TypedStructs.js'
-import {ID, IORef, IOFlag, IODataType, getIOType, setIOType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF} from '../Controller/ControllerDataTypes.js'
+import {ID, IORef, IOFlag, IODataType, getIODataType, setIODataType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF} from '../Controller/ControllerDataTypes.js'
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionCallParams} from '../Controller/ControllerDataTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from '../Controller/ControllerDataTypes.js'
 import {ITask, TaskStruct, taskStructByteLength} from '../Controller/ControllerDataTypes.js'
@@ -657,10 +657,10 @@ export default class VirtualController
             const ioFlag = this.bytes[pointers.flags + i];
             if (inputRef > 0) {
                 let value = this.floats[inputRef];
-                if (getIOType(ioFlag) == IODataType.BINARY) {
+                if (getIODataType(ioFlag) == IODataType.BINARY) {
                     value = (value && 1) ^ (ioFlag & IOFlag.INVERTED && 1)
                 }
-                else if (getIOType(ioFlag) == IODataType.INTEGER) {
+                else if (getIODataType(ioFlag) == IODataType.INTEGER) {
                     value = Math.floor(value)
                 }
                 this.floats[pointers.inputs + i] = value;
@@ -703,10 +703,10 @@ export default class VirtualController
                 const ioFlag = this.bytes[outputFlags + i];
                 if (outputRef > 0) {
                     let value = this.floats[outputRef];
-                    if (getIOType(ioFlag) == IODataType.BINARY) {
+                    if (getIODataType(ioFlag) == IODataType.BINARY) {
                         value = (value) ? 1 : 0;
                     }
-                    else if (getIOType(ioFlag) == IODataType.INTEGER) {
+                    else if (getIODataType(ioFlag) == IODataType.INTEGER) {
                         value = Math.floor(value)
                     }
                     this.floats[pointers.outputs + i] = value;

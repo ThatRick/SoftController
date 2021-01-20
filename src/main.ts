@@ -1,9 +1,9 @@
 import { getFunction, getFunctionName } from './FunctionCollection.js'
-import { DatablockType, IOFlag, IODataType, getIOType, IORef } from './Controller/ControllerDataTypes.js';
+import { DatablockType, IOFlag, IODataType, getIODataType, IORef } from './Controller/ControllerDataTypes.js';
 // import { createControllerBlueprint, getBlueprintResourceNeeded, loadControllerBlueprint } from './SoftController/SoftSerializer.js'
 import CircuitView from './CircuitView/CircuitView.js'
 import Vec2, {vec2} from './Lib/Vector2.js'
-import { Circuit } from './CircuitView/CircuitModel.js';
+import { Circuit } from './CircuitView/CircuitState.js';
 import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
 import IControllerInterface from './Controller/ControllerInterface.js';
 import { defaultStyle } from './CircuitView/CircuitTypes.js';
@@ -82,7 +82,7 @@ async function app()
     terminal(await systemSectorToString(cpu))
     terminal(await datablockTableToString(cpu));
 
-    const circuit = await Circuit.downloadOnline(cpu, circuitID)
+    const circuit = await Circuit.loadOnline(cpu, circuitID)
     
     const view = testGUI(circuit)
 
@@ -107,21 +107,21 @@ async function app()
         // })},
         { name: 'Update', fn: async () => {
             await cpu.stepController(20)
-            await circuit.readOnlineIOValues()
+            await circuit.readOnlineValues()
         }},
         { name: 'Step', fn: async () => {
             await cpu.stepController(20)
         }},
         { name: 'Read', fn: async () => {
-            await circuit.readOnlineIOValues()
+            await circuit.readOnlineValues()
         }},
         { name: 'Upload', fn: async () => {
             console.log('Upload changes')
-            await circuit.uploadChanges()
+            await circuit.sendChanges()
             console.log('Step controller')
             await cpu.stepController(20)
             console.log('Read online values')
-            await circuit.readOnlineIOValues()
+            await circuit.readOnlineValues()
         }},
         { name: 'debug', fn: async () => {
             terminal(await systemSectorToString(cpu))
@@ -257,7 +257,7 @@ async function functionToString(cpu: IControllerInterface, funcID: number) {
 
     function ioValue(i: number): string {
         const flags = funcBlock.ioFlags[i];
-        const ioType = getIOType(flags)
+        const ioType = getIODataType(flags)
         const value = (ioType == IODataType.BINARY || ioType == IODataType.INTEGER)
                     ? funcBlock.ioValues[i].toFixed(0)
                     : funcBlock.ioValues[i].toPrecision(precision);

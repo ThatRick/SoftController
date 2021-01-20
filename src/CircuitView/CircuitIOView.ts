@@ -1,23 +1,25 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
-import { FunctionBlock, FunctionBlockIO, Input, Output } from './CircuitModel.js'
+import { Circuit, FunctionBlock } from './CircuitState.js'
 import CircuitView from './CircuitView.js'
 import { Table } from '../Lib/HTML.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'
 import { CircuitElement, ElementType } from './CircuitTypes.js'
 
-export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildElement implements CircuitElement
+export default class CircuitIOView extends GUIChildElement implements CircuitElement
 {
     type: ElementType
-    get id(): number { return this.io.id }
+    get id(): number { return this.ioPin.id }
     gui: CircuitView
 
     isDraggable = true
     isSelectable = true
 
-    io: T
-    ioPin: FunctionBlockPinView<T>
+    ioPin: FunctionBlockPinView
+
+    state: Circuit
+    ioNum: number
 
     // Restrict horizontal movement
     setPos(v: Vec2) {
@@ -25,7 +27,7 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
         super.setPos(v)
     }
 
-    constructor(parent: IViewContainerGUI, io: T, pos: Vec2)
+    constructor(parent: IViewContainerGUI, circuitState: Circuit, ioNum: number, pos: Vec2)
     {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
             borderBottom: '1px solid',
@@ -37,8 +39,9 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
             fontFamily: 'monospace',
             userSelect: 'none',
         }, true)
-        this.io = io
-        this.type = (this.io.pinType == 'inputPin') ? 'circuitInput' : 'circuitOutput'
+        this.state = circuitState
+        this.ioNum = ioNum
+        this.type = (ioNum < circuitState.funcData.inputCount) ? 'circuitInput' : 'circuitOutput'
 
         this.build()
     }
@@ -49,12 +52,12 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
     }
 
     createPin() {
-        const pos = (this.io.pinType == 'inputPin') ? vec2(this.gui.style.IOAreaWidth, 0) : vec2(-1, 0)
-        this.ioPin = new FunctionBlockPinView(this.children, this.io, pos, true)
+        const pos = (this.type == 'circuitInput') ? vec2(this.gui.style.IOAreaWidth, 0) : vec2(-1, 0)
+        this.ioPin = new FunctionBlockPinView(this.children, this.state, this.ioNum, pos, true)
     }
 
     createIOName() {
-        this.DOMElement.textContent = this.io.name
+        this.DOMElement.textContent = this.ioNum.toString()
         this.setStyle({
             textAlign: 'center',
             verticalAlign: 'middle',
@@ -62,11 +65,11 @@ export default class CircuitIOView<T extends FunctionBlockIO> extends GUIChildEl
         })
     }
 
-    selected() {
+    onSelected() {
         this.DOMElement.style.backgroundColor = this.gui.style.colorSelected
     }
 
-    unselected() {
+    onUnselected() {
         this.DOMElement.style.backgroundColor = this.gui.style.colorBlock
     }
 

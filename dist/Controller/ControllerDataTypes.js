@@ -31,9 +31,9 @@ export function alignBytes(addr, bytes = BYTES_PER_VALUE) {
     return Math.ceil(addr / bytes) * bytes;
 }
 const IOTypeBitMask = (1 /* TYPE_BIT0 */ | 2 /* TYPE_BIT1 */ | 4 /* TYPE_BIT2 */);
-export function getIOType(flags) {
+export function getIODataType(flags) {
     return (flags & IOTypeBitMask);
 }
-export function setIOType(flags, ioType) {
+export function setIODataType(flags, ioType) {
     return (flags & ~IOTypeBitMask) | ioType;
 }

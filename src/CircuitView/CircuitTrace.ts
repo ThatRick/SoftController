@@ -1,6 +1,5 @@
 import { ID } from "../Controller/ControllerDataTypes"
 import { Vec2 } from "../GUI/GUITypes"
-import { Input, Output } from "./CircuitModel"
 import { CircuitElement } from "./CircuitTypes"
 import FunctionBlockPinView from "./FunctionBlockPinView"
 
@@ -15,8 +14,8 @@ export interface ICircuitTraceLayer {
 export class CircuitTrace {
     constructor(
         public layer: ICircuitTraceLayer,
-        public outputPin: FunctionBlockPinView<Output>,
-        public inputPin: FunctionBlockPinView<Input>
+        public outputPin: FunctionBlockPinView,
+        public inputPin: FunctionBlockPinView
     ) {
         this.id = inputPin.id
         layer.addTrace(this.id, outputPin.absPos, inputPin.absPos, outputPin.color)

@@ -1,7 +1,7 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
-import { FunctionBlock } from './CircuitState.js'
+import { FunctionBlock, Input, Output } from './CircuitState.js'
 import CircuitView from './CircuitView.js'
 import { Table } from '../Lib/HTML.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'
@@ -10,12 +10,12 @@ import { CircuitElement, ElementType } from './CircuitTypes.js'
 export default class FunctionBlockView extends GUIChildElement implements CircuitElement
 {
     static isMinimal(state: FunctionBlock) {
-        return (state.func?.inputs[0].name == undefined)
+        return (state.inputs[0].name == undefined)
     }
 
     static getBlockSize(state: FunctionBlock) {
-        const w = (FunctionBlockView.isMinimal(state)) ? 3 : 6
-        const h = Math.max(state.funcData.inputCount, state.funcData.outputCount)
+        const w = (FunctionBlockView.isMinimal(state) || !state.outputs?.[0]?.name) ? 3 : 6
+        const h = Math.max(state.inputs.length, state.outputs.length)
         return vec2(w, h)
     }
 
@@ -30,10 +30,8 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
     state: FunctionBlock
     isMinimal: boolean
     
-    inputPins: FunctionBlockPinView[] = []
-    outputPins: FunctionBlockPinView[] = []
-
-    name: string
+    inputPins: FunctionBlockPinView<Input>[] = []
+    outputPins: FunctionBlockPinView<Output>[] = []
     
     private IONameTable: Table
 
@@ -48,7 +46,6 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         
         this.state = state
         this.isMinimal = FunctionBlockView.isMinimal(state)
-        this.name = state.func?.name
 
         this.build(this.gui)
     }
@@ -59,28 +56,23 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
             fontSize: Math.round(gui.scale.y * 0.65)+'px'
         })
 
-        this.createIONames()
-        this.createPins()
+        this.createIONames(gui)
+        this.createPins(gui)
     }
 
-    createPins() {
-        const state = this.state
-        for (let inputNum = 0; inputNum < state.funcData.inputCount; inputNum++) {
-            const ioNum = inputNum
-            const name = (state.func) ? state.func.inputs[inputNum]?.name : inputNum.toString()
-            this.inputPins[inputNum] = new FunctionBlockPinView(this.children, state, ioNum, vec2(-1, inputNum))
-        }
-        for (let outputNum = 0; outputNum < state.funcData.outputCount; outputNum++) {
-            const ioNum = state.funcData.inputCount + outputNum
-            const name = (state.func) ? state.func.outputs[outputNum]?.name : outputNum.toString()
-            this.outputPins[outputNum] = new FunctionBlockPinView(this.children, state, ioNum, vec2(this.size.x, outputNum))
-        }
+    createPins(gui: CircuitView) {
+
+        this.state.inputs.forEach((input, i) => {
+            this.inputPins[i] = new FunctionBlockPinView(this.children, input, vec2(-1, i))
+        })
+        this.state.outputs.forEach((output, i) => {
+            this.outputPins[i] = new FunctionBlockPinView(this.children, output, vec2(this.size.x, i))
+        })
     }
 
-    createIONames() {
-        const gui = this.gui
+    createIONames(gui: CircuitView) {
         if (this.isMinimal) {
-            this.DOMElement.textContent = this.name
+            this.DOMElement.textContent = this.state.name
             this.setStyle({
                 textAlign: 'center',
                 verticalAlign: 'middle',
@@ -108,8 +100,8 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
                     color: 'white'
                 },
                 cellIterator: (cell, row, col) => {
-                    cell.textContent = (col == INPUT) ? (this.state?.func?.inputs[row]?.name ?? ((row == 0 && this.state) ? this.name : 'FUNC')) 
-                                                      : this.state?.func?.outputs[row]?.name
+                    cell.textContent = (col == INPUT) ? (this.state?.inputs[row]?.name ?? ((row == 0 && this.state) ? this.state.name : 'FUNC')) 
+                                                      : this.state?.outputs[row]?.name
                     cell.style.textAlign = (col == INPUT) ? 'left' : 'right'
                     cell.style[(col == INPUT ? 'paddingLeft' : 'paddingRight')] = Math.round(gui.scale.x * 0.3)+'px'
                 }

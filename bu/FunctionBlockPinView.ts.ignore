@@ -1,65 +1,52 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
-import { FunctionBlock } from './CircuitState.js'
+import { FunctionBlock, FunctionBlockIO } from './CircuitState.js'
 import { domElement } from '../Lib/HTML.js'
 import { CircuitElement, ElementType, PinType } from './CircuitTypes.js'
 import CircuitView from './CircuitView.js'
-import { getIODataType, IODataType } from '../Controller/ControllerDataTypes.js'
+import { IODataType } from '../Controller/ControllerDataTypes.js'
 
 
-export default class FunctionBlockPinView extends GUIChildElement implements CircuitElement
+export default class FunctionBlockPinView<T extends FunctionBlockIO> extends GUIChildElement implements CircuitElement
 {
     type: ElementType
+    get id(): number { return this.io.id }
     gui: CircuitView
 
     isSelectable = true
     isDraggable = true
 
-    funcState: FunctionBlock
-    ioNum: number
-    pinType: PinType
-
+    io: T
     pin: HTMLDivElement
     valueField: HTMLDivElement
 
     color: string
 
+    dataType: IODataType
+
     isInternalCircuitIO: boolean
 
-    _name: string
-
-    get name()  { return this._name }
-    get dataType()  { return getIODataType(this.flags) }
-    get flags() { return this.funcState.funcData.ioFlags[this.ioNum] }
-    get value() { return this.funcState.funcData.ioValues[this.ioNum] }
-    get id()    { return this.funcState.offlineID * 1000 + this.ioNum }
-    
     get blockID() {
-        return this.funcState.offlineID
+        return this.io.funcBlock.offlineID
     }
-    setValue(value: number) { this.funcState.parentCircuit.setIOValue(this.blockID, this.ioNum, value) }
-    
-    constructor(parent: IViewContainerGUI, funcState: FunctionBlock, ioNum: number, pos: Vec2, isInternalCircuitIO = false) {
+
+    constructor(parent: IViewContainerGUI, io: T, pos: Vec2, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1))
-        this.funcState = funcState
-        this.ioNum = ioNum
-        this.pinType = (ioNum < funcState.funcData.inputCount) ? 'inputPin' : 'outputPin'
 
-        this.type = (!isInternalCircuitIO && this.pinType == 'inputPin' || isInternalCircuitIO && this.pinType == 'outputPin')
+        this.io = io
+        this.type = (!isInternalCircuitIO && io.pinType == 'inputPin' || isInternalCircuitIO && io.pinType == 'outputPin')
             ? 'inputPin' : 'outputPin'
-
+        this.dataType = this.io.dataType
         this.isInternalCircuitIO = isInternalCircuitIO
         this.create(this.gui)
     }
-
-    get connection() { return this.funcState.funcData.inputRefs[this.ioNum] }
 
     private create(gui: CircuitView) {
         this.createPinElement(gui)
         this.createValueField(gui)
         this.updatePin()
-        this.funcState.onIOChanged[this.ioNum] = this.updatePin.bind(this)
+        this.io.onValueChanged = this.updatePin.bind(this)
     }
 
     createPinElement(gui: CircuitView) {
@@ -105,13 +92,12 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
 
     updatePin() {
-        console.log('update pin')
-        this.valueField.textContent = this.value.toString()
+        this.valueField.textContent = this.io.value.toString()
         
         const style = this.gui.style
         
         switch (this.dataType) {
-            case IODataType.BINARY:   this.color = (this.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1; break
+            case IODataType.BINARY:   this.color = (this.io.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1; break
             case IODataType.INTEGER:  this.color = style.colorPinInteger; break
             case IODataType.FLOAT:    this.color = style.colorPinFloat; break
         }

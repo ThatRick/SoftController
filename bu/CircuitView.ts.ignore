@@ -2,12 +2,12 @@ import Vec2, { vec2 } from '../Lib/Vector2.js'
 import GUIView from '../GUI/GUIView.js'
 import CircuitGrid from './CircuitGrid.js'
 import { CircuitElement, CircuitStyle, defaultStyle, ElementType } from './CircuitTypes.js'
-import { Circuit, FunctionBlock, IOConnection } from './CircuitState.js'
+import { Circuit, FunctionBlock, FunctionBlockIO, Input, IOConnection, Output } from './CircuitState.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import * as HTML from '../Lib/HTML.js'
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import TraceLayerBezier from './TraceLayerBezier.js'
-import { ID, IORef } from '../Controller/ControllerDataTypes.js'
+import { ID } from '../Controller/ControllerDataTypes.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'
 import GUIContainer from '../GUI/GUIContainer.js'
 import { CircuitTrace, ICircuitTraceLayer } from './CircuitTrace.js'
@@ -63,22 +63,12 @@ class IOArea extends GUIChildElement implements CircuitElement {
     }
     createCircuitIOViews(circuit: Circuit) {
         this.circuit = circuit
-        let ioNumStart: number
-        let ioNumEnd: number
-        if (this.type == 'inputArea') {
-            ioNumStart = 0
-            ioNumEnd = circuit.funcData.inputCount - 1
-        } else {
-            ioNumStart = circuit.funcData.inputCount
-            ioNumEnd = ioNumStart + circuit.funcData.outputCount - 1
-        }
-        for (let ioNum = ioNumStart; ioNum <= ioNumEnd; ioNum++) {
-            this.ioViews.push(new CircuitIOView(this.children, circuit, ioNum, vec2(0, ioNum + 2) ))
-        }
+        const ioList = (this.type == 'inputArea') ? circuit.inputs : circuit.outputs
+        this.ioViews = ioList.map((io, i) => new CircuitIOView(this.children, io, vec2(0, i + 2) ))
     }
     circuit: Circuit
     type: ElementType
-    ioViews: CircuitIOView[] = []
+    ioViews: CircuitIOView<FunctionBlockIO>[] = []
     get id(): number { return this.circuit.offlineID }
     gui: CircuitView
 }
@@ -172,9 +162,10 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         // Create connection traces
         this.blocks.forEach(funcBlockElem => {
             funcBlockElem.inputPins.forEach(inputPin => {
-                if (inputPin.connection) {
-                    const outputPin = this.getConnectionSourcePin(inputPin.connection)
-                    this.createConnectionTrace(outputPin, inputPin)
+                const conn = inputPin.io.connection
+                if (conn) {
+                    const outputPin = this.getConnectionSourcePin(conn)
+                    this.createConnectionTrace(outputPin, inputPin, conn.inverted)
                 }
             })
         })
@@ -185,19 +176,19 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         this.blocks.set(funcBlock.offlineID, block)
     }
 
-    connect(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false)
+    connect(outputPin: FunctionBlockPinView<Output>, inputPin: FunctionBlockPinView<Input>, inverted = false)
     {
         console.log('Connect', outputPin.id, inputPin.id)
-        this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum)
+        this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.io.ioNum, outputPin.blockID, outputPin.io.ioNum)
         this.createConnectionTrace(outputPin, inputPin, inverted)
     }
-    disconnect(inputPin: FunctionBlockPinView) {
-        this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.ioNum)
+    disconnect(inputPin: FunctionBlockPinView<Input>) {
+        this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.io.ioNum)
         this.deleteConnectionTrace(inputPin.id)
     }
 
-    createConnectionTrace(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false) {
-        if (inputPin.connection) {
+    createConnectionTrace(outputPin: FunctionBlockPinView<Output>, inputPin: FunctionBlockPinView<Input>, inverted = false) {
+        if (inputPin.io.connection) {
             this.deleteConnectionTrace(inputPin.id)
         }
         const trace = new CircuitTrace(this.traceLayer, outputPin, inputPin)
@@ -213,13 +204,13 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     }
 
     // Get connection source pin element
-    getConnectionSourcePin(conn: IORef) {
-        let outputPin: FunctionBlockPinView
-        if (conn.id == -1) {
+    getConnectionSourcePin(conn: IOConnection) {
+        let outputPin: FunctionBlockPinView<Output>
+        if (conn.sourceBlockID == -1) {
             outputPin = this.inputArea.ioViews[conn.ioNum].ioPin
         }
         else {
-            const sourceBlockElem = this.blocks.get(conn.id)
+            const sourceBlockElem = this.blocks.get(conn.sourceBlockID)
             outputPin = sourceBlockElem.outputPins[conn.ioNum - sourceBlockElem.inputPins.length]
         }
         return outputPin
@@ -286,8 +277,8 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
             case 'inputPin': {
                 const targetElem = this.pointer.targetElem
                 if (targetElem?.type == 'outputPin') {
-                    const outputPin = targetElem as FunctionBlockPinView
-                    const inputPin = elem as FunctionBlockPinView
+                    const outputPin = targetElem as FunctionBlockPinView<Output>
+                    const inputPin = elem as FunctionBlockPinView<Input>
                     this.connect(outputPin, inputPin)
                 }
                 this.traceLayer.deleteTrace(this.connectingTraceID)
@@ -297,8 +288,8 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
             case 'outputPin': {
                 const targetElem = this.pointer.targetElem
                 if (targetElem?.type == 'inputPin') {
-                    const outputPin = elem as FunctionBlockPinView
-                    const inputPin = targetElem as FunctionBlockPinView
+                    const outputPin = elem as FunctionBlockPinView<Output>
+                    const inputPin = targetElem as FunctionBlockPinView<Input>
                     this.connect(outputPin, inputPin)
                 }
                 this.traceLayer.deleteTrace(this.connectingTraceID)
@@ -453,7 +444,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         {
             case 'inputPin':
             {
-                this.disconnect(elem as FunctionBlockPinView)
+                this.disconnect(elem as FunctionBlockPinView<Input>)
             }
         }
     }

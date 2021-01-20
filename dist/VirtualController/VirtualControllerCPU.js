@@ -1,5 +1,5 @@
 import { readStruct, writeStruct } from '../Lib/TypedStructs.js';
-import { getIOType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF } from '../Controller/ControllerDataTypes.js';
+import { getIODataType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF } from '../Controller/ControllerDataTypes.js';
 import { FunctionHeaderStruct, functionHeaderByteLength } from '../Controller/ControllerDataTypes.js';
 import { DatablockHeaderStruct, datablockHeaderByteLength } from '../Controller/ControllerDataTypes.js';
 import { TaskStruct, taskStructByteLength } from '../Controller/ControllerDataTypes.js';
@@ -533,10 +533,10 @@ export default class VirtualController {
             const ioFlag = this.bytes[pointers.flags + i];
             if (inputRef > 0) {
                 let value = this.floats[inputRef];
-                if (getIOType(ioFlag) == 2 /* BINARY */) {
+                if (getIODataType(ioFlag) == 2 /* BINARY */) {
                     value = (value && 1) ^ (ioFlag & 8 /* INVERTED */ && 1);
                 }
-                else if (getIOType(ioFlag) == 1 /* INTEGER */) {
+                else if (getIODataType(ioFlag) == 1 /* INTEGER */) {
                     value = Math.floor(value);
                 }
                 this.floats[pointers.inputs + i] = value;
@@ -573,10 +573,10 @@ export default class VirtualController {
                 const ioFlag = this.bytes[outputFlags + i];
                 if (outputRef > 0) {
                     let value = this.floats[outputRef];
-                    if (getIOType(ioFlag) == 2 /* BINARY */) {
+                    if (getIODataType(ioFlag) == 2 /* BINARY */) {
                         value = (value) ? 1 : 0;
                     }
-                    else if (getIOType(ioFlag) == 1 /* INTEGER */) {
+                    else if (getIODataType(ioFlag) == 1 /* INTEGER */) {
                         value = Math.floor(value);
                     }
                     this.floats[pointers.outputs + i] = value;

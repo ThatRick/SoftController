@@ -123,10 +123,10 @@ export const enum IOFlag
 
 const IOTypeBitMask = (IOFlag.TYPE_BIT0 | IOFlag.TYPE_BIT1 | IOFlag.TYPE_BIT2)
 
-export function getIOType(flags: number) {
+export function getIODataType(flags: number) {
     return (flags & IOTypeBitMask) as IODataType
 }
 
-export function setIOType(flags: number, ioType: IODataType) {
+export function setIODataType(flags: number, ioType: IODataType) {
     return (flags & ~IOTypeBitMask) | ioType
 }

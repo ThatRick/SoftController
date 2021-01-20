@@ -2,7 +2,7 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import { vec2 } from '../Lib/Vector2.js';
 import FunctionBlockPinView from './FunctionBlockPinView.js';
 export default class CircuitIOView extends GUIChildElement {
-    constructor(parent, io, pos) {
+    constructor(parent, circuitState, ioNum, pos) {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
             borderBottom: '1px solid',
             borderColor: parent.gui.style.colorPanelLines,
@@ -21,11 +21,12 @@ export default class CircuitIOView extends GUIChildElement {
         this.onPointerLeave = () => {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
         };
-        this.io = io;
-        this.type = (this.io.pinType == 'inputPin') ? 'circuitInput' : 'circuitOutput';
+        this.state = circuitState;
+        this.ioNum = ioNum;
+        this.type = (ioNum < circuitState.funcData.inputCount) ? 'circuitInput' : 'circuitOutput';
         this.build();
     }
-    get id() { return this.io.id; }
+    get id() { return this.ioPin.id; }
     // Restrict horizontal movement
     setPos(v) {
         v.x = this._pos.x;
@@ -36,21 +37,21 @@ export default class CircuitIOView extends GUIChildElement {
         this.createPin();
     }
     createPin() {
-        const pos = (this.io.pinType == 'inputPin') ? vec2(this.gui.style.IOAreaWidth, 0) : vec2(-1, 0);
-        this.ioPin = new FunctionBlockPinView(this.children, this.io, pos, true);
+        const pos = (this.type == 'circuitInput') ? vec2(this.gui.style.IOAreaWidth, 0) : vec2(-1, 0);
+        this.ioPin = new FunctionBlockPinView(this.children, this.state, this.ioNum, pos, true);
     }
     createIOName() {
-        this.DOMElement.textContent = this.io.name;
+        this.DOMElement.textContent = this.ioNum.toString();
         this.setStyle({
             textAlign: 'center',
             verticalAlign: 'middle',
             lineHeight: this._sizeScaled.y + 'px'
         });
     }
-    selected() {
+    onSelected() {
         this.DOMElement.style.backgroundColor = this.gui.style.colorSelected;
     }
-    unselected() {
+    onUnselected() {
         this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
     }
     toFront() {

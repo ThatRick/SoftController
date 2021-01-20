@@ -3,8 +3,8 @@ import { vec2 } from '../Lib/Vector2.js';
 import { Table } from '../Lib/HTML.js';
 import FunctionBlockPinView from './FunctionBlockPinView.js';
 export default class FunctionBlockView extends GUIChildElement {
-    constructor(circuitView, pos, funcBlock) {
-        super(circuitView, 'div', pos, FunctionBlockView.getBlockSize(funcBlock), {
+    constructor(circuitView, pos, state) {
+        super(circuitView, 'div', pos, FunctionBlockView.getBlockSize(state), {
             color: 'white',
             boxSizing: 'border-box',
             fontFamily: 'monospace',
@@ -22,38 +22,45 @@ export default class FunctionBlockView extends GUIChildElement {
         this.onPointerLeave = () => {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
         };
-        this.func = funcBlock;
-        this.isMinimal = FunctionBlockView.isMinimal(funcBlock);
+        this.state = state;
+        this.isMinimal = FunctionBlockView.isMinimal(state);
+        this.name = state.func?.name;
         this.build(this.gui);
     }
-    static isMinimal(func) {
-        return (func.inputs[0].name == undefined);
+    static isMinimal(state) {
+        return (state.func?.inputs[0].name == undefined);
     }
-    static getBlockSize(func) {
-        const w = (FunctionBlockView.isMinimal(func) || !func.outputs?.[0]?.name) ? 3 : 6;
-        const h = Math.max(func.inputs.length, func.outputs.length);
+    static getBlockSize(state) {
+        const w = (FunctionBlockView.isMinimal(state)) ? 3 : 6;
+        const h = Math.max(state.funcData.inputCount, state.funcData.outputCount);
         return vec2(w, h);
     }
-    get id() { return this.func.offlineID; }
+    get id() { return this.state.offlineID; }
     build(gui) {
         this.setStyle({
             backgroundColor: this.gui.style.colorBlock,
             fontSize: Math.round(gui.scale.y * 0.65) + 'px'
         });
-        this.createIONames(gui);
-        this.createPins(gui);
+        this.createIONames();
+        this.createPins();
     }
-    createPins(gui) {
-        this.func.inputs.forEach((input, i) => {
-            this.inputPins[i] = new FunctionBlockPinView(this.children, input, vec2(-1, i));
-        });
-        this.func.outputs.forEach((output, i) => {
-            this.outputPins[i] = new FunctionBlockPinView(this.children, output, vec2(this.size.x, i));
-        });
+    createPins() {
+        const state = this.state;
+        for (let inputNum = 0; inputNum < state.funcData.inputCount; inputNum++) {
+            const ioNum = inputNum;
+            const name = (state.func) ? state.func.inputs[inputNum]?.name : inputNum.toString();
+            this.inputPins[inputNum] = new FunctionBlockPinView(this.children, state, ioNum, vec2(-1, inputNum));
+        }
+        for (let outputNum = 0; outputNum < state.funcData.outputCount; outputNum++) {
+            const ioNum = state.funcData.inputCount + outputNum;
+            const name = (state.func) ? state.func.outputs[outputNum]?.name : outputNum.toString();
+            this.outputPins[outputNum] = new FunctionBlockPinView(this.children, state, ioNum, vec2(this.size.x, outputNum));
+        }
     }
-    createIONames(gui) {
+    createIONames() {
+        const gui = this.gui;
         if (this.isMinimal) {
-            this.DOMElement.textContent = this.func.name;
+            this.DOMElement.textContent = this.name;
             this.setStyle({
                 textAlign: 'center',
                 verticalAlign: 'middle',
@@ -79,18 +86,18 @@ export default class FunctionBlockView extends GUIChildElement {
                     color: 'white'
                 },
                 cellIterator: (cell, row, col) => {
-                    cell.textContent = (col == INPUT) ? (this.func?.inputs[row]?.name ?? ((row == 0 && this.func) ? this.func.name : 'FUNC'))
-                        : this.func?.outputs[row]?.name;
+                    cell.textContent = (col == INPUT) ? (this.state?.func?.inputs[row]?.name ?? ((row == 0 && this.state) ? this.name : 'FUNC'))
+                        : this.state?.func?.outputs[row]?.name;
                     cell.style.textAlign = (col == INPUT) ? 'left' : 'right';
                     cell.style[(col == INPUT ? 'paddingLeft' : 'paddingRight')] = Math.round(gui.scale.x * 0.3) + 'px';
                 }
             });
         }
     }
-    selected() {
+    onSelected() {
         this.DOMElement.style.outline = this.gui.style.blockOutlineSelected;
     }
-    unselected() {
+    onUnselected() {
         this.DOMElement.style.outline = this.gui.style.blockOutlineUnselected;
     }
     toFront() {

@@ -40,8 +40,19 @@ class IOArea extends GUIChildElement {
     }
     createCircuitIOViews(circuit) {
         this.circuit = circuit;
-        const ioList = (this.type == 'inputArea') ? circuit.inputs : circuit.outputs;
-        this.ioViews = ioList.map((io, i) => new CircuitIOView(this.children, io, vec2(0, i + 2)));
+        let ioNumStart;
+        let ioNumEnd;
+        if (this.type == 'inputArea') {
+            ioNumStart = 0;
+            ioNumEnd = circuit.funcData.inputCount - 1;
+        }
+        else {
+            ioNumStart = circuit.funcData.inputCount;
+            ioNumEnd = ioNumStart + circuit.funcData.outputCount - 1;
+        }
+        for (let ioNum = ioNumStart; ioNum <= ioNumEnd; ioNum++) {
+            this.ioViews.push(new CircuitIOView(this.children, circuit, ioNum, vec2(0, ioNum + 2)));
+        }
     }
     get id() { return this.circuit.offlineID; }
 }
@@ -199,10 +210,9 @@ export default class CircuitView extends GUIView {
         // Create connection traces
         this.blocks.forEach(funcBlockElem => {
             funcBlockElem.inputPins.forEach(inputPin => {
-                const conn = inputPin.io.connection;
-                if (conn) {
-                    const outputPin = this.getConnectionSourcePin(conn);
-                    this.createConnectionTrace(outputPin, inputPin, conn.inverted);
+                if (inputPin.connection) {
+                    const outputPin = this.getConnectionSourcePin(inputPin.connection);
+                    this.createConnectionTrace(outputPin, inputPin);
                 }
             });
         });
@@ -213,15 +223,15 @@ export default class CircuitView extends GUIView {
     }
     connect(outputPin, inputPin, inverted = false) {
         console.log('Connect', outputPin.id, inputPin.id);
-        this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.io.ioNum, outputPin.blockID, outputPin.io.ioNum);
+        this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum);
         this.createConnectionTrace(outputPin, inputPin, inverted);
     }
     disconnect(inputPin) {
-        this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.io.ioNum);
+        this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.ioNum);
         this.deleteConnectionTrace(inputPin.id);
     }
     createConnectionTrace(outputPin, inputPin, inverted = false) {
-        if (inputPin.io.connection) {
+        if (inputPin.connection) {
             this.deleteConnectionTrace(inputPin.id);
         }
         const trace = new CircuitTrace(this.traceLayer, outputPin, inputPin);
@@ -238,11 +248,11 @@ export default class CircuitView extends GUIView {
     // Get connection source pin element
     getConnectionSourcePin(conn) {
         let outputPin;
-        if (conn.sourceBlockID == -1) {
+        if (conn.id == -1) {
             outputPin = this.inputArea.ioViews[conn.ioNum].ioPin;
         }
         else {
-            const sourceBlockElem = this.blocks.get(conn.sourceBlockID);
+            const sourceBlockElem = this.blocks.get(conn.id);
             outputPin = sourceBlockElem.outputPins[conn.ioNum - sourceBlockElem.inputPins.length];
         }
         return outputPin;
@@ -329,14 +339,14 @@ export default class CircuitView extends GUIView {
     /////////////////////////
     selectElement(elem) {
         this.selectedElements.add(elem);
-        elem.selected();
+        elem.onSelected();
         switch (elem.type) {
             case 'block': { }
         }
     }
     unselectElement(elem) {
         this.selectedElements.delete(elem);
-        elem.unselected();
+        elem.onUnselected();
         switch (elem.type) {
             case 'block': { }
         }

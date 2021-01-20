@@ -16,8 +16,8 @@ export interface CircuitElement extends GUIChildElement
     id:     number
     gui:    CircuitView
 
-    selected?(): void
-    unselected?(): void
+    onSelected?(): void
+    onUnselected?(): void
 }
 
 export interface CircuitStyle

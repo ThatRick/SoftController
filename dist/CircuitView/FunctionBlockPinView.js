@@ -1,8 +1,9 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import { domElement } from '../Lib/HTML.js';
+import { getIODataType } from '../Controller/ControllerDataTypes.js';
 export default class FunctionBlockPinView extends GUIChildElement {
-    constructor(parent, io, pos, isInternalCircuitIO = false) {
+    constructor(parent, funcState, ioNum, pos, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1));
         this.isSelectable = true;
         this.isDraggable = true;
@@ -12,22 +13,29 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.onPointerLeave = (ev) => {
             this.DOMElement.style.filter = 'none';
         };
-        this.io = io;
-        this.type = (!isInternalCircuitIO && io.pinType == 'inputPin' || isInternalCircuitIO && io.pinType == 'outputPin')
+        this.funcState = funcState;
+        this.ioNum = ioNum;
+        this.pinType = (ioNum < funcState.funcData.inputCount) ? 'inputPin' : 'outputPin';
+        this.type = (!isInternalCircuitIO && this.pinType == 'inputPin' || isInternalCircuitIO && this.pinType == 'outputPin')
             ? 'inputPin' : 'outputPin';
-        this.dataType = this.io.dataType;
         this.isInternalCircuitIO = isInternalCircuitIO;
         this.create(this.gui);
     }
-    get id() { return this.io.id; }
+    get name() { return this._name; }
+    get dataType() { return getIODataType(this.flags); }
+    get flags() { return this.funcState.funcData.ioFlags[this.ioNum]; }
+    get value() { return this.funcState.funcData.ioValues[this.ioNum]; }
+    get id() { return this.funcState.offlineID * 1000 + this.ioNum; }
     get blockID() {
-        return this.io.funcBlock.offlineID;
+        return this.funcState.offlineID;
     }
+    setValue(value) { this.funcState.parentCircuit.setIOValue(this.blockID, this.ioNum, value); }
+    get connection() { return this.funcState.funcData.inputRefs[this.ioNum]; }
     create(gui) {
         this.createPinElement(gui);
         this.createValueField(gui);
         this.updatePin();
-        this.io.onValueChanged = this.updatePin.bind(this);
+        this.funcState.onIOChanged[this.ioNum] = this.updatePin.bind(this);
     }
     createPinElement(gui) {
         const size = vec2(0.5, gui.style.traceWidth);
@@ -65,11 +73,12 @@ export default class FunctionBlockPinView extends GUIChildElement {
         });
     }
     updatePin() {
-        this.valueField.textContent = this.io.value.toString();
+        console.log('update pin');
+        this.valueField.textContent = this.value.toString();
         const style = this.gui.style;
         switch (this.dataType) {
             case 2 /* BINARY */:
-                this.color = (this.io.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1;
+                this.color = (this.value == 0) ? style.colorPinBinary0 : style.colorPinBinary1;
                 break;
             case 1 /* INTEGER */:
                 this.color = style.colorPinInteger;
@@ -83,11 +92,11 @@ export default class FunctionBlockPinView extends GUIChildElement {
         //console.log('update pin:', this.id, this.io.value, this.onPinUpdated)
         this.onPinUpdated?.();
     }
-    selected() {
+    onSelected() {
         this.pin.style.outline = this.gui.style.blockOutlineSelected;
         this.pin.style.backgroundColor = this.gui.style.colorSelected;
     }
-    unselected() {
+    onUnselected() {
         this.pin.style.outline = this.gui.style.blockOutlineUnselected;
         this.updatePin();
     }
