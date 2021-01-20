@@ -34,6 +34,7 @@ export class CircuitTrace {
     }
     delete() {
         this.layer.deleteTrace(this.id)
+        this.outputPin.onPinUpdated = undefined
     }
     isConnectedTo(block: CircuitElement) {
         const isConnected = (block.type == 'circuitInput' || block.type == 'circuitOutput')

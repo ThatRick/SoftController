@@ -86,9 +86,6 @@ async function app()
     
     const view = testGUI(circuit)
 
-    await cpu.stepController(20)
-    await circuit.readOnlineIOValues()
-
     createControlButtonBar([
         // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
         // { name: 'Load', fn: () => loadFromJSON(obj => {
@@ -108,8 +105,14 @@ async function app()
         //     terminal(systemSectorToString(cpuLink));
         //     terminal(datablockTableToString(cpuLink));
         // })},
+        { name: 'Update', fn: async () => {
+            await cpu.stepController(20)
+            await circuit.readOnlineIOValues()
+        }},
         { name: 'Step', fn: async () => {
             await cpu.stepController(20)
+        }},
+        { name: 'Read', fn: async () => {
             await circuit.readOnlineIOValues()
         }},
         { name: 'Upload', fn: async () => {
@@ -121,7 +124,6 @@ async function app()
             await circuit.readOnlineIOValues()
         }},
         { name: 'debug', fn: async () => {
-            await circuit.readOnlineIOValues()
             terminal(await systemSectorToString(cpu))
             terminal(await datablockTableToString(cpu))
             terminal(await taskToString(cpu, taskId))

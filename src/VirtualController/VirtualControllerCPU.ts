@@ -439,11 +439,11 @@ export default class VirtualController
     }
 
     connectFunctionInput(funcId: ID, inputNum: number, sourceFuncId: ID, sourceIONum: number, inverted = false) {
-        const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
         const inputRefPointer = this.getFunctionInputRefPointer(funcId, inputNum);
-
-        if (!sourceIOPointer || !inputRefPointer) return false
-
+        
+        const sourceIOPointer = (sourceFuncId) ? this.getFunctionIOPointer(sourceFuncId, sourceIONum) : 0;
+        if (sourceFuncId && !sourceIOPointer) return false
+        
         this.ints[inputRefPointer] = sourceIOPointer;
         if (inverted) this.setFunctionIOFlag(funcId, inputNum, IOFlag.INVERTED);
         

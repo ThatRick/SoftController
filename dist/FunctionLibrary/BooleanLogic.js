@@ -46,7 +46,7 @@ const XOR = {
     run(params, values) {
         const a = values[params.input + 0];
         const b = values[params.input + 1];
-        values[params.output] = ((a && !b) || (a && b)) ? 1 : 0;
+        values[params.output] = ((a && !b) || (!a && b)) ? 1 : 0;
     }
 };
 const NOT = {

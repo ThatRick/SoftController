@@ -1,3 +1,4 @@
+import { vec2 } from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
 import { IChildElementGUI, IViewContainerGUI, IWindowGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
 
@@ -62,10 +63,16 @@ export class GUIChildElement implements IChildElementGUI{
     }
     get pos() { return this._pos.copy() }
 
-    // Absolute position
+    // Element absolute position
     get absPos() {
         const absPos = Vec2.add(this._pos, this.parentContainer.absPos)
         return absPos
+    }
+
+    // Translate Absolute position to relative position
+    relativePixelPos(pos: Vec2) {
+        const bounds = this.DOMElement.getBoundingClientRect();
+        return vec2(pos.x - bounds.x, pos.y - bounds.y)
     }
 
     // Size

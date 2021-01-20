@@ -1,5 +1,18 @@
 import { getFunction } from '../FunctionCollection.js';
 import { getIOType } from '../Controller/ControllerDataTypes.js';
+export var ModificationType;
+(function (ModificationType) {
+    ModificationType[ModificationType["ADD_BLOCK"] = 0] = "ADD_BLOCK";
+    ModificationType[ModificationType["ADD_CIRCUIT_INPUT"] = 1] = "ADD_CIRCUIT_INPUT";
+    ModificationType[ModificationType["ADD_CIRCUIT_OUTPUT"] = 2] = "ADD_CIRCUIT_OUTPUT";
+    ModificationType[ModificationType["SET_IO_VALUE"] = 3] = "SET_IO_VALUE";
+    ModificationType[ModificationType["CONNECT_FUNCTION_INPUT"] = 4] = "CONNECT_FUNCTION_INPUT";
+    ModificationType[ModificationType["CONNECT_CIRCUIT_OUTPUT"] = 5] = "CONNECT_CIRCUIT_OUTPUT";
+    ModificationType[ModificationType["DELETE_BLOCK"] = 6] = "DELETE_BLOCK";
+    ModificationType[ModificationType["DELETE_CIRCUIT_INPUT"] = 7] = "DELETE_CIRCUIT_INPUT";
+    ModificationType[ModificationType["DELETE_CIRCUIT_OUTPUT"] = 8] = "DELETE_CIRCUIT_OUTPUT";
+    ModificationType[ModificationType["DELETE_CONNECTION"] = 9] = "DELETE_CONNECTION";
+})(ModificationType || (ModificationType = {}));
 ///////////////////////////////
 //            IO
 ///////////////////////////////
@@ -37,11 +50,7 @@ export class Input extends FunctionBlockIO {
     defineConnection(sourceBlockID, ioNum, inverted = false) {
         this._ref = { sourceBlockID, ioNum: ioNum, inverted };
     }
-    connect(sourceBlockID, ioNum, inverted = false) {
-        this.defineConnection(sourceBlockID, ioNum, inverted);
-        if (this.funcBlock.onlineID) {
-        }
-    }
+    clearConnection() { this._ref = undefined; }
 }
 ///////////////////////////////
 //          Output
@@ -81,13 +90,12 @@ export class FunctionBlock {
         this.onlineID = id;
         this.cpu = cpu;
     }
-    readOnlineIOValues() {
+    async readOnlineIOValues() {
         if (!this.cpu)
             return;
-        this.cpu.getFunctionBlockIOValues(this.onlineID).then(ioValues => {
-            ioValues.forEach((onlineValue, ioNum) => {
-                this.setIOValue(ioNum, onlineValue, false);
-            });
+        const ioValues = await this.cpu.getFunctionBlockIOValues(this.onlineID);
+        ioValues.forEach((onlineValue, ioNum) => {
+            this.setIOValue(ioNum, onlineValue, false);
         });
     }
     setIOValue(ioNum, value, isOfflineModification = true) {
@@ -101,7 +109,7 @@ export class FunctionBlock {
                 io = this.outputs[ioNum - this.inputs.length];
             io.onValueChanged?.();
             if (isOfflineModification && this.cpu) {
-                this.parentCircuit?.modified(io, 3 /* SET_IO_VALUE */, this.offlineID, ioNum);
+                this.parentCircuit?.modified(io, ModificationType.SET_IO_VALUE, this.offlineID, ioNum);
             }
         }
     }
@@ -153,7 +161,7 @@ export class Circuit extends FunctionBlock {
     constructor(funcData, circuitData) {
         super(funcData, -1);
         this.blocks = [];
-        this.onlineBlocks = new Map();
+        this.blocksByOnlineID = new Map();
         this.modifications = new Map();
         this.circuitData = circuitData;
     }
@@ -172,20 +180,31 @@ export class Circuit extends FunctionBlock {
         this.blocks.push(funcBlock);
         funcBlock.parentCircuit = this;
         if (this.cpu)
-            this.modified(funcBlock, 0 /* ADD_BLOCK */, offlineID);
+            this.modified(funcBlock, ModificationType.ADD_BLOCK, offlineID);
         return funcBlock;
     }
     connectFunctionBlockInput(targetBlockID, inputNum, sourceBlockID, sourceIONum, inverted = false) {
         const targetBlock = this.blocks[targetBlockID];
         const input = targetBlock.inputs[inputNum];
         input.defineConnection(sourceBlockID, sourceIONum, inverted);
+        targetBlock.funcData.inputRefs[inputNum] = { id: sourceBlockID, ioNum: sourceIONum };
         if (this.cpu)
-            this.modified(input, 4 /* CONNECT_FUNCTION_INPUT */, targetBlock.offlineID, input.ioNum);
+            this.modified(input, ModificationType.CONNECT_FUNCTION_INPUT, targetBlock.offlineID, input.ioNum);
+    }
+    disconnectFunctionBlockInput(targetBlockID, inputNum) {
+        const targetBlock = this.blocks[targetBlockID];
+        const input = targetBlock.inputs[inputNum];
+        input.clearConnection();
+        targetBlock.funcData.inputRefs[inputNum] = undefined;
+        if (this.cpu)
+            this.modified(input, ModificationType.DELETE_CONNECTION, targetBlock.offlineID, inputNum);
     }
     // Read IO values from online CPU
     async readOnlineIOValues() {
         await super.readOnlineIOValues();
-        this.blocks.forEach(async (block) => await block.readOnlineIOValues());
+        for (const block of this.blocks) {
+            await block.readOnlineIOValues();
+        }
     }
     // Load function blocks from online CPU
     async loadOnlineFunctionBlocks() {
@@ -194,7 +213,7 @@ export class Circuit extends FunctionBlock {
             return;
         }
         // Set self to online blocks for connecting circuit inputs to block IO
-        this.onlineBlocks.set(this.onlineID, this);
+        this.blocksByOnlineID.set(this.onlineID, this);
         // Get first free offline ID
         let offlineID = this.blocks.length;
         // Load circuit's function blocks from CPU
@@ -202,18 +221,20 @@ export class Circuit extends FunctionBlock {
             const data = await FunctionBlock.downloadOnlineData(this.cpu, onlineID);
             const block = new FunctionBlock(data, offlineID++);
             block.connectOnline(this.cpu, onlineID);
-            this.onlineBlocks.set(onlineID, block);
+            this.blocksByOnlineID.set(onlineID, block);
             return block;
         }));
         // Connect loaded function blocks
         this.blocks.forEach(block => {
-            block.funcData.inputRefs.forEach((ioRef, i) => {
+            block.funcData.inputRefs.forEach((ioRef, i, ioRefs) => {
                 if (ioRef) {
                     const input = block.inputs[i];
-                    const sourceBlock = this.onlineBlocks.get(ioRef.id);
+                    const sourceBlock = this.blocksByOnlineID.get(ioRef.id);
                     if (sourceBlock) {
                         const inverted = !!(input.flags & 8 /* INVERTED */);
                         input.defineConnection(sourceBlock.offlineID, ioRef.ioNum, inverted);
+                        // Change block reference form online to offline ID
+                        ioRefs[i].id = sourceBlock.offlineID;
                     }
                     else
                         console.error('Connect: source block undefined');
@@ -235,14 +256,14 @@ export class Circuit extends FunctionBlock {
         let success;
         let error;
         switch (type) {
-            case 3 /* SET_IO_VALUE */:
+            case ModificationType.SET_IO_VALUE:
                 {
                     const block = (blockOfflineID == -1) ? this : this.blocks[blockOfflineID];
                     const value = block.funcData.ioValues[ioNum];
                     success = await this.cpu.setFunctionBlockIOValue(block.onlineID, ioNum, value);
                     break;
                 }
-            case 0 /* ADD_BLOCK */:
+            case ModificationType.ADD_BLOCK:
                 {
                     const block = this.blocks[blockOfflineID];
                     const data = block.funcData;
@@ -253,22 +274,28 @@ export class Circuit extends FunctionBlock {
                     }
                     break;
                 }
-            case 4 /* CONNECT_FUNCTION_INPUT */:
+            case ModificationType.CONNECT_FUNCTION_INPUT:
                 {
                     const targetBlock = this.blocks[blockOfflineID];
-                    const targetInput = targetBlock.inputs[ioNum];
-                    const connection = targetInput.connection;
-                    const sourceBlock = (connection.sourceBlockID == -1) ? this : this.blocks[connection.sourceBlockID];
+                    const connection = targetBlock.funcData.inputRefs[ioNum];
+                    const sourceBlock = (connection.id == -1) ? this : this.blocks[connection.id];
                     const targetOnlineID = targetBlock.onlineID;
                     const sourceOnlineID = sourceBlock.onlineID;
                     if (!targetOnlineID || !sourceOnlineID) {
                         error = 'Invalid source of target block ID';
                         break;
                     }
-                    success = await this.cpu.connectFunctionBlockInput(targetOnlineID, targetInput.ioNum, sourceOnlineID, connection.ioNum, connection.inverted).catch(e => error = e);
+                    success = await this.cpu.connectFunctionBlockInput(targetOnlineID, ioNum, sourceOnlineID, connection.ioNum).catch(e => error = e);
                     break;
                 }
+            case ModificationType.DELETE_CONNECTION:
+                {
+                    const targetBlock = this.blocks[blockOfflineID];
+                    success = await this.cpu.connectFunctionBlockInput(targetBlock.onlineID, ioNum, 0, 0).catch(e => error = e);
+                }
         }
+        const typeName = ModificationType[type];
+        console.log('Modification result:', { type: typeName, success, blockOfflineID, ioNum });
         this.onModificationUploaded?.(type, success, blockOfflineID, ioNum);
         return success;
     }

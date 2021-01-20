@@ -1,3 +1,4 @@
+import { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 import { Vec2 } from './GUITypes.js';
 export class GUIChildElement {
@@ -33,10 +34,15 @@ export class GUIChildElement {
         this.requestUpdate();
     }
     get pos() { return this._pos.copy(); }
-    // Absolute position
+    // Element absolute position
     get absPos() {
         const absPos = Vec2.add(this._pos, this.parentContainer.absPos);
         return absPos;
+    }
+    // Translate Absolute position to relative position
+    relativePixelPos(pos) {
+        const bounds = this.DOMElement.getBoundingClientRect();
+        return vec2(pos.x - bounds.x, pos.y - bounds.y);
     }
     set size(s) {
         if (this._size.equal(s))

@@ -20,6 +20,10 @@ class Ticker
         clearTimeout(this.timer)
     }
     step(interval: number, numSteps = 1) {
+        if (numSteps == 1) {
+            cpu.tick(interval)
+            return
+        }
         this.timer = setInterval(() => {
             cpu.tick(interval)
             if (--numSteps == 0) this.stop();

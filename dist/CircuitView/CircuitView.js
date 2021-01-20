@@ -63,7 +63,7 @@ export default class CircuitView extends GUIView {
             ...backgroundGridStyle(scale, style.colorGridLine)
         });
         this.gridMap = new CircuitGrid();
-        this.connectingTrace = -1;
+        this.connectingTraceID = -1;
         this.selectedElements = new Set();
         this.selectedElementsInitPos = new Map();
         this.blocks = new Map();
@@ -100,13 +100,15 @@ export default class CircuitView extends GUIView {
             // Start selection box
             else if (this.pointer.targetElem == this.blockArea && ev.buttons == 1 /* LEFT */) {
                 this.draggingMode = 3 /* SELECTION_BOX */;
+                this.selectionBoxInitPos = this.blockArea.relativePixelPos(this.pointer.downPos);
                 this.selectionBox = HTML.domElement(this.blockArea.DOMElement, 'div', {
                     position: 'absolute',
                     backgroundColor: 'rgba(128,128,255,0.2)',
                     border: 'thin solid #88F',
                     pointerEvents: 'none',
-                    ...getPositiveRectAttributes(this.pointer.relativeDownPos, this.pointer.dragOffset)
+                    ...getPositiveRectAttributes(this.selectionBoxInitPos, this.pointer.dragOffset)
                 });
+                console.log('selection start:', this.selectionBoxInitPos);
             }
             // Start dragging selection
             else if (this.pointer.isDragging && this.pointer.downTargetElem?.isDraggable) {
@@ -125,7 +127,7 @@ export default class CircuitView extends GUIView {
                     this.parentDOM.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y;
                     break;
                 case 3 /* SELECTION_BOX */:
-                    Object.assign(this.selectionBox.style, getPositiveRectAttributes(this.pointer.relativeDownPos, this.pointer.dragOffset));
+                    Object.assign(this.selectionBox.style, getPositiveRectAttributes(this.selectionBoxInitPos, this.pointer.dragOffset));
                     break;
                 case 2 /* DRAG_ELEMENT */:
                     const offset = Vec2.div(this.pointer.dragOffset, this.scale);
@@ -147,7 +149,7 @@ export default class CircuitView extends GUIView {
                     if (!ev.shiftKey)
                         this.unselectAll();
                     this.blocks.forEach(block => {
-                        const pos = Vec2.div(this.pointer.relativeDownPos, this.scale);
+                        const pos = Vec2.div(this.selectionBoxInitPos, this.scale);
                         const size = Vec2.div(this.pointer.dragOffset, this.scale);
                         if (isElementInsideRect(block, pos, size)) {
                             this.selectElement(block);
@@ -171,11 +173,12 @@ export default class CircuitView extends GUIView {
         this.blockArea = new BlockArea(this);
         this.inputArea = new IOArea(this, 'inputArea');
         this.outputArea = new IOArea(this, 'outputArea');
+        window.onkeydown = this.onKeyDown.bind(this);
+        window.onkeyup = this.onKeyUp.bind(this);
     }
     loadCircuit(circuit) {
         this.circuit = circuit;
         this.circuit.onModificationUploaded = (type, success, blockID, ioNum) => {
-            console.log('Modification result:', { type, success, blockID, ioNum });
         };
         console.log('CircuitView: Load circuit');
         const margin = vec2(6, 2);
@@ -213,16 +216,22 @@ export default class CircuitView extends GUIView {
         this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.io.ioNum, outputPin.blockID, outputPin.io.ioNum);
         this.createConnectionTrace(outputPin, inputPin, inverted);
     }
+    disconnect(inputPin) {
+        this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.io.ioNum);
+        this.deleteConnectionTrace(inputPin.id);
+    }
     createConnectionTrace(outputPin, inputPin, inverted = false) {
-        const trace = new CircuitTrace(this.traceLayer, outputPin, inputPin);
         if (inputPin.io.connection) {
             this.deleteConnectionTrace(inputPin.id);
         }
+        const trace = new CircuitTrace(this.traceLayer, outputPin, inputPin);
         this.traces.set(inputPin.id, trace);
     }
     deleteConnectionTrace(id) {
         const trace = this.traces.get(id);
-        console.log('Delete connection', id, trace);
+        if (!trace)
+            return;
+        console.log('Delete trace', id, trace);
         trace.delete();
         this.traces.delete(id);
     }
@@ -257,7 +266,7 @@ export default class CircuitView extends GUIView {
             case 'inputPin':
             case 'outputPin':
                 this.selectedElementsInitPos.set(elem, elem.pos.copy());
-                this.traceLayer.addTrace(this.connectingTrace, elem.absPos, elem.absPos, this.style.colorPinHover);
+                this.traceLayer.addTrace(this.connectingTraceID, elem.absPos, elem.absPos, this.style.colorPinHover);
                 break;
         }
     }
@@ -271,13 +280,13 @@ export default class CircuitView extends GUIView {
                 break;
             }
             case 'inputPin': {
-                const absPos = Vec2.div(this.pointer.relativeDownPos, this.scale).add(offset);
-                this.traceLayer.updateTrace(this.connectingTrace, absPos, elem.absPos);
+                const absPos = Vec2.div(this.pointer.relativeDownPos, this.scale).add(offset).sub(vec2(0.5));
+                this.traceLayer.updateTrace(this.connectingTraceID, absPos, elem.absPos);
                 break;
             }
             case 'outputPin': {
-                const absPos = Vec2.div(this.pointer.relativeDownPos, this.scale).add(offset);
-                this.traceLayer.updateTrace(this.connectingTrace, elem.absPos, absPos);
+                const absPos = Vec2.div(this.pointer.relativeDownPos, this.scale).add(offset).sub(vec2(0.5));
+                this.traceLayer.updateTrace(this.connectingTraceID, elem.absPos, absPos);
                 break;
             }
         }
@@ -298,7 +307,7 @@ export default class CircuitView extends GUIView {
                     const inputPin = elem;
                     this.connect(outputPin, inputPin);
                 }
-                this.traceLayer.deleteTrace(this.connectingTrace);
+                this.traceLayer.deleteTrace(this.connectingTraceID);
                 this.unselectAll();
                 break;
             }
@@ -309,7 +318,7 @@ export default class CircuitView extends GUIView {
                     const inputPin = targetElem;
                     this.connect(outputPin, inputPin);
                 }
-                this.traceLayer.deleteTrace(this.connectingTrace);
+                this.traceLayer.deleteTrace(this.connectingTraceID);
                 this.unselectAll();
                 break;
             }
@@ -334,6 +343,30 @@ export default class CircuitView extends GUIView {
     }
     unselectAll() {
         this.selectedElements.forEach(elem => this.unselectElement(elem));
+    }
+    deleteElement(elem) {
+        console.log('Delete element', elem);
+        switch (elem.type) {
+            case 'inputPin':
+                {
+                    this.disconnect(elem);
+                }
+        }
+    }
+    ////////////////////////////////
+    //      KEYBOARD HANDLING
+    ////////////////////////////////
+    onKeyDown(ev) {
+        switch (ev.code) {
+            case 'Delete':
+                {
+                    this.selectedElements.forEach(elem => this.deleteElement(elem));
+                    break;
+                }
+        }
+    }
+    onKeyUp(ev) {
+        console.log('Key up', ev.code, ev.key);
     }
 }
 function getPositiveRectAttributes(pos, size) {
