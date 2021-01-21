@@ -6,6 +6,8 @@ interface Updateable {
     update(force?: boolean): boolean
 }
 
+const DOUBLE_CLICK_INTERVAL = 400
+
 export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI> implements IElementGUI, IWindowGUI { 
 
     DOMElement: HTMLElement
@@ -148,9 +150,12 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
     onPointerMove?:  (ev: PointerEvent) => void
     onPointerUp?:    (ev: PointerEvent) => void
     onClicked?:      (ev: PointerEvent) => void
+    onDoubleClicked?:(ev: PointerEvent) => void
     onDragStarted?:  (ev: PointerEvent) => void
     onDragging?:     (ev: PointerEvent) => void
     onDragEnded?:    (ev: PointerEvent) => void
+
+    doubleClickPending = false
 
     setupPointerHandlers() {
     
@@ -217,8 +222,16 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
     
             // Clicked
             if (!this.pointer.isDragging)  {
-                this.onClicked?.(ev)
-                if (this.pointer.targetElem == this.pointer.downTargetElem) this.pointer.targetElem?.onClicked?.(ev, this.pointer)
+                if (this.doubleClickPending) {
+                    this.onDoubleClicked?.(ev)
+                    if (this.pointer.targetElem == this.pointer.downTargetElem) this.pointer.targetElem?.onDoubleClicked?.(ev, this.pointer)
+                }
+                else {
+                    this.onClicked?.(ev)
+                    if (this.pointer.targetElem == this.pointer.downTargetElem) this.pointer.targetElem?.onClicked?.(ev, this.pointer)
+                    this.doubleClickPending = true
+                    setTimeout(() => this.doubleClickPending = false, DOUBLE_CLICK_INTERVAL)
+                }
             }
             // Stop dragging
             if (this.pointer.isDragging) {

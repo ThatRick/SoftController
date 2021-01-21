@@ -1,5 +1,6 @@
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
+const DOUBLE_CLICK_INTERVAL = 400;
 export default class GUIView {
     constructor(parentDOM, size, scale, style, css) {
         this.parentDOM = parentDOM;
@@ -25,6 +26,7 @@ export default class GUIView {
             upPos: vec2(0),
             relativeDownPos: vec2(0)
         };
+        this.doubleClickPending = false;
         this.DOMElement = document.createElement('div');
         parentDOM.appendChild(this.DOMElement);
         const defaultStyle = {
@@ -143,9 +145,18 @@ export default class GUIView {
             this.onPointerUp?.(ev);
             // Clicked
             if (!this.pointer.isDragging) {
-                this.onClicked?.(ev);
-                if (this.pointer.targetElem == this.pointer.downTargetElem)
-                    this.pointer.targetElem?.onClicked?.(ev, this.pointer);
+                if (this.doubleClickPending) {
+                    this.onDoubleClicked?.(ev);
+                    if (this.pointer.targetElem == this.pointer.downTargetElem)
+                        this.pointer.targetElem?.onDoubleClicked?.(ev, this.pointer);
+                }
+                else {
+                    this.onClicked?.(ev);
+                    if (this.pointer.targetElem == this.pointer.downTargetElem)
+                        this.pointer.targetElem?.onClicked?.(ev, this.pointer);
+                    this.doubleClickPending = true;
+                    setTimeout(() => this.doubleClickPending = false, DOUBLE_CLICK_INTERVAL);
+                }
             }
             // Stop dragging
             if (this.pointer.isDragging) {

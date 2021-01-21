@@ -6,7 +6,7 @@ import { domElement } from '../Lib/HTML.js'
 import { CircuitElement, ElementType, PinType } from './CircuitTypes.js'
 import CircuitView from './CircuitView.js'
 import { getIODataType, IODataType } from '../Controller/ControllerDataTypes.js'
-
+import { DataType } from '../Lib/TypedStructs.js'
 
 export default class FunctionBlockPinView extends GUIChildElement implements CircuitElement
 {
@@ -23,11 +23,13 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     pin: HTMLDivElement
     valueField: HTMLDivElement
 
-    color: string
-
     isInternalCircuitIO: boolean
+    
+    color: string
+    
+    private _name: string
 
-    _name: string
+    private doubleClickPending: boolean
 
     get name()  { return this._name }
     get dataType()  { return getIODataType(this.flags) }
@@ -122,6 +124,12 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         this.onPinUpdated?.()
     }
 
+    toggleValue() {
+        if (this.dataType == IODataType.BINARY && !this.connection) {
+            this.setValue((this.value) ? 0 : 1)
+        }
+    }
+
     onPinUpdated?(): void
 
     onSelected() {
@@ -141,4 +149,9 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     onPointerLeave = (ev: PointerEvent) => {
         this.DOMElement.style.filter = 'none'
     }
+
+    onDoubleClicked = ev => {
+        this.toggleValue()
+    }
+
 }

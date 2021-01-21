@@ -24,7 +24,7 @@ export abstract class ButtonBase
 
     backgroundColor = this.color.base
 
-    constructor(parentElement: HTMLElement, text: string, charWidth = 10) {
+    constructor(parentElement: HTMLElement, text: string, charWidth = 9) {
         this.elem = domElement(parentElement, 'div', {
             color: 'white',
             margin: '2px',

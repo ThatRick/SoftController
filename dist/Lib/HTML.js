@@ -5,7 +5,7 @@ export function domElement(parentDOM, tagName, style) {
     return elem;
 }
 export class ButtonBase {
-    constructor(parentElement, text, charWidth = 10) {
+    constructor(parentElement, text, charWidth = 9) {
         this.color = {
             base: '#557',
             light: '#779',

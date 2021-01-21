@@ -361,6 +361,10 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         console.log('Clicked:', this.elementToString(elem), this.pointer.relativeDownPos)
     }
 
+    onDoubleClicked = (ev: PointerEvent) => {
+        if (this.pointer.downTargetElem?.isSelectable) this.unselectAll()
+    }
+
     onDragStarted = (ev: PointerEvent) => {
         // Start scrolling view
         if (this.pointer.targetElem == this.blockArea && ev.buttons == MouseButton.RIGHT) {

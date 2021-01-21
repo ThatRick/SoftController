@@ -13,6 +13,9 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.onPointerLeave = (ev) => {
             this.DOMElement.style.filter = 'none';
         };
+        this.onDoubleClicked = ev => {
+            this.toggleValue();
+        };
         this.funcState = funcState;
         this.ioNum = ioNum;
         this.pinType = (ioNum < funcState.funcData.inputCount) ? 'inputPin' : 'outputPin';
@@ -90,6 +93,11 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.valueField.style.color = this.color;
         //console.log('update pin:', this.id, this.io.value, this.onPinUpdated)
         this.onPinUpdated?.();
+    }
+    toggleValue() {
+        if (this.dataType == 2 /* BINARY */ && !this.connection) {
+            this.setValue((this.value) ? 0 : 1);
+        }
     }
     onSelected() {
         this.pin.style.outline = this.gui.style.blockOutlineSelected;

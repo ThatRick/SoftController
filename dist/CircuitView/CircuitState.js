@@ -19,12 +19,13 @@ export var ModificationType;
 //      Function Block
 ///////////////////////////////
 export class FunctionBlock {
-    constructor(funcData, offlineID) {
+    constructor(funcData, offlineID, parentCircuit) {
         this.funcData = funcData;
         this.offlineID = offlineID;
         this.onIOChanged = [];
         this.isCircuit = (funcData.library == 0);
         this.func = (this.isCircuit) ? null : getFunction(funcData.library, funcData.opcode);
+        this.parentCircuit = parentCircuit;
     }
     connectOnline(onlineID) {
         this.onlineID = onlineID;
@@ -80,6 +81,7 @@ export class Circuit extends FunctionBlock {
         this.blocksByOnlineID = new Map();
         this.modifications = [];
         this.immediateMode = false;
+        this.parentCircuit = this;
         this.circuitData = circuitData;
     }
     modified(type, blockID, ioNum) {
@@ -106,18 +108,27 @@ export class Circuit extends FunctionBlock {
     addFunctionBlock(library, opcode, customInputCount, customOutputCount, callIndex) {
         const funcData = FunctionBlock.createNewData(library, opcode, customInputCount, customOutputCount);
         const offlineID = this.blocks.length;
-        const funcBlock = new FunctionBlock(funcData, offlineID);
+        const funcBlock = new FunctionBlock(funcData, offlineID, this);
         this.blocks.push(funcBlock);
         funcBlock.parentCircuit = this;
         if (this.cpu)
             this.modified(ModificationType.ADD_BLOCK, offlineID);
         return funcBlock;
     }
-    connectFunctionBlockInput(targetBlockID, targetInputNum, sourceBlockID, sourceIONum, inverted = false) {
+    connectFunctionBlockInput(targetBlockID, targetIONum, sourceBlockID, sourceIONum, inverted = false) {
         const targetBlock = this.getBlock(targetBlockID);
-        targetBlock.funcData.inputRefs[targetInputNum] = { id: sourceBlockID, ioNum: sourceIONum };
-        if (this.cpu)
-            this.modified(ModificationType.CONNECT_FUNCTION_INPUT, targetBlock.offlineID, targetInputNum);
+        // Connect circuit output
+        if (targetBlock == this) {
+            this.circuitData.outputRefs[targetIONum] = { id: sourceBlockID, ioNum: sourceIONum };
+            if (this.cpu)
+                this.modified(ModificationType.CONNECT_CIRCUIT_OUTPUT, targetBlock.offlineID, targetIONum);
+        }
+        // Connect block input
+        else {
+            targetBlock.funcData.inputRefs[targetIONum] = { id: sourceBlockID, ioNum: sourceIONum };
+            if (this.cpu)
+                this.modified(ModificationType.CONNECT_FUNCTION_INPUT, targetBlock.offlineID, targetIONum);
+        }
     }
     disconnectFunctionBlockInput(blockID, inputNum) {
         const targetBlock = this.getBlock(blockID);
@@ -154,7 +165,7 @@ export class Circuit extends FunctionBlock {
         // Load circuit's function blocks from CPU
         this.blocks = await Promise.all(this.circuitData.callIDList.map(async (onlineID) => {
             const data = await FunctionBlock.readOnlineData(this.cpu, onlineID);
-            const block = new FunctionBlock(data, offlineID++);
+            const block = new FunctionBlock(data, offlineID++, this);
             block.connectOnline(onlineID);
             this.blocksByOnlineID.set(onlineID, block);
             return block;
@@ -192,19 +203,18 @@ export class Circuit extends FunctionBlock {
         this.readOnlineValues();
     }
     async sendModification(type, blockOfflineID, ioNum) {
+        const block = this.getBlock(blockOfflineID);
         let success;
         let error;
         switch (type) {
             case ModificationType.SET_IO_VALUE:
                 {
-                    const block = (blockOfflineID == -1) ? this : this.blocks[blockOfflineID];
                     const value = block.funcData.ioValues[ioNum];
                     success = await this.cpu.setFunctionBlockIOValue(block.onlineID, ioNum, value);
                     break;
                 }
             case ModificationType.ADD_BLOCK:
                 {
-                    const block = this.blocks[blockOfflineID];
                     const data = block.funcData;
                     const onlineID = await this.cpu.createFunctionBlock(data.library, data.opcode, this.onlineID, undefined, data.inputCount, data.outputCount, data.staticCount).catch(e => error = e);
                     if (onlineID) {
@@ -215,16 +225,29 @@ export class Circuit extends FunctionBlock {
                 }
             case ModificationType.CONNECT_FUNCTION_INPUT:
                 {
-                    const targetBlock = this.blocks[blockOfflineID];
-                    const connection = targetBlock.funcData.inputRefs[ioNum];
+                    const connection = block.funcData.inputRefs[ioNum];
                     const sourceBlock = (connection.id == -1) ? this : this.blocks[connection.id];
-                    const targetOnlineID = targetBlock.onlineID;
+                    const targetOnlineID = block.onlineID;
                     const sourceOnlineID = sourceBlock.onlineID;
                     if (!targetOnlineID || !sourceOnlineID) {
-                        error = 'Invalid source of target block ID';
+                        error = 'Invalid source or target block ID';
                         break;
                     }
                     success = await this.cpu.connectFunctionBlockInput(targetOnlineID, ioNum, sourceOnlineID, connection.ioNum).catch(e => error = e);
+                    break;
+                }
+            case ModificationType.CONNECT_CIRCUIT_OUTPUT:
+                {
+                    const connection = this.circuitData.outputRefs[ioNum];
+                    const sourceBlock = this.getBlock(connection.id);
+                    const targetOnlineID = this.onlineID;
+                    const sourceOnlineID = sourceBlock.onlineID;
+                    const outputNum = ioNum - this.funcData.inputCount;
+                    if (!targetOnlineID || !sourceOnlineID) {
+                        error = 'Invalid source or target block ID';
+                        break;
+                    }
+                    success = await this.cpu.connectCircuitOutput(targetOnlineID, outputNum, sourceOnlineID, connection.ioNum).catch(e => error = e);
                     break;
                 }
             case ModificationType.DELETE_CONNECTION:

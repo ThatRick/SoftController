@@ -26,15 +26,16 @@ export type EventHandlerFn = (ev: PointerEvent, pointer?: GUIPointerState<IChild
 
 export interface GUIPointerEventHandler
 {
-    onPointerEnter?: EventHandlerFn
-    onPointerLeave?: EventHandlerFn
-    onPointerDown?:  EventHandlerFn
-    onPointerMove?:  EventHandlerFn
-    onPointerUp?:    EventHandlerFn
-    onClicked?:      EventHandlerFn
-    onDragStarted?:  EventHandlerFn
-    onDragging?:     EventHandlerFn
-    onDragEnded?:    EventHandlerFn
+    onPointerEnter?:    EventHandlerFn
+    onPointerLeave?:    EventHandlerFn
+    onPointerDown?:     EventHandlerFn
+    onPointerMove?:     EventHandlerFn
+    onPointerUp?:       EventHandlerFn
+    onClicked?:         EventHandlerFn
+    onDoubleClicked?:   EventHandlerFn
+    onDragStarted?:     EventHandlerFn
+    onDragging?:        EventHandlerFn
+    onDragEnded?:       EventHandlerFn
 }
 
 export interface IStyleGUI {
