@@ -179,7 +179,7 @@ export class Circuit extends FunctionBlock
         const targetBlock = this.getBlock(targetBlockID)
         // Connect circuit output
         if (targetBlock == this) {
-            this.circuitData.outputRefs[targetIONum] = { id: sourceBlockID, ioNum: sourceIONum }
+            this.circuitData.outputRefs[targetIONum - this.funcData.inputCount] = { id: sourceBlockID, ioNum: sourceIONum }
             if (this.cpu) this.modified(ModificationType.CONNECT_CIRCUIT_OUTPUT, targetBlock.offlineID, targetIONum)
         }
         // Connect block input
@@ -306,14 +306,14 @@ export class Circuit extends FunctionBlock
 
             case ModificationType.CONNECT_CIRCUIT_OUTPUT:
                 {
-                    const connection = this.circuitData.outputRefs[ioNum]
+                    const outputNum = ioNum - this.funcData.inputCount
+
+                    const connection = this.circuitData.outputRefs[outputNum]
                     const sourceBlock = this.getBlock(connection.id)
     
                     const targetOnlineID = this.onlineID
                     const sourceOnlineID = sourceBlock.onlineID
 
-                    const outputNum = ioNum - this.funcData.inputCount
-                    
                     if (!targetOnlineID || !sourceOnlineID) { error = 'Invalid source or target block ID'; break }
                     
                     success = await this.cpu.connectCircuitOutput(

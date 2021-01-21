@@ -26,6 +26,9 @@ const enum MouseButton {
     MIDDLE = 4
 }
 
+const debugLogging = true
+function logInfo(...args: any[]) { debugLogging && console.info('Circuit View:', ...args)}
+function logError(...args: any[]) { console.error('Circuit View:', ...args)}
 
 function backgroundGridStyle(scale: Vec2, lineColor: string) {
     return {
@@ -187,17 +190,19 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     connect(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false)
     {
-        console.log('Connect', outputPin.id, inputPin.id)
+        logInfo('connect', outputPin.id, inputPin.id)
         this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum)
         this.createConnectionTrace(outputPin, inputPin, inverted)
     }
-
+    
     disconnect(inputPin: FunctionBlockPinView) {
+        logInfo('disconnect', inputPin.id)
         this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.ioNum)
         this.deleteConnectionTrace(inputPin.id)
     }
 
     createConnectionTrace(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false) {
+        logInfo('create trace, old input connection:', inputPin.connection)
         if (inputPin.connection) {
             this.deleteConnectionTrace(inputPin.id)
         }
@@ -206,6 +211,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     }
     
     deleteConnectionTrace(id: ID) {
+        logInfo('delete trace', id)
         const trace = this.traces.get(id)
         if (!trace) return
         trace.delete()

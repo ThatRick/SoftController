@@ -33,7 +33,12 @@ export default class FunctionBlockPinView extends GUIChildElement {
         return this.funcState.offlineID;
     }
     setValue(value) { this.funcState.parentCircuit.setIOValue(this.blockID, this.ioNum, value); }
-    get connection() { return this.funcState.funcData.inputRefs[this.ioNum]; }
+    get connection() {
+        const ref = (this.isInternalCircuitIO)
+            ? this.funcState.parentCircuit.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
+            : this.funcState.funcData.inputRefs[this.ioNum];
+        return ref;
+    }
     create(gui) {
         this.createPinElement(gui);
         this.createValueField(gui);

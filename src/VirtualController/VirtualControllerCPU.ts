@@ -1,6 +1,6 @@
 
 import {readStruct, setStructElement, writeStruct} from '../Lib/TypedStructs.js'
-import {ID, IORef, IOFlag, IODataType, getIODataType, setIODataType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF} from '../Controller/ControllerDataTypes.js'
+import {ID, IORef, IOFlag, IODataType, getIODataType, setIODataType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF, FunctionFlag} from '../Controller/ControllerDataTypes.js'
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionCallParams} from '../Controller/ControllerDataTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from '../Controller/ControllerDataTypes.js'
 import {ITask, TaskStruct, taskStructByteLength} from '../Controller/ControllerDataTypes.js'
@@ -32,6 +32,7 @@ const enum SystemSector {
 }
 const systemSectorLength = 10
 
+const MAX_MONITORED_IO_CHANGES = 100
 
 //////////////////////////////////
 //      Virtual Controller
@@ -253,6 +254,30 @@ export default class VirtualController
         const taskIDs = taskRefs.map(ref => this.getDatablockID(ref))
         return taskIDs
     }
+
+    monitoringStructSize = 2 + 2 + 4
+    monitoringBuffer = new ArrayBuffer(this.monitoringStructSize * MAX_MONITORED_IO_CHANGES)
+    monitoringData = new DataView(this.monitoringBuffer)
+    monitoringDataIndex = 0
+    monitoringDataHandler: (buffer: ArrayBuffer, length: number) => void
+
+    startMonitoringCycle() {
+        this.monitoringDataIndex = 0
+    }
+    reportIOValueChange(blockRef: number, ioNum: number, currentValue: number) {
+        const id = this.getDatablockID(blockRef)
+        let offset = this.monitoringDataIndex * this.monitoringStructSize
+        this.monitoringData.setUint16(offset, blockRef)
+        offset += 2
+        this.monitoringData.setUint16(offset, ioNum)
+        offset += 2
+        this.monitoringData.setFloat32(offset, currentValue)
+        this.monitoringDataIndex++
+    }
+    completeMonitoringCycle() {
+        this.monitoringDataHandler?.(this.monitoringBuffer, this.monitoringDataIndex)
+    }
+
 
 /****************************
  *    CIRCUIT PROCEDURES    *
@@ -652,6 +677,10 @@ export default class VirtualController
         const funcHeader = this.readFunctionHeader(blockRef);
         const pointers = this.functionDataMap(blockRef, funcHeader);
         
+        const monitoring = !!(funcHeader.functionFlags & FunctionFlag.MONITOR)
+        let preIOValues: Float32Array
+        if (monitoring) preIOValues = this.floats.slice(pointers.inputs, pointers.statics)
+        
         for (let i = 0; i < funcHeader.inputCount; i++) {           // update input values from input references
             const inputRef = this.ints[pointers.inputRefs + i];
             const ioFlag = this.bytes[pointers.flags + i];
@@ -666,6 +695,14 @@ export default class VirtualController
                 this.floats[pointers.inputs + i] = value;
             }
         }
+
+        if (monitoring) {
+            preIOValues.forEach((preValue, ioNum) => {
+                const currentValue = this.floats[pointers.inputs + ioNum]
+                if (currentValue != preValue) this.reportIOValueChange(blockRef, ioNum, currentValue)
+            })
+        }
+
         
         if (blockHeader.type == DatablockType.FUNCTION)             // Run function
         {

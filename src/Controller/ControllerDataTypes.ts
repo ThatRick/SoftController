@@ -111,6 +111,11 @@ export const enum IODataType
     BINARY =  2,
 }
 
+export const enum FunctionFlag
+{
+    MONITOR =   (1 << 0)
+}
+
 // IO FLAGS
 export const enum IOFlag
 {

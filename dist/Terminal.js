@@ -163,6 +163,11 @@ ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  
         circuit.callIDList.forEach((funcID, i) => {
             addLine(`${i.toString().padStart(3)}:  ${funcID.toString().padStart(3, '0')}`);
         });
+        addLine(`OUTPUT REFERENCES (size: ${circuit.callIDList.length})`);
+        addLine('');
+        circuit.outputRefs.forEach((ref, i) => {
+            addLine(`${i.toString().padStart(3)}:  ${(ref) ? ref.id.toString() + ':' + ref.ioNum : '-'}`);
+        });
         return text;
     }
     async printCircuit(circuitID) {

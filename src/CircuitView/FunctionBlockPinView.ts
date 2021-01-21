@@ -55,7 +55,12 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         this.create(this.gui)
     }
 
-    get connection() { return this.funcState.funcData.inputRefs[this.ioNum] }
+    get connection() {
+        const ref = (this.isInternalCircuitIO)
+            ? this.funcState.parentCircuit.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
+            : this.funcState.funcData.inputRefs[this.ioNum]
+        return ref
+    }
 
     private create(gui: CircuitView) {
         this.createPinElement(gui)

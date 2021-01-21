@@ -7,6 +7,9 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import TraceLayerBezier from './TraceLayerBezier.js';
 import { CircuitTrace } from './CircuitTrace.js';
 import CircuitIOView from './CircuitIOView.js';
+const debugLogging = true;
+function logInfo(...args) { debugLogging && console.info('Circuit View:', ...args); }
+function logError(...args) { console.error('Circuit View:', ...args); }
 function backgroundGridStyle(scale, lineColor) {
     return {
         backgroundImage: `linear-gradient(to right, ${lineColor} 1px, transparent 1px), linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)`,
@@ -226,15 +229,17 @@ export default class CircuitView extends GUIView {
         this.blocks.set(funcBlock.offlineID, block);
     }
     connect(outputPin, inputPin, inverted = false) {
-        console.log('Connect', outputPin.id, inputPin.id);
+        logInfo('connect', outputPin.id, inputPin.id);
         this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum);
         this.createConnectionTrace(outputPin, inputPin, inverted);
     }
     disconnect(inputPin) {
+        logInfo('disconnect', inputPin.id);
         this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.ioNum);
         this.deleteConnectionTrace(inputPin.id);
     }
     createConnectionTrace(outputPin, inputPin, inverted = false) {
+        logInfo('create trace, old input connection:', inputPin.connection);
         if (inputPin.connection) {
             this.deleteConnectionTrace(inputPin.id);
         }
@@ -242,6 +247,7 @@ export default class CircuitView extends GUIView {
         this.traces.set(inputPin.id, trace);
     }
     deleteConnectionTrace(id) {
+        logInfo('delete trace', id);
         const trace = this.traces.get(id);
         if (!trace)
             return;

@@ -6,12 +6,17 @@ import { TaskStruct, taskStructByteLength } from '../Controller/ControllerDataTy
 import { getFunction, getFunctionName } from '../FunctionCollection.js';
 import { calcCircuitSize, calcFunctionSize } from '../Controller/ControllerInterface.js';
 const systemSectorLength = 10;
+const MAX_MONITORED_IO_CHANGES = 100;
 //////////////////////////////////
 //      Virtual Controller
 //////////////////////////////////
 const debugLogging = false;
 export default class VirtualController {
     constructor(arg, datablockTableLength = 1024, taskListLength = 16, id = 1) {
+        this.monitoringStructSize = 2 + 2 + 4;
+        this.monitoringBuffer = new ArrayBuffer(this.monitoringStructSize * MAX_MONITORED_IO_CHANGES);
+        this.monitoringData = new DataView(this.monitoringBuffer);
+        this.monitoringDataIndex = 0;
         // arg = ArrayBuffer: Use existing ArrayBuffer as controller memory data
         if (typeof arg === 'object') {
             this.mem = arg;
@@ -177,6 +182,22 @@ export default class VirtualController {
         const taskRefs = Array.from(this.taskList.slice(0, this.getTaskCount()));
         const taskIDs = taskRefs.map(ref => this.getDatablockID(ref));
         return taskIDs;
+    }
+    startMonitoringCycle() {
+        this.monitoringDataIndex = 0;
+    }
+    reportIOValueChange(blockRef, ioNum, currentValue) {
+        const id = this.getDatablockID(blockRef);
+        let offset = this.monitoringDataIndex * this.monitoringStructSize;
+        this.monitoringData.setUint16(offset, blockRef);
+        offset += 2;
+        this.monitoringData.setUint16(offset, ioNum);
+        offset += 2;
+        this.monitoringData.setFloat32(offset, currentValue);
+        this.monitoringDataIndex++;
+    }
+    completeMonitoringCycle() {
+        this.monitoringDataHandler?.(this.monitoringBuffer, this.monitoringDataIndex);
     }
     /****************************
      *    CIRCUIT PROCEDURES    *
@@ -528,6 +549,10 @@ export default class VirtualController {
         const blockHeader = this.getDatablockHeader(blockRef);
         const funcHeader = this.readFunctionHeader(blockRef);
         const pointers = this.functionDataMap(blockRef, funcHeader);
+        const monitoring = !!(funcHeader.functionFlags & 1 /* MONITOR */);
+        let preIOValues;
+        if (monitoring)
+            preIOValues = this.floats.slice(pointers.inputs, pointers.statics);
         for (let i = 0; i < funcHeader.inputCount; i++) { // update input values from input references
             const inputRef = this.ints[pointers.inputRefs + i];
             const ioFlag = this.bytes[pointers.flags + i];
@@ -541,6 +566,13 @@ export default class VirtualController {
                 }
                 this.floats[pointers.inputs + i] = value;
             }
+        }
+        if (monitoring) {
+            preIOValues.forEach((preValue, ioNum) => {
+                const currentValue = this.floats[pointers.inputs + ioNum];
+                if (currentValue != preValue)
+                    this.reportIOValueChange(blockRef, ioNum, currentValue);
+            });
         }
         if (blockHeader.type == 4 /* FUNCTION */) // Run function
          {
