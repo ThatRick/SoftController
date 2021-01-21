@@ -3,6 +3,9 @@ import { IOFlag, IODataType, getIODataType, setIODataType, IORef, ID } from '../
 import { PinType } from './CircuitTypes.js'
 import IControllerInterface, { ICircuitData, IFunctionBlockData } from '../Controller/ControllerInterface.js'
 
+const debugLogging = true
+function logInfo(...args: any[]) { debugLogging && console.info('State:', ...args)}
+function logError(...args: any[]) { console.error('State:', ...args)}
 
 export interface IOConnection
 {
@@ -33,7 +36,6 @@ export interface Modification
 }
 
 type ChangeEventHandler = () => void
-
 
 ///////////////////////////////
 //      Function Block
@@ -126,8 +128,11 @@ export class Circuit extends FunctionBlock
     cpu:            IControllerInterface
     modifications:  Modification[] = []
 
+    immediateMode = false
+
     modified(type: ModificationType, blockID: ID, ioNum?: number) {
         this.modifications.push({ type, blockID, ioNum })
+        if (this.immediateMode) this.sendChanges()
     }
 
     onModificationUploaded?: (type: ModificationType, successful: boolean, blockID: ID, ioNum?: number) => void
@@ -225,6 +230,12 @@ export class Circuit extends FunctionBlock
         })
     }
 
+    setImmediateMode(state: boolean) {
+        this.immediateMode = state
+        logInfo('immediate mode', this.immediateMode)
+        return this.immediateMode
+    }
+
     async sendChanges() {
         if (!this.cpu) { console.error('Upload changes: No online CPU connection'); return }
 
@@ -232,6 +243,8 @@ export class Circuit extends FunctionBlock
             await this.sendModification(modification.type, modification.blockID, modification.ioNum)
         }
         this.modifications = []
+        await this.cpu.stepController(20)
+        this.readOnlineValues()
     }
 
     async sendModification(type: ModificationType, blockOfflineID: ID, ioNum?: number) {
@@ -284,8 +297,7 @@ export class Circuit extends FunctionBlock
                 success = await this.cpu.connectFunctionBlockInput(targetBlock.onlineID, ioNum, 0, 0).catch(e => error = e)
             }
         }
-        const typeName = ModificationType[type]
-        console.log('Modification result:', { type: typeName, success, blockOfflineID, ioNum })
+        logInfo('Modification result:', { type: ModificationType[type], success, blockOfflineID, ioNum })
         this.onModificationUploaded?.(type, success, blockOfflineID, ioNum)
         return success
     }

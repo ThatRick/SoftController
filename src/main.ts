@@ -21,11 +21,9 @@ function createTerminal(div: HTMLElement) {
     }
 }
 
-function createControlButtonBar(buttons: {name: string, fn: () => void}[]) {
-    const nav = document.getElementById('navi');
-    buttons.forEach(btn => {
-        const button = new HTML.Button(nav, btn.name, 10, btn.fn)
-    })
+function createControlButtonBar(buttons: HTML.ButtonBase[]) {
+    const nav = document.getElementById('navi')
+    buttons.forEach(btn => nav.appendChild(btn.elem))
 }
 
 function setGridTemplateRows(gridContainer: HTMLElement, gridRowHeights: {[key: string]: number }) {
@@ -87,6 +85,34 @@ async function app()
     const view = testGUI(circuit)
 
     createControlButtonBar([
+
+        new HTML.Button(null, 'Update', async () => {
+            await cpu.stepController(20)
+            await circuit.readOnlineValues()
+        }),
+        new HTML.Button(null, 'Step', async () => {
+            await cpu.stepController(20)
+        }),
+        new HTML.Button(null, 'Read', async () => {
+            await circuit.readOnlineValues()
+        }),
+        new HTML.Button(null, 'Upload', async () => {
+            console.log('Upload changes')
+            await circuit.sendChanges()
+            console.log('Step controller')
+            await cpu.stepController(20)
+            console.log('Read online values')
+            await circuit.readOnlineValues()
+        }),
+        new HTML.Button(null, 'debug', async () => {
+            terminal(await systemSectorToString(cpu))
+            terminal(await datablockTableToString(cpu))
+            terminal(await taskToString(cpu, taskId))
+            circuit.blocks.forEach(async block => terminal(await functionToString(cpu, block.onlineID)));
+        }),
+        new HTML.Button(null, 'Clear', () => terminal('CLEAR')),
+        new HTML.ToggleButton(null, 'Immediate', state => circuit.setImmediateMode(state), circuit.immediateMode)
+
         // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
         // { name: 'Load', fn: () => loadFromJSON(obj => {
         //     terminal(breakLine);
@@ -105,31 +131,6 @@ async function app()
         //     terminal(systemSectorToString(cpuLink));
         //     terminal(datablockTableToString(cpuLink));
         // })},
-        { name: 'Update', fn: async () => {
-            await cpu.stepController(20)
-            await circuit.readOnlineValues()
-        }},
-        { name: 'Step', fn: async () => {
-            await cpu.stepController(20)
-        }},
-        { name: 'Read', fn: async () => {
-            await circuit.readOnlineValues()
-        }},
-        { name: 'Upload', fn: async () => {
-            console.log('Upload changes')
-            await circuit.sendChanges()
-            console.log('Step controller')
-            await cpu.stepController(20)
-            console.log('Read online values')
-            await circuit.readOnlineValues()
-        }},
-        { name: 'debug', fn: async () => {
-            terminal(await systemSectorToString(cpu))
-            terminal(await datablockTableToString(cpu))
-            terminal(await taskToString(cpu, taskId))
-            circuit.blocks.forEach(async block => terminal(await functionToString(cpu, block.onlineID)));
-        }},
-        { name: 'Clear', fn: () => terminal('CLEAR') },
     ])
 }
 

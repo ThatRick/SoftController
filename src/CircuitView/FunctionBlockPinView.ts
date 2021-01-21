@@ -105,7 +105,6 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
 
     updatePin() {
-        console.log('update pin')
         this.valueField.textContent = this.value.toString()
         
         const style = this.gui.style

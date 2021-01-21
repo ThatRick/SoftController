@@ -18,13 +18,13 @@ export class CircuitTrace {
         public inputPin: FunctionBlockPinView
     ) {
         this.id = inputPin.id
-        layer.addTrace(this.id, outputPin.absPos, inputPin.absPos, outputPin.color)
-        outputPin.onPinUpdated = this.updateColor.bind(this)
+        layer.addTrace(this.id, outputPin.absPos, inputPin.absPos, inputPin.color)
+        inputPin.onPinUpdated = this.updateColor.bind(this)
     }
     id: ID
 
     updateColor() {
-        this.layer.setTraceColor(this.id, this.outputPin.color)
+        this.layer.setTraceColor(this.id, this.inputPin.color)
     }
 
     update() {
@@ -33,7 +33,7 @@ export class CircuitTrace {
     }
     delete() {
         this.layer.deleteTrace(this.id)
-        this.outputPin.onPinUpdated = undefined
+        this.inputPin.onPinUpdated = undefined
     }
     isConnectedTo(block: CircuitElement) {
         const isConnected = (block.type == 'circuitInput' || block.type == 'circuitOutput')

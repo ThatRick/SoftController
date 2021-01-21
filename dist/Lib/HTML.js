@@ -4,13 +4,19 @@ export function domElement(parentDOM, tagName, style) {
     parentDOM?.appendChild(elem);
     return elem;
 }
-export class Button {
-    constructor(parentElement, text, charWidth, action) {
+export class ButtonBase {
+    constructor(parentElement, text, charWidth = 10) {
+        this.color = {
+            base: '#557',
+            light: '#779',
+            active: '#99A'
+        };
+        this.backgroundColor = this.color.base;
         this.elem = domElement(parentElement, 'div', {
             color: 'white',
             margin: '2px',
-            backgroundColor: '#557',
-            border: '1px solid #779',
+            backgroundColor: this.backgroundColor,
+            border: '1px solid ' + this.color.light,
             width: text.length * charWidth + 'px',
             borderRadius: '10%',
             fontSize: '1em',
@@ -21,14 +27,36 @@ export class Button {
             cursor: 'pointer'
         });
         this.elem.textContent = text;
-        this.elem.onpointerenter = ev => this.elem.style.backgroundColor = '#779';
-        this.elem.onpointerleave = ev => this.elem.style.backgroundColor = '#557';
-        this.elem.onclick = (ev) => {
-            this.elem.style.backgroundColor = '#99A';
-            setTimeout(() => {
-                this.elem.style.backgroundColor = '#557';
-            }, 30);
+        this.elem.onpointerenter = ev => this.elem.style.backgroundColor = this.color.light;
+        this.elem.onpointerleave = ev => this.elem.style.backgroundColor = this.backgroundColor;
+        this.elem.onclick = ev => this.onClick?.(ev);
+        this.elem.onpointerdown = ev => this.onDown?.(ev);
+        this.elem.onpointerup = ev => this.onUp?.(ev);
+    }
+    flash(color) {
+        this.elem.style.backgroundColor = color;
+        setTimeout(() => {
+            this.elem.style.backgroundColor = this.backgroundColor;
+        }, 30);
+    }
+}
+export class Button extends ButtonBase {
+    constructor(parentElement, text, action) {
+        super(parentElement, text);
+        this.onClick = () => {
+            this.flash(this.color.active);
             action();
+        };
+    }
+}
+export class ToggleButton extends ButtonBase {
+    constructor(parentElement, text, toggle, initState = false) {
+        super(parentElement, text);
+        this.state = initState;
+        this.onClick = () => {
+            this.state = toggle(!this.state);
+            this.backgroundColor = this.state ? this.color.light : this.color.base;
+            this.flash(this.color.active);
         };
     }
 }

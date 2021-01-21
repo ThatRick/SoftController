@@ -5,6 +5,10 @@ const lineStyle = {
     pointerEvents: 'visible'
 };
 const sizePadding = 10;
+const parseID = (id) => `${Math.trunc(id / 1000)}:${id % 1000}`;
+const debugLogging = true;
+function logInfo(...args) { debugLogging && console.info('Trace layer:', ...args); }
+function logError(...args) { console.error('Trace layer:', ...args); }
 export default class TraceBezierLayer {
     constructor(parent, scale, style) {
         this.traces = new Map();
@@ -24,6 +28,7 @@ export default class TraceBezierLayer {
     }
     scaledPinEndPos(pos) { return Vec2.mul(pos, this.scale).add(this.cellOffset).round(); }
     addTrace(id, outputPos, inputPos, color) {
+        logInfo('add', parseID(id));
         const a = this.scaledPinEndPos(outputPos);
         const b = this.scaledPinEndPos(inputPos);
         this.resizeToFit(a, b);
@@ -41,6 +46,7 @@ export default class TraceBezierLayer {
         trace.setAttributeNS(null, 'd', curve);
     }
     setTraceColor(id, color) {
+        logInfo('set color', parseID(id), color);
         const trace = this.traces.get(id);
         const currentColor = trace.style.stroke;
         if (color != currentColor) {
@@ -48,8 +54,8 @@ export default class TraceBezierLayer {
         }
     }
     deleteTrace(id) {
+        logInfo('delete', parseID(id));
         const trace = this.traces.get(id);
-        console.log('Trace layer delete trace', id, trace);
         this.svg.removeChild(trace);
     }
     get size() {

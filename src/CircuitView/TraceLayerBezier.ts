@@ -12,6 +12,11 @@ const lineStyle = {
  
 const sizePadding = 10
 
+const parseID = (id: number) => `${Math.trunc(id/1000)}:${id % 1000}`
+
+const debugLogging = true
+function logInfo(...args: any[]) { debugLogging && console.info('Trace layer:', ...args)}
+function logError(...args: any[]) { console.error('Trace layer:', ...args)}
 
 export default class TraceBezierLayer implements ICircuitTraceLayer
 {
@@ -45,6 +50,7 @@ export default class TraceBezierLayer implements ICircuitTraceLayer
 
     addTrace(id: number, outputPos: Vec2, inputPos: Vec2, color: string)
     {
+        logInfo('add', parseID(id))
         const a = this.scaledPinEndPos(outputPos)
         const b = this.scaledPinEndPos(inputPos)
 
@@ -73,6 +79,7 @@ export default class TraceBezierLayer implements ICircuitTraceLayer
     }
     
     setTraceColor(id: number, color: string) {
+        logInfo('set color', parseID(id), color)
         const trace = this.traces.get(id)
         const currentColor = trace.style.stroke
         if (color != currentColor) {
@@ -82,13 +89,12 @@ export default class TraceBezierLayer implements ICircuitTraceLayer
     }
 
     deleteTrace(id: number) {
+        logInfo('delete', parseID(id))
         const trace = this.traces.get(id)
-        console.log('Trace layer delete trace', id, trace)
         this.svg.removeChild(trace)
     }
 
     onTraceSelected: (id: number) => void
-
 
     get size() {
         return vec2(this.svg.clientWidth, this.svg.clientHeight)

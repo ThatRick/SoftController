@@ -73,7 +73,6 @@ export default class FunctionBlockPinView extends GUIChildElement {
         });
     }
     updatePin() {
-        console.log('update pin');
         this.valueField.textContent = this.value.toString();
         const style = this.gui.style;
         switch (this.dataType) {

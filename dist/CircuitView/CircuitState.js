@@ -1,4 +1,7 @@
 import { getFunction } from '../FunctionCollection.js';
+const debugLogging = true;
+function logInfo(...args) { debugLogging && console.info('State:', ...args); }
+function logError(...args) { console.error('State:', ...args); }
 export var ModificationType;
 (function (ModificationType) {
     ModificationType[ModificationType["ADD_BLOCK"] = 0] = "ADD_BLOCK";
@@ -76,10 +79,13 @@ export class Circuit extends FunctionBlock {
         this.blocks = [];
         this.blocksByOnlineID = new Map();
         this.modifications = [];
+        this.immediateMode = false;
         this.circuitData = circuitData;
     }
     modified(type, blockID, ioNum) {
         this.modifications.push({ type, blockID, ioNum });
+        if (this.immediateMode)
+            this.sendChanges();
     }
     getBlock(offlineID) {
         return (offlineID == -1) ? this : this.blocks[offlineID];
@@ -168,6 +174,11 @@ export class Circuit extends FunctionBlock {
             });
         });
     }
+    setImmediateMode(state) {
+        this.immediateMode = state;
+        logInfo('immediate mode', this.immediateMode);
+        return this.immediateMode;
+    }
     async sendChanges() {
         if (!this.cpu) {
             console.error('Upload changes: No online CPU connection');
@@ -177,6 +188,8 @@ export class Circuit extends FunctionBlock {
             await this.sendModification(modification.type, modification.blockID, modification.ioNum);
         }
         this.modifications = [];
+        await this.cpu.stepController(20);
+        this.readOnlineValues();
     }
     async sendModification(type, blockOfflineID, ioNum) {
         let success;
@@ -220,8 +233,7 @@ export class Circuit extends FunctionBlock {
                     success = await this.cpu.connectFunctionBlockInput(targetBlock.onlineID, ioNum, 0, 0).catch(e => error = e);
                 }
         }
-        const typeName = ModificationType[type];
-        console.log('Modification result:', { type: typeName, success, blockOfflineID, ioNum });
+        logInfo('Modification result:', { type: ModificationType[type], success, blockOfflineID, ioNum });
         this.onModificationUploaded?.(type, success, blockOfflineID, ioNum);
         return success;
     }
