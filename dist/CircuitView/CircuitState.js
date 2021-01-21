@@ -84,10 +84,15 @@ export class Circuit extends FunctionBlock {
         this.parentCircuit = this;
         this.circuitData = circuitData;
     }
-    modified(type, blockID, ioNum) {
-        this.modifications.push({ type, blockID, ioNum });
-        if (this.immediateMode)
-            this.sendChanges();
+    async modified(type, blockID, ioNum) {
+        logInfo('Modification', ModificationType[type], blockID, ioNum);
+        if (this.immediateMode) {
+            this.sendModification(type, blockID, ioNum);
+            await this.cpu.stepController(20);
+            this.readOnlineValues();
+        }
+        else
+            this.modifications.push({ type, blockID, ioNum });
     }
     getBlock(offlineID) {
         return (offlineID == -1) ? this : this.blocks[offlineID];
@@ -195,7 +200,7 @@ export class Circuit extends FunctionBlock {
             console.error('Upload changes: No online CPU connection');
             return;
         }
-        for (const modification of this.modifications.values()) {
+        for (const modification of this.modifications) {
             await this.sendModification(modification.type, modification.blockID, modification.ioNum);
         }
         this.modifications = [];

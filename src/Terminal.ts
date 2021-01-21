@@ -211,10 +211,6 @@ ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  
         const cpu = this.cpu
         const nameLength = 22
 
-        async function getBlockID(ref: number) {
-
-        }
-
         const names: {[index: string]: [string, (value: number) => string | Promise<string>]} =
         {
             targetRef:   ['Target Ref',             async (value) => `${('0x'+value.toString(16).toUpperCase()).padStart(this.defaultIntegerPadding)}  (ID: ${await cpu.getDatablockID(value)})`],

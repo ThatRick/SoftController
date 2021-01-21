@@ -132,9 +132,14 @@ export class Circuit extends FunctionBlock
 
     immediateMode = false
 
-    modified(type: ModificationType, blockID: ID, ioNum?: number) {
-        this.modifications.push({ type, blockID, ioNum })
-        if (this.immediateMode) this.sendChanges()
+    async modified(type: ModificationType, blockID: ID, ioNum?: number) {
+        logInfo('Modification', ModificationType[type], blockID, ioNum)
+        if (this.immediateMode) {
+            this.sendModification(type, blockID, ioNum)
+            await this.cpu.stepController(20)
+            this.readOnlineValues()
+        }
+        else this.modifications.push({ type, blockID, ioNum })
     }
 
     onModificationUploaded?: (type: ModificationType, successful: boolean, blockID: ID, ioNum?: number) => void
@@ -248,7 +253,7 @@ export class Circuit extends FunctionBlock
     async sendChanges() {
         if (!this.cpu) { console.error('Upload changes: No online CPU connection'); return }
 
-        for (const modification of this.modifications.values()) {
+        for (const modification of this.modifications) {
             await this.sendModification(modification.type, modification.blockID, modification.ioNum)
         }
         this.modifications = []

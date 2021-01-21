@@ -191,6 +191,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum)
         this.createConnectionTrace(outputPin, inputPin, inverted)
     }
+
     disconnect(inputPin: FunctionBlockPinView) {
         this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.ioNum)
         this.deleteConnectionTrace(inputPin.id)
@@ -207,7 +208,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     deleteConnectionTrace(id: ID) {
         const trace = this.traces.get(id)
         if (!trace) return
-        console.log('Delete trace', id, trace)
         trace.delete()
         this.traces.delete(id)
     }
@@ -285,21 +285,34 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
             }
             case 'inputPin': {
                 const targetElem = this.pointer.targetElem
+                const inputPin = elem as FunctionBlockPinView
                 if (targetElem?.type == 'outputPin') {
                     const outputPin = targetElem as FunctionBlockPinView
-                    const inputPin = elem as FunctionBlockPinView
                     this.connect(outputPin, inputPin)
+                }
+                else if (inputPin.connection && targetElem?.type == 'inputPin' && targetElem != inputPin) {
+                    const trace = this.traces.get(inputPin.id)
+                    this.connect(trace.outputPin, targetElem as FunctionBlockPinView)
+                    this.disconnect(inputPin)
                 }
                 this.traceLayer.deleteTrace(this.connectingTraceID)
                 this.unselectAll()
                 break
             }
             case 'outputPin': {
+                const outputPin = elem as FunctionBlockPinView
                 const targetElem = this.pointer.targetElem
                 if (targetElem?.type == 'inputPin') {
-                    const outputPin = elem as FunctionBlockPinView
                     const inputPin = targetElem as FunctionBlockPinView
                     this.connect(outputPin, inputPin)
+                }
+                else if (targetElem?.type == 'outputPin' && targetElem != outputPin) {
+                    // Move output pin connection
+                    const connectedTraces = Array.from(this.traces.values()).filter(trace => trace.outputPin == outputPin)
+                    if (connectedTraces.length > 0) {
+                        const newSourcePin = targetElem as FunctionBlockPinView
+                        connectedTraces.forEach(trace => this.connect(newSourcePin, trace.inputPin))
+                    }
                 }
                 this.traceLayer.deleteTrace(this.connectingTraceID)
                 this.unselectAll()

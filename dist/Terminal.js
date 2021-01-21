@@ -174,8 +174,6 @@ ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  
     async printTask(taskID) {
         const cpu = this.cpu;
         const nameLength = 22;
-        async function getBlockID(ref) {
-        }
         const names = {
             targetRef: ['Target Ref', async (value) => `${('0x' + value.toString(16).toUpperCase()).padStart(this.defaultIntegerPadding)}  (ID: ${await cpu.getDatablockID(value)})`],
             interval: ['Interval (ms)', (value) => this.alignValue(value)],

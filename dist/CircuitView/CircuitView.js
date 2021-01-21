@@ -245,7 +245,6 @@ export default class CircuitView extends GUIView {
         const trace = this.traces.get(id);
         if (!trace)
             return;
-        console.log('Delete trace', id, trace);
         trace.delete();
         this.traces.delete(id);
     }
@@ -316,21 +315,34 @@ export default class CircuitView extends GUIView {
             }
             case 'inputPin': {
                 const targetElem = this.pointer.targetElem;
+                const inputPin = elem;
                 if (targetElem?.type == 'outputPin') {
                     const outputPin = targetElem;
-                    const inputPin = elem;
                     this.connect(outputPin, inputPin);
+                }
+                else if (inputPin.connection && targetElem?.type == 'inputPin' && targetElem != inputPin) {
+                    const trace = this.traces.get(inputPin.id);
+                    this.connect(trace.outputPin, targetElem);
+                    this.disconnect(inputPin);
                 }
                 this.traceLayer.deleteTrace(this.connectingTraceID);
                 this.unselectAll();
                 break;
             }
             case 'outputPin': {
+                const outputPin = elem;
                 const targetElem = this.pointer.targetElem;
                 if (targetElem?.type == 'inputPin') {
-                    const outputPin = elem;
                     const inputPin = targetElem;
                     this.connect(outputPin, inputPin);
+                }
+                else if (targetElem?.type == 'outputPin' && targetElem != outputPin) {
+                    // Move output pin connection
+                    const connectedTraces = Array.from(this.traces.values()).filter(trace => trace.outputPin == outputPin);
+                    if (connectedTraces.length > 0) {
+                        const newSourcePin = targetElem;
+                        connectedTraces.forEach(trace => this.connect(newSourcePin, trace.inputPin));
+                    }
                 }
                 this.traceLayer.deleteTrace(this.connectingTraceID);
                 this.unselectAll();
