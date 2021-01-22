@@ -65,8 +65,8 @@ async function app()
     // const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
     
-    const circuitID = await createTestCircuit(cpu, 10)
-    const taskId = await cpu.createTask(circuitID, 20, 10)
+    const circuitID = await createTestCircuit(cpu, 20)
+    const taskId = await cpu.createTask(circuitID, 100, 10)
     
     terminal.printSystemSector()
     terminal.printDatablockTable()
@@ -77,23 +77,19 @@ async function app()
 
     createControlButtonBar([
 
-        new HTML.Button(null, 'Update', async () => {
-            await cpu.stepController(20)
-            await circuit.onlineReadIOValues()
+        new HTML.Button(null, 'Run', async () => {
+            await cpu.startController(20)
+        }),
+        new HTML.Button(null, 'Stop', async () => {
+            await cpu.stopController()
         }),
         new HTML.Button(null, 'Step', async () => {
             await cpu.stepController(20)
-        }),
-        new HTML.Button(null, 'Read', async () => {
-            await circuit.onlineReadIOValues()
         }),
         new HTML.Button(null, 'Upload', async () => {
             console.log('Upload changes')
             await circuit.sendChanges()
             console.log('Step controller')
-            await cpu.stepController(20)
-            console.log('Read online values')
-            await circuit.onlineReadIOValues()
         }),
         new HTML.Button(null, 'debug', async () => {
             terminal.printSystemSector()

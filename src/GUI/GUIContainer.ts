@@ -4,7 +4,6 @@ export default class GUIContainer<T extends IChildElementGUI> implements IViewCo
 {
     DOMElement: HTMLElement
     elements = new Set<T>()
-    uninitializedElements = new Set<T>()
 
     gui: IWindowGUI
 
@@ -29,11 +28,6 @@ export default class GUIContainer<T extends IChildElementGUI> implements IViewCo
     }
 
     removeChildElement(elem: T) {
-        if (!this.gui) {
-            this.uninitializedElements.delete(elem)            
-            return
-        }
-
         this.DOMElement.removeChild(elem.DOMElement)
         this.elements.delete(elem)
         elem.parentContainer = undefined

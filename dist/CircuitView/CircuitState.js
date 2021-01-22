@@ -101,7 +101,8 @@ export class Circuit extends FunctionBlock {
                     const buffer = event.data;
                     const changes = readArrayOfStructs(buffer, 0, MonitorValueChangeStruct);
                     changes.forEach(change => {
-                        //this.setFunctionBlockIOValue()
+                        const offlineID = this.blocksByOnlineID.get(change.id).offlineID;
+                        this.setFunctionBlockIOValue(offlineID, change.ioNum, change.value, true);
                     });
                 }
         }
@@ -111,13 +112,16 @@ export class Circuit extends FunctionBlock {
         return (offlineID == -1) ? this : this.blocks[offlineID];
     }
     // Store circuit modifications
-    async modified(type, blockID, ioNum) {
+    async modified(type, blockID, ioNum, blockOnlineID) {
         logInfo('Modification', ModificationType[type], blockID, ioNum);
+        if (type == ModificationType.DELETE_BLOCK) {
+            this.modifications = this.modifications.filter(modif => (modif.blockID != blockID));
+        }
         if (this.immediateMode) {
-            this.sendModification(type, blockID, ioNum);
+            this.sendModification(type, blockID, ioNum, blockOnlineID);
         }
         else
-            this.modifications.push({ type, blockID, ioNum });
+            this.modifications.push({ type, blockID, ioNum, blockOnlineID });
     }
     ////////////////////////////
     //      Modifications
@@ -141,6 +145,14 @@ export class Circuit extends FunctionBlock {
         if (this.cpu)
             this.modified(ModificationType.ADD_BLOCK, offlineID);
         return funcBlock;
+    }
+    deleteFunctionBlock(id) {
+        const block = this.blocks[id];
+        if (this.cpu)
+            this.modified(ModificationType.DELETE_BLOCK, id, undefined, block.onlineID);
+        this.blocksByOnlineID.delete(block.onlineID);
+        delete this.blocks[id];
+        this.circuitData.callIDList = this.circuitData.callIDList.filter(callID => callID != id);
     }
     connectFunctionBlockInput(targetBlockID, targetIONum, sourceBlockID, sourceIONum, inverted = false) {
         const targetBlock = this.getBlock(targetBlockID);
@@ -176,9 +188,9 @@ export class Circuit extends FunctionBlock {
         if (!this.cpu)
             return;
         await this.onlineReadBlockIOValues(this.offlineID);
-        for (const block of this.blocks) {
+        this.blocks.forEach(block => {
             this.onlineReadBlockIOValues(block.offlineID);
-        }
+        });
     }
     // Read function block IO values from online CPU
     async onlineReadBlockIOValues(blockID) {
@@ -228,12 +240,12 @@ export class Circuit extends FunctionBlock {
             return;
         }
         for (const modification of this.modifications) {
-            await this.sendModification(modification.type, modification.blockID, modification.ioNum);
+            await this.sendModification(modification.type, modification.blockID, modification.ioNum, modification.blockOnlineID);
         }
         this.modifications = [];
     }
     // Send circuit modification to online CPU
-    async sendModification(type, blockOfflineID, ioNum) {
+    async sendModification(type, blockOfflineID, ioNum, blockOnlineID) {
         const block = this.getBlock(blockOfflineID);
         let success;
         let error;
@@ -252,6 +264,11 @@ export class Circuit extends FunctionBlock {
                         block.connectOnline(this.cpu, onlineID);
                         success = true;
                     }
+                    break;
+                }
+            case ModificationType.DELETE_BLOCK:
+                {
+                    success = await this.cpu.deleteFunctionBlock(blockOnlineID);
                     break;
                 }
             case ModificationType.CONNECT_FUNCTION_INPUT:

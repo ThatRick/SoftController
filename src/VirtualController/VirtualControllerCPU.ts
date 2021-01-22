@@ -581,11 +581,12 @@ export default class VirtualController
 
     deleteFunctionBlock(id: ID) {
         const blockHeader = this.getDatablockHeaderByID(id);
-        if (!blockHeader) return null
+        if (!blockHeader) return false
         const parentID = blockHeader.parentID;
         if (parentID) {
             this.removeFunctionCall(parentID, id);
         }
+        return true
     }
 
     readFunctionHeaderByID(id: ID): IFunctionHeader {
@@ -750,6 +751,7 @@ export default class VirtualController
             for (let i = 0; i < funcCallCount; i++)                     // Call functions in circuit call list
             {
                 const callRef = this.ints[funcCalls + i];
+                if (!callRef) break
                 this.runFunction(callRef, dt);
             }
             
@@ -855,6 +857,7 @@ export default class VirtualController
         }
 
         this.unallocateDatablock(id);
+        return true
     }
 
     unallocateDatablock(id: number) {

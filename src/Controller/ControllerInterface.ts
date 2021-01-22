@@ -60,6 +60,7 @@ export const enum MessageCode {
     ConnectCircuitOutput,
 
     CreateFunctionBlock,
+    DeleteFunctionBlock,
     SetFunctionBlockFlag,
     SetFunctionBlockIOValue,
     SetFunctionBlockIOFlags,
@@ -98,6 +99,7 @@ export const MessageCodeNames = [
     'ConnectCircuitOutput',
 
     'CreateFunctionBlock',
+    'DeleteFunctionBlock',
     'SetFunctionBlockFlag',
     'SetFunctionBlockIOValue',
     'SetFunctionBlockIOFlags',
@@ -171,6 +173,7 @@ export default interface IControllerInterface
 
     // FUNCTION BLOCK
     createFunctionBlock( library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number ): Promise<ID>
+    deleteFunctionBlock( funcID: ID ): Promise<boolean>
     setFunctionBlockFlag( funcID: ID, flag: number, enabled: boolean ): Promise<boolean>
     setFunctionBlockIOFlag( funcID: ID, ioNum: number, flag: number, enabled: boolean ): Promise<boolean>
     setFunctionBlockIOFlags( funcID: ID, ioNum: number, flags: number ): Promise<boolean>

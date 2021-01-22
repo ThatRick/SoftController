@@ -2,7 +2,6 @@ export default class GUIContainer {
     constructor(parent) {
         this.parent = parent;
         this.elements = new Set();
-        this.uninitializedElements = new Set();
         this.DOMElement = parent.DOMElement;
         this.gui = parent.gui;
     }
@@ -17,10 +16,6 @@ export default class GUIContainer {
         this.gui.registerElement(elem);
     }
     removeChildElement(elem) {
-        if (!this.gui) {
-            this.uninitializedElements.delete(elem);
-            return;
-        }
         this.DOMElement.removeChild(elem.DOMElement);
         this.elements.delete(elem);
         elem.parentContainer = undefined;

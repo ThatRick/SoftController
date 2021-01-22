@@ -126,6 +126,10 @@ export class GUIChildElement implements IChildElementGUI{
         this.gui.requestElementUpdate(this)
     }
 
+    delete() {
+        this.parentContainer.removeChildElement(this)
+    }
+
     // Event receivers
     onPointerEnter?: EventHandlerFn
     onPointerLeave?: EventHandlerFn

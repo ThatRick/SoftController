@@ -188,8 +188,14 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         this.blocks.set(funcBlock.offlineID, block)
     }
 
-    connect(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false)
-    {
+    deleteFunctionBlock(block: FunctionBlockView) {
+        this.traces.forEach(trace => trace.isConnectedTo(block) && this.disconnect(trace.inputPin))
+        this.circuit.deleteFunctionBlock(block.id)
+        this.blocks.delete(block.id)
+        block.delete()
+    }
+
+    connect(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false) {
         logInfo('connect', outputPin.id, inputPin.id)
         this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum)
         this.createConnectionTrace(outputPin, inputPin, inverted)
@@ -236,6 +242,20 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     elementToString(elem: CircuitElement) {
         if (!elem) return 'undefined'
         return `type: ${elem.type}, id: ${elem.id}, pos: ${elem.absPos.toString()}`    
+    }
+
+    deleteElement(elem: CircuitElement) {
+        console.log('Delete element', elem)
+        switch (elem.type)
+        {
+            case 'inputPin':
+                this.disconnect(elem as FunctionBlockPinView)
+                break
+            
+            case 'block':
+                this.deleteFunctionBlock(elem as FunctionBlockView)
+                break
+        }
     }
 
 
@@ -470,17 +490,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         this.draggingMode = DraggingMode.NONE
     }
 
-    deleteElement(elem: CircuitElement) {
-        console.log('Delete element', elem)
-        switch (elem.type)
-        {
-            case 'inputPin':
-            {
-                this.disconnect(elem as FunctionBlockPinView)
-            }
-        }
-    }
-
     ////////////////////////////////
     //      KEYBOARD HANDLING
     ////////////////////////////////
@@ -488,8 +497,10 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         switch(ev.code)
         {
             case 'Delete':
+            case 'Backspace':
             {
                 this.selectedElements.forEach(elem => this.deleteElement(elem))
+                this.unselectAll()
                 break
             }
         }

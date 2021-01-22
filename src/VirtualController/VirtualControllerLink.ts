@@ -77,34 +77,34 @@ export default class VirtualControllerLink implements IControllerInterface
 //////////////////////
 //  SYSTEM MESSAGES
 //
-    createController( dataMemSize: number, datablockTableLength?: number, taskListLength?: number, id?: number ): Promise<boolean> {
+    createController( dataMemSize: number, datablockTableLength?: number, taskListLength?: number, id?: number ) {
         const params: ICreateControllerParams = { dataMemSize, datablockTableLength, taskListLength, id }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.CreateController, params, resolve, reject )
         })
         return promise
     }
-    startController( interval: number ): Promise<boolean> {
+    startController( interval: number ) {
         const params = interval
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.StartController, params, resolve, reject )
         })
         return promise
     }
-    stopController(): Promise<boolean> {
+    stopController() {
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.StopController, null, resolve, reject )
         })
         return promise
     }
-    stepController( interval: number, numSteps?: number ): Promise<boolean> {
+    stepController( interval: number, numSteps?: number ) {
         const params: IStepControllerParams = { interval, numSteps }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.StepController, params, resolve, reject )
         })
         return promise
     }
-    setMonitoring( enabled: boolean ): Promise<boolean> {
+    setMonitoring( enabled: boolean ) {
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.SetMonitoring, enabled, resolve, reject )
         })
@@ -115,35 +115,35 @@ export default class VirtualControllerLink implements IControllerInterface
 //  MODIFY MESSAGES
 //
 
-    createTask( callTargetID: ID, interval: number, offset?: number ): Promise<ID> {
+    createTask( callTargetID: ID, interval: number, offset?: number ) {
         const params: ICreateTaskParams = { callTargetID, interval, offset }
         const promise = new Promise<ID>((resolve, reject) => {
             this.sendMessage( MessageCode.CreateTask, params, resolve, reject )
         })
         return promise
     }
-    setTaskCallTarget( taskID: ID, callTargetID: ID ): Promise<boolean> {
+    setTaskCallTarget( taskID: ID, callTargetID: ID ) {
         const params: ISetTaskCallTargetParams = { taskID, callTargetID }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.SetTaskCallTarget, params, resolve, reject )
         })
         return promise
     }
-    createCircuit( inputCount: number, outputCount: number, funcCallCount: number ): Promise<ID> {
+    createCircuit( inputCount: number, outputCount: number, funcCallCount: number ) {
         const params: ICreateCircuitParams = { inputCount, outputCount, funcCallCount }
         const promise = new Promise<ID>((resolve, reject) => {
             this.sendMessage( MessageCode.CreateCircuit, params, resolve, reject )
         })
         return promise
     }
-    connectCircuitOutput( circID: ID, outputNum: number, sourceID: ID, sourceIONum: number ): Promise<boolean> {
+    connectCircuitOutput( circID: ID, outputNum: number, sourceID: ID, sourceIONum: number ) {
         const params: IConnectCircuitOutputParams = { circID, outputNum, sourceID, sourceIONum }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.ConnectCircuitOutput, params, resolve, reject )
         })
         return promise
     }
-    createFunctionBlock( library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number ): Promise<ID>
+    createFunctionBlock( library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number )
     {
         const params: ICreateFunctionBlockParams = { library, opcode, circuitID, callIndex, inputCount, outputCount, staticCount }
         const promise = new Promise<ID>((resolve, reject) => {
@@ -151,35 +151,42 @@ export default class VirtualControllerLink implements IControllerInterface
         })
         return promise
     }
-    setFunctionBlockFlag( funcID: ID, flag: number, enabled: boolean ): Promise<boolean> {
+    deleteFunctionBlock( funcID: ID )
+    {
+        const promise = new Promise<boolean>((resolve, reject) => {
+            this.sendMessage( MessageCode.DeleteFunctionBlock, funcID, resolve, reject )
+        })
+        return promise
+    }
+    setFunctionBlockFlag( funcID: ID, flag: number, enabled: boolean ) {
         const params: ISetFunctionBlockFlagParams = { funcID, flag, enabled }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.SetFunctionBlockFlag, params, resolve, reject )
         })
         return promise
     }
-    setFunctionBlockIOFlag( funcID: ID, ioNum: number, flag: number, enabled: boolean ): Promise<boolean> {
+    setFunctionBlockIOFlag( funcID: ID, ioNum: number, flag: number, enabled: boolean ) {
         const params: ISetFunctionBlockIOFlagParams = { funcID, ioNum, flag, enabled }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.SetFunctionBlockIOFlag, params, resolve, reject )
         })
         return promise
     }
-    setFunctionBlockIOFlags( funcID: ID, ioNum: number, flags: number ): Promise<boolean> {
+    setFunctionBlockIOFlags( funcID: ID, ioNum: number, flags: number ) {
         const params: ISetFunctionBlockIOFlagsParams = { funcID, ioNum, flags }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.SetFunctionBlockIOFlags, params, resolve, reject )
         })
         return promise
     }
-    setFunctionBlockIOValue( funcID: ID, ioNum: number, value: number ): Promise<boolean> {
+    setFunctionBlockIOValue( funcID: ID, ioNum: number, value: number ) {
         const params: ISetFunctionBlockIOValueParams = { funcID, ioNum, value }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.SetFunctionBlockIOValue, params, resolve, reject )
         })
         return promise
     }
-    connectFunctionBlockInput( targetID: ID, targetInputNum: number, sourceID: ID, sourceIONum: number, inverted = false ): Promise<boolean> {
+    connectFunctionBlockInput( targetID: ID, targetInputNum: number, sourceID: ID, sourceIONum: number, inverted = false ) {
         const params: IConnectFunctionBlockInputParams = { targetID, targetInputNum, sourceID, sourceIONum, inverted }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.ConnectFunctionBlockInput, params, resolve, reject )
@@ -230,7 +237,7 @@ export default class VirtualControllerLink implements IControllerInterface
         })
         return promise
     }
-    getDatablockID(ref: number ): Promise<ID> {
+    getDatablockID(ref: number ) {
         const params: number = ref
         const promise = new Promise<ID>((resolve, reject) => {
             this.sendMessage( MessageCode.GetDatablockID, params, resolve, reject )

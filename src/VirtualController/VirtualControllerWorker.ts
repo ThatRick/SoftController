@@ -158,10 +158,15 @@ onmessage = (e) =>
             if (id > 0) response = id
             break
         }
+        case MessageCode.DeleteFunctionBlock:
+        {
+            const id = msg.params as ID
+            response = cpu.deleteDatablock(id)
+            break
+        }
         case MessageCode.SetFunctionBlockFlag:
         {
             const par = msg.params as ISetFunctionBlockFlagParams
-            console.log('set func flag', par.flag, par.enabled)
             response = cpu.setFunctionFlag(par.funcID, par.flag, par.enabled)
             break
         }
@@ -283,11 +288,14 @@ onmessage = (e) =>
             if (cpu.getDatablockHeaderByID(id).type != DatablockType.CIRCUIT) { error = 'Invalid circuit ID ' + id; break }
             
             const outputRefs = Array.from(cpu.readCircuitOutputRefsByID(id)).map(ioRef => cpu.solveIOReference(ioRef))
-            const callList = Array.from(cpu.readCircuitCallRefListByID(id)).map(callRef => cpu.getDatablockID(callRef))
+            const refList = cpu.readCircuitCallRefListByID(id)
+            const last = refList.lastIndexOf(0)
+            const refs = refList.slice(0, last)
+            const callIDList = Array.from(refs).map(ref => cpu.getDatablockID(ref))
     
             const data: ICircuitData =  {
                 outputRefs,
-                callIDList: callList
+                callIDList
             }
             response = data
             break

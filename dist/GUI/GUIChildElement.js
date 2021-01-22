@@ -81,4 +81,7 @@ export class GUIChildElement {
     requestUpdate() {
         this.gui.requestElementUpdate(this);
     }
+    delete() {
+        this.parentContainer.removeChildElement(this);
+    }
 }

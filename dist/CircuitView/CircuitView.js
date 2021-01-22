@@ -228,6 +228,12 @@ export default class CircuitView extends GUIView {
         const block = new FunctionBlockView(this.blockArea.children, pos, funcBlock);
         this.blocks.set(funcBlock.offlineID, block);
     }
+    deleteFunctionBlock(block) {
+        this.traces.forEach(trace => trace.isConnectedTo(block) && this.disconnect(trace.inputPin));
+        this.circuit.deleteFunctionBlock(block.id);
+        this.blocks.delete(block.id);
+        block.delete();
+    }
     connect(outputPin, inputPin, inverted = false) {
         logInfo('connect', outputPin.id, inputPin.id);
         this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum);
@@ -271,6 +277,17 @@ export default class CircuitView extends GUIView {
         if (!elem)
             return 'undefined';
         return `type: ${elem.type}, id: ${elem.id}, pos: ${elem.absPos.toString()}`;
+    }
+    deleteElement(elem) {
+        console.log('Delete element', elem);
+        switch (elem.type) {
+            case 'inputPin':
+                this.disconnect(elem);
+                break;
+            case 'block':
+                this.deleteFunctionBlock(elem);
+                break;
+        }
     }
     /////////////////////////
     //      DRAGGING
@@ -376,23 +393,16 @@ export default class CircuitView extends GUIView {
     unselectAll() {
         this.selectedElements.forEach(elem => this.unselectElement(elem));
     }
-    deleteElement(elem) {
-        console.log('Delete element', elem);
-        switch (elem.type) {
-            case 'inputPin':
-                {
-                    this.disconnect(elem);
-                }
-        }
-    }
     ////////////////////////////////
     //      KEYBOARD HANDLING
     ////////////////////////////////
     onKeyDown(ev) {
         switch (ev.code) {
             case 'Delete':
+            case 'Backspace':
                 {
                     this.selectedElements.forEach(elem => this.deleteElement(elem));
+                    this.unselectAll();
                     break;
                 }
         }

@@ -142,38 +142,43 @@ onmessage = (e) => {
                     response = id;
                 break;
             }
-        case 11 /* SetFunctionBlockFlag */:
+        case 11 /* DeleteFunctionBlock */:
+            {
+                const id = msg.params;
+                response = cpu.deleteDatablock(id);
+                break;
+            }
+        case 12 /* SetFunctionBlockFlag */:
             {
                 const par = msg.params;
-                console.log('set func flag', par.flag, par.enabled);
                 response = cpu.setFunctionFlag(par.funcID, par.flag, par.enabled);
                 break;
             }
-        case 14 /* SetFunctionBlockIOFlag */:
+        case 15 /* SetFunctionBlockIOFlag */:
             {
                 const par = msg.params;
                 response = cpu.setFunctionIOFlag(par.funcID, par.ioNum, par.flag, par.enabled);
                 break;
             }
-        case 13 /* SetFunctionBlockIOFlags */:
+        case 14 /* SetFunctionBlockIOFlags */:
             {
                 const par = msg.params;
                 response = cpu.setFunctionIOFlags(par.funcID, par.ioNum, par.flags);
                 break;
             }
-        case 12 /* SetFunctionBlockIOValue */:
+        case 13 /* SetFunctionBlockIOValue */:
             {
                 const par = msg.params;
                 response = cpu.setFunctionIOValue(par.funcID, par.ioNum, par.value);
                 break;
             }
-        case 15 /* ConnectFunctionBlockInput */:
+        case 16 /* ConnectFunctionBlockInput */:
             {
                 const par = msg.params;
                 response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum);
                 break;
             }
-        case 16 /* GetSystemSector */:
+        case 17 /* GetSystemSector */:
             {
                 const systemSector = cpu.getSystemSector();
                 const data = {
@@ -191,47 +196,47 @@ onmessage = (e) => {
                 response = data;
                 break;
             }
-        case 17 /* GetTaskList */:
+        case 18 /* GetTaskList */:
             {
                 response = cpu.getTaskIDList();
                 break;
             }
-        case 18 /* GetTask */:
+        case 19 /* GetTask */:
             {
                 const id = msg.params;
                 response = cpu.getTaskByID(id);
                 break;
             }
-        case 19 /* GetDatablockTable */:
+        case 20 /* GetDatablockTable */:
             {
                 response = cpu.getDatablockTable();
                 break;
             }
-        case 20 /* GetDatablockHeader */:
+        case 21 /* GetDatablockHeader */:
             {
                 const id = msg.params;
                 response = cpu.getDatablockHeaderByID(id);
                 break;
             }
-        case 21 /* GetDatablockRef */:
+        case 22 /* GetDatablockRef */:
             {
                 const id = msg.params;
                 response = cpu.getDatablockRef(id);
                 break;
             }
-        case 22 /* GetDatablockID */:
+        case 23 /* GetDatablockID */:
             {
                 const ref = msg.params;
                 response = cpu.getDatablockID(ref);
                 break;
             }
-        case 23 /* GetFunctionBlockHeader */:
+        case 24 /* GetFunctionBlockHeader */:
             {
                 const id = msg.params;
                 response = cpu.readFunctionHeaderByID(id);
                 break;
             }
-        case 24 /* GetFunctionBlockData */:
+        case 25 /* GetFunctionBlockData */:
             {
                 const id = msg.params;
                 const funcHeader = cpu.readFunctionHeaderByID(id);
@@ -251,7 +256,7 @@ onmessage = (e) => {
                 response = data;
                 break;
             }
-        case 25 /* GetFunctionBlockIOValues */:
+        case 26 /* GetFunctionBlockIOValues */:
             {
                 const id = msg.params;
                 const values = cpu.readFunctionIOValuesByID(id);
@@ -262,7 +267,7 @@ onmessage = (e) => {
                 response = Array.from(values);
                 break;
             }
-        case 26 /* GetCircuitData */:
+        case 27 /* GetCircuitData */:
             {
                 const id = msg.params;
                 if (cpu.getDatablockHeaderByID(id).type != 3 /* CIRCUIT */) {
@@ -270,10 +275,13 @@ onmessage = (e) => {
                     break;
                 }
                 const outputRefs = Array.from(cpu.readCircuitOutputRefsByID(id)).map(ioRef => cpu.solveIOReference(ioRef));
-                const callList = Array.from(cpu.readCircuitCallRefListByID(id)).map(callRef => cpu.getDatablockID(callRef));
+                const refList = cpu.readCircuitCallRefListByID(id);
+                const last = refList.lastIndexOf(0);
+                const refs = refList.slice(0, last);
+                const callIDList = Array.from(refs).map(ref => cpu.getDatablockID(ref));
                 const data = {
                     outputRefs,
-                    callIDList: callList
+                    callIDList
                 };
                 response = data;
                 break;

@@ -11,6 +11,7 @@ export const MessageCodeNames = [
     'CreateCircuit',
     'ConnectCircuitOutput',
     'CreateFunctionBlock',
+    'DeleteFunctionBlock',
     'SetFunctionBlockFlag',
     'SetFunctionBlockIOValue',
     'SetFunctionBlockIOFlags',
