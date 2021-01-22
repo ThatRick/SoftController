@@ -40,7 +40,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     get blockID() {
         return this.funcState.offlineID
     }
-    setValue(value: number) { this.funcState.parentCircuit.setIOValue(this.blockID, this.ioNum, value) }
+    setValue(value: number) { this.funcState.parentCircuit.setFunctionBlockIOValue(this.blockID, this.ioNum, value) }
     
     constructor(parent: IViewContainerGUI, funcState: FunctionBlock, ioNum: number, pos: Vec2, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1))

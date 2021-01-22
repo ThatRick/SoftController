@@ -1,4 +1,4 @@
-import {DataType, StructDataTypes, sizeOfStruct, sizeOfType, readStruct, writeStruct} from '../Lib/TypedStructs.js'
+import {DataType, StructDataTypes, sizeOfStruct, sizeOfType, readStruct, writeStruct, StructDataType} from '../Lib/TypedStructs.js'
 
 export type ID = number
 export type REF = number
@@ -84,6 +84,20 @@ export const TaskStruct: StructDataTypes<ITask> =
 }
 export const taskStructByteLength = sizeOfStruct(TaskStruct)
 
+// MONITOR VALUES DATA
+export type IMonitorValueChange =
+{
+    id:         number     
+    ioNum:      number  
+    value:      number  
+}
+export const MonitorValueChangeStruct: StructDataTypes<IMonitorValueChange> =
+{
+    id:     DataType.uint16,
+    ioNum:  DataType.uint16,
+    value:  DataType.float
+}
+export const monitorValueChangeStructByteLength = sizeOfStruct(MonitorValueChangeStruct)
 
 // FUNCTION PARAMETERS
 export interface IFunctionCallParams

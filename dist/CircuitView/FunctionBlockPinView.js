@@ -32,7 +32,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
     get blockID() {
         return this.funcState.offlineID;
     }
-    setValue(value) { this.funcState.parentCircuit.setIOValue(this.blockID, this.ioNum, value); }
+    setValue(value) { this.funcState.parentCircuit.setFunctionBlockIOValue(this.blockID, this.ioNum, value); }
     get connection() {
         const ref = (this.isInternalCircuitIO)
             ? this.funcState.parentCircuit.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]

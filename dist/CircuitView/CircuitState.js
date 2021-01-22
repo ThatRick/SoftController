@@ -1,4 +1,6 @@
 import { getFunction } from '../FunctionCollection.js';
+import { MonitorValueChangeStruct } from '../Controller/ControllerDataTypes.js';
+import { readArrayOfStructs } from '../Lib/TypedStructs.js';
 const debugLogging = true;
 function logInfo(...args) { debugLogging && console.info('State:', ...args); }
 function logError(...args) { console.error('State:', ...args); }
@@ -27,7 +29,9 @@ export class FunctionBlock {
         this.func = (this.isCircuit) ? null : getFunction(funcData.library, funcData.opcode);
         this.parentCircuit = parentCircuit;
     }
-    connectOnline(onlineID) {
+    connectOnline(cpu, onlineID) {
+        cpu.setFunctionBlockFlag(onlineID, 1 /* MONITOR */, true);
+        this.cpu = cpu;
         this.onlineID = onlineID;
     }
     // Create new offline function block data
@@ -66,7 +70,7 @@ export class FunctionBlock {
         return data;
     }
     // Download online function block data
-    static async readOnlineData(cpu, id) {
+    static async readFuncBlockDataFromOnlineCPU(cpu, id) {
         const data = await cpu.getFunctionBlockData(id);
         return data;
     }
@@ -84,23 +88,41 @@ export class Circuit extends FunctionBlock {
         this.parentCircuit = this;
         this.circuitData = circuitData;
     }
+    connectOnline(cpu, onlineID) {
+        super.connectOnline(cpu, onlineID);
+        cpu.setMonitoring(true);
+        cpu.onEventReceived = this.receiveEvent.bind(this);
+    }
+    receiveEvent(event) {
+        logInfo('Event received:', event);
+        switch (event.code) {
+            case 0 /* MonitoringValues */:
+                {
+                    const buffer = event.data;
+                    const changes = readArrayOfStructs(buffer, 0, MonitorValueChangeStruct);
+                    changes.forEach(change => {
+                        //this.setFunctionBlockIOValue()
+                    });
+                }
+        }
+    }
+    // Get block by ID
+    getBlock(offlineID) {
+        return (offlineID == -1) ? this : this.blocks[offlineID];
+    }
+    // Store circuit modifications
     async modified(type, blockID, ioNum) {
         logInfo('Modification', ModificationType[type], blockID, ioNum);
         if (this.immediateMode) {
             this.sendModification(type, blockID, ioNum);
-            await this.cpu.stepController(20);
-            this.readOnlineValues();
         }
         else
             this.modifications.push({ type, blockID, ioNum });
     }
-    getBlock(offlineID) {
-        return (offlineID == -1) ? this : this.blocks[offlineID];
-    }
     ////////////////////////////
     //      Modifications
     ////////////////////////////
-    setIOValue(blockID, ioNum, value, isOnlineReadback = false) {
+    setFunctionBlockIOValue(blockID, ioNum, value, isOnlineReadback = false) {
         const block = this.getBlock(blockID);
         const currentValues = block.funcData.ioValues;
         if (currentValues[ioNum] != value) {
@@ -141,24 +163,33 @@ export class Circuit extends FunctionBlock {
         if (this.cpu)
             this.modified(ModificationType.DELETE_CONNECTION, targetBlock.offlineID, inputNum);
     }
-    // Read IO values from online CPU
-    async readOnlineValues() {
+    ///////////////////////////////
+    //      Online functions
+    ///////////////////////////////
+    // In immediate mode changes are sent to CPU immediately
+    setImmediateMode(state) {
+        this.immediateMode = state;
+        return this.immediateMode;
+    }
+    // Read circuit and it's blocks IO values from online CPU
+    async onlineReadIOValues() {
         if (!this.cpu)
             return;
-        await this.readOnlineBlockIOValues(this.offlineID);
+        await this.onlineReadBlockIOValues(this.offlineID);
         for (const block of this.blocks) {
-            this.readOnlineBlockIOValues(block.offlineID);
+            this.onlineReadBlockIOValues(block.offlineID);
         }
     }
-    async readOnlineBlockIOValues(blockID) {
+    // Read function block IO values from online CPU
+    async onlineReadBlockIOValues(blockID) {
         const block = this.getBlock(blockID);
         const ioValues = await this.cpu.getFunctionBlockIOValues(block.onlineID);
         ioValues.forEach((onlineValue, ioNum) => {
-            this.setIOValue(blockID, ioNum, onlineValue, true);
+            this.setFunctionBlockIOValue(blockID, ioNum, onlineValue, true);
         });
     }
     // Load function blocks from online CPU
-    async readOnlineFunctionBlocks() {
+    async onlineReadFunctionBlocks() {
         if (!this.cpu) {
             console.error('Circuit: Can not load online blocks. no controller connected');
             return;
@@ -169,9 +200,9 @@ export class Circuit extends FunctionBlock {
         let offlineID = this.blocks.length;
         // Load circuit's function blocks from CPU
         this.blocks = await Promise.all(this.circuitData.callIDList.map(async (onlineID) => {
-            const data = await FunctionBlock.readOnlineData(this.cpu, onlineID);
+            const data = await FunctionBlock.readFuncBlockDataFromOnlineCPU(this.cpu, onlineID);
             const block = new FunctionBlock(data, offlineID++, this);
-            block.connectOnline(onlineID);
+            block.connectOnline(this.cpu, onlineID);
             this.blocksByOnlineID.set(onlineID, block);
             return block;
         }));
@@ -190,11 +221,7 @@ export class Circuit extends FunctionBlock {
             });
         });
     }
-    setImmediateMode(state) {
-        this.immediateMode = state;
-        logInfo('immediate mode', this.immediateMode);
-        return this.immediateMode;
-    }
+    // Send circuit modifications to online CPU
     async sendChanges() {
         if (!this.cpu) {
             console.error('Upload changes: No online CPU connection');
@@ -204,9 +231,8 @@ export class Circuit extends FunctionBlock {
             await this.sendModification(modification.type, modification.blockID, modification.ioNum);
         }
         this.modifications = [];
-        await this.cpu.stepController(20);
-        this.readOnlineValues();
     }
+    // Send circuit modification to online CPU
     async sendModification(type, blockOfflineID, ioNum) {
         const block = this.getBlock(blockOfflineID);
         let success;
@@ -223,7 +249,7 @@ export class Circuit extends FunctionBlock {
                     const data = block.funcData;
                     const onlineID = await this.cpu.createFunctionBlock(data.library, data.opcode, this.onlineID, undefined, data.inputCount, data.outputCount, data.staticCount).catch(e => error = e);
                     if (onlineID) {
-                        block.connectOnline(onlineID);
+                        block.connectOnline(this.cpu, onlineID);
                         success = true;
                     }
                     break;
@@ -288,14 +314,13 @@ export class Circuit extends FunctionBlock {
         return new Circuit(funcData, circuitData);
     }
     // Download circuit from online CPU
-    static async loadOnline(cpu, circuitOnlineID, loadBlocks = true) {
+    static async loadFromOnlineCPU(cpu, circuitOnlineID, loadBlocks = true) {
         const funcData = await cpu.getFunctionBlockData(circuitOnlineID);
         const circuitData = await cpu.getCircuitData(circuitOnlineID);
         const circuit = new Circuit(funcData, circuitData);
-        circuit.cpu = cpu;
-        circuit.connectOnline(circuitOnlineID);
+        circuit.connectOnline(cpu, circuitOnlineID);
         if (loadBlocks)
-            await circuit.readOnlineFunctionBlocks();
+            await circuit.onlineReadFunctionBlocks();
         return circuit;
     }
 }

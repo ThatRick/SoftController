@@ -239,7 +239,7 @@ export default class CircuitView extends GUIView {
         this.deleteConnectionTrace(inputPin.id);
     }
     createConnectionTrace(outputPin, inputPin, inverted = false) {
-        logInfo('create trace, old input connection:', inputPin.connection);
+        logInfo('create trace', inputPin.id);
         if (inputPin.connection) {
             this.deleteConnectionTrace(inputPin.id);
         }
@@ -247,10 +247,10 @@ export default class CircuitView extends GUIView {
         this.traces.set(inputPin.id, trace);
     }
     deleteConnectionTrace(id) {
-        logInfo('delete trace', id);
         const trace = this.traces.get(id);
         if (!trace)
             return;
+        logInfo('delete trace', id);
         trace.delete();
         this.traces.delete(id);
     }

@@ -6,7 +6,7 @@ const lineStyle = {
 };
 const sizePadding = 10;
 const parseID = (id) => `${Math.trunc(id / 1000)}:${id % 1000}`;
-const debugLogging = true;
+const debugLogging = false;
 function logInfo(...args) { debugLogging && console.info('Trace layer:', ...args); }
 function logError(...args) { console.error('Trace layer:', ...args); }
 export default class TraceBezierLayer {

@@ -1,8 +1,8 @@
 export const defaultStyle = {
-    colorBackground: '#181820',
-    colorGridLine: '#202040',
-    colorPanel: '#202040',
-    colorPanelLines: '#303050',
+    colorBackground: '#202020',
+    colorGridLine: '#252525',
+    colorPanel: '#282828',
+    colorPanelLines: '#333333',
     colorBlock: '#447',
     colorBlockHover: '#558',
     colorSelected: '#AAF',

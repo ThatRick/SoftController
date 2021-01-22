@@ -47,18 +47,18 @@ async function app() {
     const taskId = await cpu.createTask(circuitID, 20, 10);
     terminal.printSystemSector();
     terminal.printDatablockTable();
-    const circuit = await Circuit.loadOnline(cpu, circuitID);
+    const circuit = await Circuit.loadFromOnlineCPU(cpu, circuitID);
     const view = testGUI(circuit);
     createControlButtonBar([
         new HTML.Button(null, 'Update', async () => {
             await cpu.stepController(20);
-            await circuit.readOnlineValues();
+            await circuit.onlineReadIOValues();
         }),
         new HTML.Button(null, 'Step', async () => {
             await cpu.stepController(20);
         }),
         new HTML.Button(null, 'Read', async () => {
-            await circuit.readOnlineValues();
+            await circuit.onlineReadIOValues();
         }),
         new HTML.Button(null, 'Upload', async () => {
             console.log('Upload changes');
@@ -66,7 +66,7 @@ async function app() {
             console.log('Step controller');
             await cpu.stepController(20);
             console.log('Read online values');
-            await circuit.readOnlineValues();
+            await circuit.onlineReadIOValues();
         }),
         new HTML.Button(null, 'debug', async () => {
             terminal.printSystemSector();

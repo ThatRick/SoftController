@@ -5,27 +5,32 @@ function logError(...args) { console.error('LINK: ', ...args); }
 export default class VirtualControllerLink {
     constructor() {
         this._msgID = 1;
-        this.messagesCallbacks = new Map();
+        this.messagesPromises = new Map();
         this.worker = new Worker('./VirtualController/VirtualControllerWorker.js', { type: 'module' });
-        this.worker.onmessage = (e) => this.handleResponse(e);
+        this.worker.onmessage = (e) => this.receiveMessage(e);
     }
     getMessageID() { return this._msgID++; }
     sendMessage(code, params, resolve, reject) {
         const id = this.getMessageID();
         const message = { id, code, params };
-        this.messagesCallbacks.set(id, { resolve, reject });
+        this.messagesPromises.set(id, { resolve, reject });
         this.worker.postMessage(message);
         logInfo('Sent message:', MessageCodeNames[code], message);
     }
-    handleResponse(e) {
+    receiveMessage(e) {
         if (!e.data) {
             logError('Bad message response, no data found', e);
         }
         const response = e.data;
         (response.success ? logInfo : logError)('Received message:', response);
-        const callbacks = this.messagesCallbacks.get(response.id);
-        this.messagesCallbacks.delete(response.id);
-        response.success ? callbacks.resolve(response.data) : callbacks.reject(response.error);
+        if (response.code == 0 /* Event */) {
+            this.onEventReceived?.(response);
+        }
+        else {
+            const promise = this.messagesPromises.get(response.id);
+            this.messagesPromises.delete(response.id);
+            response.success ? promise.resolve(response.data) : promise.reject(response.error);
+        }
     }
     //////////////////////
     //  SYSTEM MESSAGES
@@ -57,62 +62,82 @@ export default class VirtualControllerLink {
         });
         return promise;
     }
+    setMonitoring(enabled) {
+        const promise = new Promise((resolve, reject) => {
+            this.sendMessage(5 /* SetMonitoring */, enabled, resolve, reject);
+        });
+        return promise;
+    }
     //////////////////////
     //  MODIFY MESSAGES
     //
     createTask(callTargetID, interval, offset) {
         const params = { callTargetID, interval, offset };
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(5 /* CreateTask */, params, resolve, reject);
+            this.sendMessage(6 /* CreateTask */, params, resolve, reject);
         });
         return promise;
     }
     setTaskCallTarget(taskID, callTargetID) {
         const params = { taskID, callTargetID };
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(6 /* SetTaskCallTarget */, params, resolve, reject);
+            this.sendMessage(7 /* SetTaskCallTarget */, params, resolve, reject);
         });
         return promise;
     }
     createCircuit(inputCount, outputCount, funcCallCount) {
         const params = { inputCount, outputCount, funcCallCount };
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(7 /* CreateCircuit */, params, resolve, reject);
+            this.sendMessage(8 /* CreateCircuit */, params, resolve, reject);
         });
         return promise;
     }
     connectCircuitOutput(circID, outputNum, sourceID, sourceIONum) {
         const params = { circID, outputNum, sourceID, sourceIONum };
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(8 /* ConnectCircuitOutput */, params, resolve, reject);
+            this.sendMessage(9 /* ConnectCircuitOutput */, params, resolve, reject);
         });
         return promise;
     }
     createFunctionBlock(library, opcode, circuitID, callIndex, inputCount, outputCount, staticCount) {
         const params = { library, opcode, circuitID, callIndex, inputCount, outputCount, staticCount };
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(9 /* CreateFunctionBlock */, params, resolve, reject);
+            this.sendMessage(10 /* CreateFunctionBlock */, params, resolve, reject);
         });
         return promise;
     }
-    setFunctionBlockIOValue(funcID, ioNum, value) {
-        const params = { funcID, ioNum, value };
+    setFunctionBlockFlag(funcID, flag, enabled) {
+        const params = { funcID, flag, enabled };
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(10 /* SetFunctionBlockIOValue */, params, resolve, reject);
+            this.sendMessage(11 /* SetFunctionBlockFlag */, params, resolve, reject);
+        });
+        return promise;
+    }
+    setFunctionBlockIOFlag(funcID, ioNum, flag, enabled) {
+        const params = { funcID, ioNum, flag, enabled };
+        const promise = new Promise((resolve, reject) => {
+            this.sendMessage(14 /* SetFunctionBlockIOFlag */, params, resolve, reject);
         });
         return promise;
     }
     setFunctionBlockIOFlags(funcID, ioNum, flags) {
         const params = { funcID, ioNum, flags };
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(11 /* SetFunctionBlockIOFlags */, params, resolve, reject);
+            this.sendMessage(13 /* SetFunctionBlockIOFlags */, params, resolve, reject);
+        });
+        return promise;
+    }
+    setFunctionBlockIOValue(funcID, ioNum, value) {
+        const params = { funcID, ioNum, value };
+        const promise = new Promise((resolve, reject) => {
+            this.sendMessage(12 /* SetFunctionBlockIOValue */, params, resolve, reject);
         });
         return promise;
     }
     connectFunctionBlockInput(targetID, targetInputNum, sourceID, sourceIONum, inverted = false) {
         const params = { targetID, targetInputNum, sourceID, sourceIONum, inverted };
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(12 /* ConnectFunctionBlockInput */, params, resolve, reject);
+            this.sendMessage(15 /* ConnectFunctionBlockInput */, params, resolve, reject);
         });
         return promise;
     }
@@ -122,75 +147,75 @@ export default class VirtualControllerLink {
     // CONTROLLER
     getSystemSector() {
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(13 /* GetSystemSector */, null, resolve, reject);
+            this.sendMessage(16 /* GetSystemSector */, null, resolve, reject);
         });
         return promise;
     }
     getTaskList() {
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(14 /* GetTaskList */, null, resolve, reject);
+            this.sendMessage(17 /* GetTaskList */, null, resolve, reject);
         });
         return promise;
     }
     getTask(id) {
         const params = id;
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(15 /* GetTask */, params, resolve, reject);
+            this.sendMessage(18 /* GetTask */, params, resolve, reject);
         });
         return promise;
     }
     getDatablockTable() {
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(16 /* GetDatablockTable */, null, resolve, reject);
+            this.sendMessage(19 /* GetDatablockTable */, null, resolve, reject);
         });
         return promise;
     }
     getDatablockHeader(id) {
         const params = id;
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(17 /* GetDatablockHeader */, params, resolve, reject);
+            this.sendMessage(20 /* GetDatablockHeader */, params, resolve, reject);
         });
         return promise;
     }
     getDatablockRef(id) {
         const params = id;
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(18 /* GetDatablockRef */, params, resolve, reject);
+            this.sendMessage(21 /* GetDatablockRef */, params, resolve, reject);
         });
         return promise;
     }
     getDatablockID(ref) {
         const params = ref;
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(19 /* GetDatablockID */, params, resolve, reject);
+            this.sendMessage(22 /* GetDatablockID */, params, resolve, reject);
         });
         return promise;
     }
     getFunctionBlockHeader(id) {
         const params = id;
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(20 /* GetFunctionBlockHeader */, params, resolve, reject);
+            this.sendMessage(23 /* GetFunctionBlockHeader */, params, resolve, reject);
         });
         return promise;
     }
     getFunctionBlockData(id) {
         const params = id;
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(21 /* GetFunctionBlockData */, params, resolve, reject);
+            this.sendMessage(24 /* GetFunctionBlockData */, params, resolve, reject);
         });
         return promise;
     }
     getFunctionBlockIOValues(id) {
         const params = id;
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(22 /* GetFunctionBlockIOValues */, params, resolve, reject);
+            this.sendMessage(25 /* GetFunctionBlockIOValues */, params, resolve, reject);
         });
         return promise;
     }
     getCircuitData(id) {
         const params = id;
         const promise = new Promise((resolve, reject) => {
-            this.sendMessage(23 /* GetCircuitData */, params, resolve, reject);
+            this.sendMessage(26 /* GetCircuitData */, params, resolve, reject);
         });
         return promise;
     }

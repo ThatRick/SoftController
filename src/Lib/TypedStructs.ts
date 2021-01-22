@@ -54,7 +54,7 @@ export function readStruct<T>(buffer: ArrayBuffer, startByteOffset: number, stru
 }
 
 // Read a struct from buffer
-export function readStructElement<T extends StructDataType>(buffer: ArrayBuffer, startByteOffset: number, struct: T, elementName: keyof T): number | void
+export function readStructElement<T extends StructDataType>(buffer: ArrayBuffer, startByteOffset: number, struct: T, elementName: keyof T)
 {
     let offset = startByteOffset;
     const view = new DataView(buffer);
@@ -94,7 +94,7 @@ export function readArrayOfStructs<T>(buffer: ArrayBuffer, startByteOffset: numb
         len = maxLen
     }
     if ((buffer.byteLength - startByteOffset) % structByteLength != 0) console.error('Read Struct Array: Given buffer length is not a multiple of struct length')
-    const array = new Array<T>(len);
+    const array: T[] = []
     // console.log('Read Struct Array: len = %d / %d = %d\n', (buffer.byteLength - startByteOffset), sizeOfStruct(struct), len);
 
     // Iterate all array elements

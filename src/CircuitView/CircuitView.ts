@@ -202,7 +202,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     }
 
     createConnectionTrace(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false) {
-        logInfo('create trace, old input connection:', inputPin.connection)
+        logInfo('create trace', inputPin.id)
         if (inputPin.connection) {
             this.deleteConnectionTrace(inputPin.id)
         }
@@ -211,9 +211,9 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     }
     
     deleteConnectionTrace(id: ID) {
-        logInfo('delete trace', id)
         const trace = this.traces.get(id)
         if (!trace) return
+        logInfo('delete trace', id)
         trace.delete()
         this.traces.delete(id)
     }

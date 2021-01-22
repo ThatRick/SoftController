@@ -1,11 +1,11 @@
 
-import {readStruct, setStructElement, writeStruct} from '../Lib/TypedStructs.js'
-import {ID, IORef, IOFlag, IODataType, getIODataType, setIODataType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF, FunctionFlag} from '../Controller/ControllerDataTypes.js'
+import {readStruct, readStructElement, setStructElement, sizeOfStruct, writeStruct} from '../Lib/TypedStructs.js'
+import {ID, IORef, IOFlag, IODataType, getIODataType, setIODataType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF, FunctionFlag, MonitorValueChangeStruct, monitorValueChangeStructByteLength} from '../Controller/ControllerDataTypes.js'
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionCallParams} from '../Controller/ControllerDataTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from '../Controller/ControllerDataTypes.js'
 import {ITask, TaskStruct, taskStructByteLength} from '../Controller/ControllerDataTypes.js'
 import {getFunction, getFunctionName} from '../FunctionCollection.js'
-import { calcCircuitSize, calcFunctionSize } from '../Controller/ControllerInterface.js'
+import { calcCircuitSize, calcFunctionSize, EventCode } from '../Controller/ControllerInterface.js'
 
 
 /*
@@ -38,7 +38,10 @@ const MAX_MONITORED_IO_CHANGES = 100
 //      Virtual Controller
 //////////////////////////////////
 
-const debugLogging = false
+const debugLogging = true
+function logInfo(...args: any[]) { debugLogging && console.info('CPU:', ...args) };
+function logError(...args: any[]) { console.error('CPU:', ...args) };
+
 
 export default class VirtualController
 {
@@ -57,7 +60,6 @@ export default class VirtualController
     private ints:       Uint32Array
     private floats:     Float32Array
 
-    logInfo(...args: any[]) { debugLogging && console.info('CPU:', ...args) };
 
     set id(value: number)                           { this.systemSector[SystemSector.id] = value }
     set version(value: number)                      { this.systemSector[SystemSector.version] = value }
@@ -155,20 +157,28 @@ export default class VirtualController
     // Process controller tasks
     tick(dt: number)
     {
-        this.logInfo('tick')
+        logInfo('tick')
         for (const taskRef of this.taskList) {
             if (taskRef == 0) break;
             // read task data
             const task = this.getTask(taskRef);
             // add delta time to accumulator
             task.timeAccu += dt;
-            if (task.timeAccu > task.interval) {
+            // Run task when time accumulator is greater or equal to task interval
+            if (task.timeAccu >= task.interval) {
                 task.timeAccu -= task.interval;
-                // run target function / circuit
-                this.logInfo('run task')
+                logInfo('run task')
+                // Start monitoring IO value changes
+                this.monitoringStart()
+                
                 const taskStartTime = performance.now();
+                // run target function / circuit
                 this.runFunction(task.targetRef, task.interval);
                 const elapsedTime = performance.now() - taskStartTime;
+                
+                // Send monitored IO value changes
+                this.monitoringComplete()
+                
                 // save performance data
                 task.cpuTime += elapsedTime;
                 if (task.cpuTime > 1) {
@@ -191,7 +201,7 @@ export default class VirtualController
         // check last 
         const vacantIndex = this.taskList.findIndex(value => (value == 0));
         if (vacantIndex == -1) {
-            console.error('Task list is full');
+            logError('Task list is full');
             return -1;
         }
 
@@ -210,7 +220,7 @@ export default class VirtualController
 
         const taskID = this.addDatablock(buffer, DatablockType.TASK);
         if (taskID == -1) {
-            console.error('Fault creating task');
+            logError('Fault creating task');
             return -1;
         }
 
@@ -255,27 +265,34 @@ export default class VirtualController
         return taskIDs
     }
 
-    monitoringStructSize = 2 + 2 + 4
-    monitoringBuffer = new ArrayBuffer(this.monitoringStructSize * MAX_MONITORED_IO_CHANGES)
-    monitoringData = new DataView(this.monitoringBuffer)
-    monitoringDataIndex = 0
-    monitoringDataHandler: (buffer: ArrayBuffer, length: number) => void
+/***************************
+ *    MONITOR IO VALUES    *
+ ***************************/
+    
+    monitoringEnabled = false
+    monitoringInterval = 100
+    monitoringBuffer = new ArrayBuffer(monitorValueChangeStructByteLength * MAX_MONITORED_IO_CHANGES)
 
-    startMonitoringCycle() {
+    monitoringDataIndex = 0
+    onControllerEvent: (id: EventCode, data: any) => void
+
+    monitoringStart() {
         this.monitoringDataIndex = 0
     }
-    reportIOValueChange(blockRef: number, ioNum: number, currentValue: number) {
-        const id = this.getDatablockID(blockRef)
-        let offset = this.monitoringDataIndex * this.monitoringStructSize
-        this.monitoringData.setUint16(offset, blockRef)
-        offset += 2
-        this.monitoringData.setUint16(offset, ioNum)
-        offset += 2
-        this.monitoringData.setFloat32(offset, currentValue)
-        this.monitoringDataIndex++
+    monitoringValueChanged(id: number, ioNum: number, value: number) {
+        if (this.monitoringDataIndex == MAX_MONITORED_IO_CHANGES) {
+            logError('Monitoring value buffer full')
+            return
+        }
+        logInfo('Monitoring value changed:', id, ioNum, value)
+        let offset = monitorValueChangeStructByteLength * this.monitoringDataIndex++
+        writeStruct(this.monitoringBuffer, offset, MonitorValueChangeStruct, { id, ioNum, value })
     }
-    completeMonitoringCycle() {
-        this.monitoringDataHandler?.(this.monitoringBuffer, this.monitoringDataIndex)
+    monitoringComplete() {
+        if (this.monitoringDataIndex) {
+            const reportData = this.monitoringBuffer.slice(0, monitorValueChangeStructByteLength * this.monitoringDataIndex)
+            this.onControllerEvent?.(EventCode.MonitoringValues, reportData)
+        }
     }
 
 
@@ -329,7 +346,7 @@ export default class VirtualController
         const circHeader = this.readFunctionHeaderByID(id);
 
         if (ioNum < 0 || ioNum >= circHeader.inputCount + circHeader.outputCount) {
-            console.error('Invalid circuit IO index', ioNum);
+            logError('Invalid circuit IO index', ioNum);
             return false;
         }
         const pointers = this.functionDataMapByID(id, circHeader);
@@ -354,7 +371,7 @@ export default class VirtualController
         const functionRef = this.datablockTable[functionID];
         const vacantIndex = funcCallList.indexOf(0);                            // find first vacant call index
         if (vacantIndex == -1) {
-            console.error('Circuit function call list is full');
+            logError('Circuit function call list is full');
             return false;
         }
         if (callIndex === undefined) {
@@ -374,7 +391,7 @@ export default class VirtualController
 
         const callIndex = funcCallList.indexOf(functionRef);                    // find function call index
         if (callIndex == -1) {
-            console.error('Tried to remove invalid function call reference', functionRef);
+            logError('Tried to remove invalid function call reference', functionRef);
             return false;
         }
         if (callIndex < funcCallList.length - 1) {
@@ -433,7 +450,7 @@ export default class VirtualController
 
     setFunctionIOValue(id: ID, ioNum: number, value: number) {
         const pointers = this.functionDataMapByID(id);
-        if (!pointers) return false
+        if (!pointers) return false;
         if (ioNum < (pointers.statics - pointers.inputs)) {
             this.floats[pointers.inputs + ioNum] = value;
         }
@@ -442,24 +459,35 @@ export default class VirtualController
 
     setFunctionIOFlags(id: ID, ioNum: number, flags: number) {
         const pointers = this.functionDataMapByID(id);
-        if (!pointers) return false
+        if (!pointers) return false;
         if (ioNum < (pointers.statics - pointers.inputs)) {
             this.bytes[pointers.flags + ioNum] = flags;
         }
         return true
     }
     
-    setFunctionIOFlag(id: ID, ioNum: number, flag: number) {
+    setFunctionIOFlag(id: ID, ioNum: number, flag: number, enabled: boolean) {
         const pointers = this.functionDataMapByID(id);
-        if (!pointers) return false
-        this.bytes[pointers.flags + ioNum] |= flag;
+        if (!pointers) return false;
+        const flagOffset = pointers.flags + ioNum
+        const currentFlags = this.bytes[flagOffset]
+        const flags = (enabled)
+            ? currentFlags | flag
+            : currentFlags & ~flag
+        this.bytes[flagOffset] = flags
         return true
     }
-    
-    clearFunctionIOFlag(id: ID, ioNum: number, flag: number) {
-        const pointers = this.functionDataMapByID(id);
-        if (!pointers) return false
-        this.bytes[pointers.flags + ioNum] &= ~flag;
+
+    setFunctionFlag(id: ID, flag: number, enabled: boolean) {
+        const ref = this.datablockTable[id]
+        if (!ref) return false
+        const funcHeaderOffset = ref + datablockHeaderByteLength;
+        const currentFlags = readStructElement(this.mem, funcHeaderOffset, FunctionHeaderStruct, 'functionFlags')
+        const flags = (enabled)
+            ? currentFlags | flag
+            : currentFlags & ~flag
+        setStructElement(this.mem, funcHeaderOffset, FunctionHeaderStruct, 'functionFlags', flags)
+        const afterFlags = readStructElement(this.mem, funcHeaderOffset, FunctionHeaderStruct, 'functionFlags')
         return true
     }
 
@@ -470,7 +498,7 @@ export default class VirtualController
         if (sourceFuncId && !sourceIOPointer) return false
         
         this.ints[inputRefPointer] = sourceIOPointer;
-        if (inverted) this.setFunctionIOFlag(funcId, inputNum, IOFlag.INVERTED);
+        if (inverted) this.setFunctionIOFlag(funcId, inputNum, IOFlag.INVERTED, true);
         
         return true
     }
@@ -546,7 +574,7 @@ export default class VirtualController
             this.addFunctionCall(circuitID, id, callIndex);
         }
 
-        this.logInfo(`for function ${getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        logInfo(`for function ${getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
 
         return id;
     }
@@ -656,7 +684,7 @@ export default class VirtualController
                     }
                 }
             }
-        if (!solved) console.error('Trying to solve invalid IO reference', ioRef);
+        if (!solved) logError('Trying to solve invalid IO reference', ioRef);
 
         return solved;
     }
@@ -677,7 +705,8 @@ export default class VirtualController
         const funcHeader = this.readFunctionHeader(blockRef);
         const pointers = this.functionDataMap(blockRef, funcHeader);
         
-        const monitoring = !!(funcHeader.functionFlags & FunctionFlag.MONITOR)
+        // Monitor IO value changes
+        const monitoring = (this.monitoringEnabled && (funcHeader.functionFlags & FunctionFlag.MONITOR))
         let preIOValues: Float32Array
         if (monitoring) preIOValues = this.floats.slice(pointers.inputs, pointers.statics)
         
@@ -696,14 +725,6 @@ export default class VirtualController
             }
         }
 
-        if (monitoring) {
-            preIOValues.forEach((preValue, ioNum) => {
-                const currentValue = this.floats[pointers.inputs + ioNum]
-                if (currentValue != preValue) this.reportIOValueChange(blockRef, ioNum, currentValue)
-            })
-        }
-
-        
         if (blockHeader.type == DatablockType.FUNCTION)             // Run function
         {
             const func = getFunction(funcHeader.library, funcHeader.opcode);
@@ -750,6 +771,15 @@ export default class VirtualController
                 }
             }
         }
+
+        // Report changed IO values
+        if (monitoring) {
+            const id = this.getDatablockID(blockRef)
+            preIOValues.forEach((preValue, ioNum) => {
+                const currentValue = this.floats[pointers.inputs + ioNum]
+                if (currentValue != preValue) this.monitoringValueChanged(id, ioNum, currentValue)
+            })
+        }
     }
 
 /******************************
@@ -761,7 +791,7 @@ export default class VirtualController
     
         const allocation = this.allocateDatablock(data.byteLength);
         if (!allocation) {
-            console.error('Could not create new data block');
+            logError('Could not create new data block');
             return -1;
         }
 
@@ -778,7 +808,7 @@ export default class VirtualController
         
         this.bytes.set(dataBytes, offset);      // Write data block body
         
-        this.logInfo(`Created data block id ${allocation.id}, size ${allocation.byteLength} bytes, offset ${allocation.startByteOffset}`)
+        logInfo(`Created data block id ${allocation.id}, size ${allocation.byteLength} bytes, offset ${allocation.startByteOffset}`)
 
         return allocation.id;
     }
@@ -795,7 +825,7 @@ export default class VirtualController
             }
         }
         if (candidates.length == 0) {
-            console.error('Controller out of memory');
+            logError('Out of memory');
             return null;
         }
         candidates.sort((a, b) => a.excessMem - b.excessMem);
@@ -853,7 +883,7 @@ export default class VirtualController
         writeStruct(this.mem, ref, DatablockHeaderStruct, header)
         this.datablockTable[id] = ref;
         
-        this.logInfo(`Unallocated block ${id}. prev: ${prevBlockID}, next: ${nextBlockID}, offset: ${ref.toString(16)}`, header);
+        logInfo(`Unallocated block ${id}. prev: ${prevBlockID}, next: ${nextBlockID}, offset: ${ref.toString(16)}`, header);
     }
 
     markUnallocatedMemory(startByteOffset: number, byteLength: number) {
@@ -896,7 +926,7 @@ export default class VirtualController
     getNewDatablockID() {
         const id = this.datablockTable.findIndex(ptr => ptr == 0);
         if (id == -1) {
-            console.error('Controller data block table full');
+            logError('Data block table full');
         }
         this.datablockTableVersion++;
         this.datablockTableLastUsedID = Math.max(this.datablockTableLastUsedID, id);
@@ -920,7 +950,7 @@ export default class VirtualController
     getDatablockID(ref: number) {
         const id = this.datablockTable.lastIndexOf(ref, this.datablockTableLastUsedID);
         if (id == -1) {
-            console.error('Invalid data block reference', ref);
+            logError('Invalid data block reference', ref);
         }
         return id;
     }

@@ -39,17 +39,19 @@ export interface MessageResponse
     id:         number
     code:       number
     success:    boolean
+
     data?:      unknown
     error?:     string
 }
 
 export const enum MessageCode {
-    Undefined,
+    Event,
 
     CreateController,
     StartController,
     StopController,
     StepController,
+    SetMonitoring,
 
     CreateTask,
     SetTaskCallTarget,
@@ -58,8 +60,10 @@ export const enum MessageCode {
     ConnectCircuitOutput,
 
     CreateFunctionBlock,
+    SetFunctionBlockFlag,
     SetFunctionBlockIOValue,
     SetFunctionBlockIOFlags,
+    SetFunctionBlockIOFlag,
     ConnectFunctionBlockInput,
 
     GetSystemSector,
@@ -79,12 +83,13 @@ export const enum MessageCode {
 }
 
 export const MessageCodeNames = [
-    'Undefined',
+    'Event',
 
     'CreateController',
     'StartController',
     'StopController',
     'StepController',
+    'SetMonitoring',
 
     'CreateTask',
     'SetTaskCallTarget',
@@ -93,8 +98,10 @@ export const MessageCodeNames = [
     'ConnectCircuitOutput',
 
     'CreateFunctionBlock',
+    'SetFunctionBlockFlag',
     'SetFunctionBlockIOValue',
     'SetFunctionBlockIOFlags',
+    'SetFunctionBlockIOFlag',
     'ConnectFunctionBlockInput',
 
     'GetSystemSector',
@@ -111,7 +118,18 @@ export const MessageCodeNames = [
     'GetFunctionBlockData',
     'GetFunctionBlockIOValues',
     'GetCircuitData',
+
 ]
+
+export const enum EventCode {
+    MonitoringValues
+}
+
+export const EventCodeNames = [
+    'MonitoringValues'
+]
+
+export type EventHandlerFunction = (MessageResponse) => void
 
 export interface ICreateControllerParams { dataMemSize: number, datablockTableLength?: number, taskListLength?: number, id?: number }
 export interface IStepControllerParams { interval: number, numSteps?: number }
@@ -120,13 +138,16 @@ export interface ISetTaskCallTargetParams { taskID: ID, callTargetID: ID }
 export interface ICreateCircuitParams { inputCount: number, outputCount: number, funcCallCount: number }
 export interface IConnectCircuitOutputParams { circID: ID, outputNum: number, sourceID: ID, sourceIONum: number }
 export interface ICreateFunctionBlockParams { library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number }
-export interface ISetFunctionBlockIOValueParams { funcID: ID, ioNum: number, value: number }
+export interface ISetFunctionBlockFlagParams { funcID: ID, flag: number, enabled: boolean }
+export interface ISetFunctionBlockIOFlagParams { funcID: ID, ioNum: number, flag: number, enabled: boolean }
 export interface ISetFunctionBlockIOFlagsParams { funcID: ID, ioNum: number, flags: number }
+export interface ISetFunctionBlockIOValueParams { funcID: ID, ioNum: number, value: number }
 export interface IConnectFunctionBlockInputParams { targetID: ID, targetInputNum: number, sourceID: ID, sourceIONum: number, inverted?: boolean }
-
 
 export default interface IControllerInterface
 {
+    onEventReceived: (eventHandler: EventHandlerFunction) => void
+
 ///////////////////
 //  SYSTEM
 //
@@ -135,6 +156,7 @@ export default interface IControllerInterface
     startController( interval: number ): Promise<boolean>
     stopController(): Promise<boolean>
     stepController( interval: number, numSteps?: number ): Promise<boolean>
+    setMonitoring( enabled: boolean ): Promise<boolean>
 
 ///////////////////
 //  MODIFY
@@ -149,8 +171,10 @@ export default interface IControllerInterface
 
     // FUNCTION BLOCK
     createFunctionBlock( library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number ): Promise<ID>
-    setFunctionBlockIOValue( funcID: ID, ioNum: number, value: number ): Promise<boolean>
+    setFunctionBlockFlag( funcID: ID, flag: number, enabled: boolean ): Promise<boolean>
+    setFunctionBlockIOFlag( funcID: ID, ioNum: number, flag: number, enabled: boolean ): Promise<boolean>
     setFunctionBlockIOFlags( funcID: ID, ioNum: number, flags: number ): Promise<boolean>
+    setFunctionBlockIOValue( funcID: ID, ioNum: number, value: number ): Promise<boolean>
     connectFunctionBlockInput( targetID: ID, targetInputNum: number, sourceID: ID, sourceIONum: number, inverted?: boolean ): Promise<boolean>
 
 ///////////////////
@@ -176,8 +200,8 @@ export default interface IControllerInterface
 
     // CIRCUIT
     getCircuitData( id: ID ): Promise<ICircuitData>
-}
 
+}
 
 export function calcFunctionSize(inputCount, outputCount, staticCount): number {
     const ioCount = inputCount + outputCount

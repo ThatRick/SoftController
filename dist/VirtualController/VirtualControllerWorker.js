@@ -1,5 +1,4 @@
 import VirtualController from './VirtualControllerCPU.js';
-let cpu;
 class Ticker {
     constructor(cpu) {
         this.cpu = cpu;
@@ -25,6 +24,26 @@ class Ticker {
     }
 }
 let ticker;
+let cpu;
+// Respond with resolve
+function respondResolve(id, code, data) {
+    const response = { id, code, success: true, data };
+    sendMessage(response);
+}
+// Respond with reject
+function respondReject(id, code, error) {
+    const response = { id, code, success: false, error };
+    sendMessage(response);
+}
+function handleControllerEvent(code, data) {
+    const event = { id: 0 /* Event */, code, success: true, data };
+    sendMessage(event);
+}
+// Post message
+function sendMessage(msg) {
+    self.postMessage(msg);
+}
+// Handle incoming messages
 onmessage = (e) => {
     const msg = e.data;
     let response;
@@ -54,6 +73,8 @@ onmessage = (e) => {
                     error = 'Controller could not be created.';
                     break;
                 }
+                // Handle CPU events
+                cpu.onControllerEvent = handleControllerEvent.bind(this);
                 ticker = new Ticker(cpu);
                 response = true;
                 break;
@@ -78,7 +99,14 @@ onmessage = (e) => {
                 response = true;
                 break;
             }
-        case 5 /* CreateTask */:
+        case 5 /* SetMonitoring */:
+            {
+                const enabled = msg.params;
+                cpu.monitoringEnabled = enabled;
+                response = true;
+                break;
+            }
+        case 6 /* CreateTask */:
             {
                 const par = msg.params;
                 const id = cpu.createTask(par.callTargetID, par.interval, par.offset);
@@ -86,13 +114,13 @@ onmessage = (e) => {
                     response = id;
                 break;
             }
-        case 6 /* SetTaskCallTarget */:
+        case 7 /* SetTaskCallTarget */:
             {
                 const par = msg.params;
                 response = cpu.setTaskCallTarget(par.taskID, par.callTargetID);
                 break;
             }
-        case 7 /* CreateCircuit */:
+        case 8 /* CreateCircuit */:
             {
                 const par = msg.params;
                 const id = cpu.createCircuit(par.inputCount, par.outputCount, par.funcCallCount);
@@ -100,13 +128,13 @@ onmessage = (e) => {
                     response = id;
                 break;
             }
-        case 8 /* ConnectCircuitOutput */:
+        case 9 /* ConnectCircuitOutput */:
             {
                 const par = msg.params;
                 response = cpu.connectCircuitOutput(par.circID, par.outputNum, par.sourceID, par.sourceIONum);
                 break;
             }
-        case 9 /* CreateFunctionBlock */:
+        case 10 /* CreateFunctionBlock */:
             {
                 const par = msg.params;
                 const id = cpu.createFunctionBlock(par.library, par.opcode, par.circuitID, par.callIndex, par.inputCount, par.outputCount, par.staticCount);
@@ -114,25 +142,38 @@ onmessage = (e) => {
                     response = id;
                 break;
             }
-        case 10 /* SetFunctionBlockIOValue */:
+        case 11 /* SetFunctionBlockFlag */:
             {
                 const par = msg.params;
-                response = cpu.setFunctionIOValue(par.funcID, par.ioNum, par.value);
+                console.log('set func flag', par.flag, par.enabled);
+                response = cpu.setFunctionFlag(par.funcID, par.flag, par.enabled);
                 break;
             }
-        case 11 /* SetFunctionBlockIOFlags */:
+        case 14 /* SetFunctionBlockIOFlag */:
+            {
+                const par = msg.params;
+                response = cpu.setFunctionIOFlag(par.funcID, par.ioNum, par.flag, par.enabled);
+                break;
+            }
+        case 13 /* SetFunctionBlockIOFlags */:
             {
                 const par = msg.params;
                 response = cpu.setFunctionIOFlags(par.funcID, par.ioNum, par.flags);
                 break;
             }
-        case 12 /* ConnectFunctionBlockInput */:
+        case 12 /* SetFunctionBlockIOValue */:
+            {
+                const par = msg.params;
+                response = cpu.setFunctionIOValue(par.funcID, par.ioNum, par.value);
+                break;
+            }
+        case 15 /* ConnectFunctionBlockInput */:
             {
                 const par = msg.params;
                 response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum);
                 break;
             }
-        case 13 /* GetSystemSector */:
+        case 16 /* GetSystemSector */:
             {
                 const systemSector = cpu.getSystemSector();
                 const data = {
@@ -150,47 +191,47 @@ onmessage = (e) => {
                 response = data;
                 break;
             }
-        case 14 /* GetTaskList */:
+        case 17 /* GetTaskList */:
             {
                 response = cpu.getTaskIDList();
                 break;
             }
-        case 15 /* GetTask */:
+        case 18 /* GetTask */:
             {
                 const id = msg.params;
                 response = cpu.getTaskByID(id);
                 break;
             }
-        case 16 /* GetDatablockTable */:
+        case 19 /* GetDatablockTable */:
             {
                 response = cpu.getDatablockTable();
                 break;
             }
-        case 17 /* GetDatablockHeader */:
+        case 20 /* GetDatablockHeader */:
             {
                 const id = msg.params;
                 response = cpu.getDatablockHeaderByID(id);
                 break;
             }
-        case 18 /* GetDatablockRef */:
+        case 21 /* GetDatablockRef */:
             {
                 const id = msg.params;
                 response = cpu.getDatablockRef(id);
                 break;
             }
-        case 19 /* GetDatablockID */:
+        case 22 /* GetDatablockID */:
             {
                 const ref = msg.params;
                 response = cpu.getDatablockID(ref);
                 break;
             }
-        case 20 /* GetFunctionBlockHeader */:
+        case 23 /* GetFunctionBlockHeader */:
             {
                 const id = msg.params;
                 response = cpu.readFunctionHeaderByID(id);
                 break;
             }
-        case 21 /* GetFunctionBlockData */:
+        case 24 /* GetFunctionBlockData */:
             {
                 const id = msg.params;
                 const funcHeader = cpu.readFunctionHeaderByID(id);
@@ -210,7 +251,7 @@ onmessage = (e) => {
                 response = data;
                 break;
             }
-        case 22 /* GetFunctionBlockIOValues */:
+        case 25 /* GetFunctionBlockIOValues */:
             {
                 const id = msg.params;
                 const values = cpu.readFunctionIOValuesByID(id);
@@ -221,7 +262,7 @@ onmessage = (e) => {
                 response = Array.from(values);
                 break;
             }
-        case 23 /* GetCircuitData */:
+        case 26 /* GetCircuitData */:
             {
                 const id = msg.params;
                 if (cpu.getDatablockHeaderByID(id).type != 3 /* CIRCUIT */) {
@@ -247,13 +288,3 @@ onmessage = (e) => {
         ? respondResolve(msg.id, msg.code, response)
         : respondReject(msg.id, msg.code, error);
 };
-// Respond with resolve
-function respondResolve(id, code, data) {
-    const response = { id, code, success: true, data };
-    self.postMessage(response);
-}
-// Respond with reject
-function respondReject(id, code, error) {
-    const response = { id, code, success: false, error };
-    self.postMessage(response);
-}

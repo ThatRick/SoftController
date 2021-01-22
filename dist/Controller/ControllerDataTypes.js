@@ -25,6 +25,12 @@ export const TaskStruct = {
     runCount: 5 /* uint32 */ // counts number of calls
 };
 export const taskStructByteLength = sizeOfStruct(TaskStruct);
+export const MonitorValueChangeStruct = {
+    id: 3 /* uint16 */,
+    ioNum: 3 /* uint16 */,
+    value: 6 /* float */
+};
+export const monitorValueChangeStructByteLength = sizeOfStruct(MonitorValueChangeStruct);
 export const BYTES_PER_VALUE = 4;
 export const BYTES_PER_REF = 4;
 export function alignBytes(addr, bytes = BYTES_PER_VALUE) {

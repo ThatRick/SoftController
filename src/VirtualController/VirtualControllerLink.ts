@@ -1,4 +1,6 @@
 import IControllerInterface, {
+    EventHandlerFunction,
+    EventCode,
     ICircuitData,
     IConnectCircuitOutputParams,
     IConnectFunctionBlockInputParams,
@@ -16,6 +18,8 @@ import IControllerInterface, {
     MessageCode,
     MessageCodeNames,
     MessageResponse,
+    ISetFunctionBlockFlagParams,
+    ISetFunctionBlockIOFlagParams,
 } from "../Controller/ControllerInterface.js";
 
 import { IDatablockHeader, IFunctionHeader, ITask, ID, REF } from "../Controller/ControllerDataTypes.js";
@@ -31,28 +35,28 @@ export default class VirtualControllerLink implements IControllerInterface
     constructor() {
         this.worker = new Worker('./VirtualController/VirtualControllerWorker.js', {type: 'module'})
 
-        this.worker.onmessage = (e) => this.handleResponse(e)
+        this.worker.onmessage = (e) => this.receiveMessage(e)
     }
+
+    onEventReceived: EventHandlerFunction
     
     private worker: Worker
     private _msgID = 1
+    private getMessageID() { return this._msgID++ }
+    private messagesPromises = new Map< number, { resolve: PromiseCallback, reject: PromiseCallback }>()
 
-    getMessageID() { return this._msgID++ }
-
-    messagesCallbacks = new Map< number, { resolve: PromiseCallback, reject: PromiseCallback }>()
-
-    sendMessage(code: MessageCode, params: unknown, resolve: PromiseCallback, reject: PromiseCallback ) {
+    private sendMessage(code: MessageCode, params: unknown, resolve: PromiseCallback, reject: PromiseCallback ) {
         const id = this.getMessageID()
         const message: Message = { id, code, params }
         
-        this.messagesCallbacks.set( id, { resolve, reject } )
+        this.messagesPromises.set( id, { resolve, reject } )
 
         this.worker.postMessage(message)
 
         logInfo('Sent message:', MessageCodeNames[code], message)
     }
 
-    handleResponse(e: MessageEvent) {
+    private receiveMessage(e: MessageEvent) {
         if (!e.data) {
             logError('Bad message response, no data found', e)
         }
@@ -60,10 +64,14 @@ export default class VirtualControllerLink implements IControllerInterface
         
         (response.success ? logInfo : logError)('Received message:', response)
 
-        const callbacks = this.messagesCallbacks.get(response.id)
-        this.messagesCallbacks.delete(response.id)
-
-        response.success ? callbacks.resolve(response.data) : callbacks.reject(response.error)
+        if (response.code == MessageCode.Event) {
+            this.onEventReceived?.(response)
+        }
+        else {
+            const promise = this.messagesPromises.get(response.id)
+            this.messagesPromises.delete(response.id)
+            response.success ? promise.resolve(response.data) : promise.reject(response.error)
+        }
     }
 
 //////////////////////
@@ -96,11 +104,16 @@ export default class VirtualControllerLink implements IControllerInterface
         })
         return promise
     }
+    setMonitoring( enabled: boolean ): Promise<boolean> {
+        const promise = new Promise<boolean>((resolve, reject) => {
+            this.sendMessage( MessageCode.SetMonitoring, enabled, resolve, reject )
+        })
+        return promise
+    }
 
 //////////////////////
 //  MODIFY MESSAGES
 //
-
 
     createTask( callTargetID: ID, interval: number, offset?: number ): Promise<ID> {
         const params: ICreateTaskParams = { callTargetID, interval, offset }
@@ -138,10 +151,17 @@ export default class VirtualControllerLink implements IControllerInterface
         })
         return promise
     }
-    setFunctionBlockIOValue( funcID: ID, ioNum: number, value: number ): Promise<boolean> {
-        const params: ISetFunctionBlockIOValueParams = { funcID, ioNum, value }
+    setFunctionBlockFlag( funcID: ID, flag: number, enabled: boolean ): Promise<boolean> {
+        const params: ISetFunctionBlockFlagParams = { funcID, flag, enabled }
         const promise = new Promise<boolean>((resolve, reject) => {
-            this.sendMessage( MessageCode.SetFunctionBlockIOValue, params, resolve, reject )
+            this.sendMessage( MessageCode.SetFunctionBlockFlag, params, resolve, reject )
+        })
+        return promise
+    }
+    setFunctionBlockIOFlag( funcID: ID, ioNum: number, flag: number, enabled: boolean ): Promise<boolean> {
+        const params: ISetFunctionBlockIOFlagParams = { funcID, ioNum, flag, enabled }
+        const promise = new Promise<boolean>((resolve, reject) => {
+            this.sendMessage( MessageCode.SetFunctionBlockIOFlag, params, resolve, reject )
         })
         return promise
     }
@@ -149,6 +169,13 @@ export default class VirtualControllerLink implements IControllerInterface
         const params: ISetFunctionBlockIOFlagsParams = { funcID, ioNum, flags }
         const promise = new Promise<boolean>((resolve, reject) => {
             this.sendMessage( MessageCode.SetFunctionBlockIOFlags, params, resolve, reject )
+        })
+        return promise
+    }
+    setFunctionBlockIOValue( funcID: ID, ioNum: number, value: number ): Promise<boolean> {
+        const params: ISetFunctionBlockIOValueParams = { funcID, ioNum, value }
+        const promise = new Promise<boolean>((resolve, reject) => {
+            this.sendMessage( MessageCode.SetFunctionBlockIOValue, params, resolve, reject )
         })
         return promise
     }
@@ -166,76 +193,77 @@ export default class VirtualControllerLink implements IControllerInterface
     // CONTROLLER
     getSystemSector(): Promise<ISystemSector> {
         const promise = new Promise<ISystemSector>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetSystemSector, null, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetSystemSector, null, resolve, reject )
+        })
+        return promise
     }
     getTaskList(): Promise<ID[]> {
         const promise = new Promise<[]>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetTaskList, null, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetTaskList, null, resolve, reject )
+        })
+        return promise
     }
     getTask(id: ID ): Promise<ITask> {
         const params: ID = id
         const promise = new Promise<ITask>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetTask, params, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetTask, params, resolve, reject )
+        })
+        return promise
     }
     getDatablockTable(): Promise<REF[]> {
         const promise = new Promise<[]>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetDatablockTable, null, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetDatablockTable, null, resolve, reject )
+        })
+        return promise
     }
     getDatablockHeader(id: ID ): Promise<IDatablockHeader> {
         const params: ID = id
         const promise = new Promise<IDatablockHeader>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetDatablockHeader, params, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetDatablockHeader, params, resolve, reject )
+        })
+        return promise
     }
     getDatablockRef(id: ID ): Promise<number> {
         const params: ID = id
         const promise = new Promise<number>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetDatablockRef, params, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetDatablockRef, params, resolve, reject )
+        })
+        return promise
     }
     getDatablockID(ref: number ): Promise<ID> {
         const params: number = ref
         const promise = new Promise<ID>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetDatablockID, params, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetDatablockID, params, resolve, reject )
+        })
+        return promise
     }
     getFunctionBlockHeader(id: ID ): Promise<IFunctionHeader> {
         const params: ID = id
         const promise = new Promise<IFunctionHeader>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetFunctionBlockHeader, params, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetFunctionBlockHeader, params, resolve, reject )
+        })
+        return promise
     }
     getFunctionBlockData(id: ID ): Promise<IFunctionBlockData> {
         const params: ID = id
         const promise = new Promise<IFunctionBlockData>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetFunctionBlockData, params, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetFunctionBlockData, params, resolve, reject )
+        })
+        return promise
     }
     getFunctionBlockIOValues(id: ID ): Promise<number[]> {
         const params: ID = id
         const promise = new Promise<[]>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetFunctionBlockIOValues, params, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetFunctionBlockIOValues, params, resolve, reject )
+        })
+        return promise
     }
     getCircuitData( id: ID ): Promise<ICircuitData> {
         const params: ID = id
         const promise = new Promise<ICircuitData>((resolve, reject) => {
-        this.sendMessage( MessageCode.GetCircuitData, params, resolve, reject )
-    })
-    return promise
+            this.sendMessage( MessageCode.GetCircuitData, params, resolve, reject )
+        })
+        return promise
     }
+
 }

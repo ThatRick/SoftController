@@ -14,7 +14,7 @@ const sizePadding = 10
 
 const parseID = (id: number) => `${Math.trunc(id/1000)}:${id % 1000}`
 
-const debugLogging = true
+const debugLogging = false
 function logInfo(...args: any[]) { debugLogging && console.info('Trace layer:', ...args)}
 function logError(...args: any[]) { console.error('Trace layer:', ...args)}
 

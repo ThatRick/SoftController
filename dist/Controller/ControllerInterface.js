@@ -1,17 +1,20 @@
 import { alignBytes, BYTES_PER_REF, functionHeaderByteLength } from './ControllerDataTypes.js';
 export const MessageCodeNames = [
-    'Undefined',
+    'Event',
     'CreateController',
     'StartController',
     'StopController',
     'StepController',
+    'SetMonitoring',
     'CreateTask',
     'SetTaskCallTarget',
     'CreateCircuit',
     'ConnectCircuitOutput',
     'CreateFunctionBlock',
+    'SetFunctionBlockFlag',
     'SetFunctionBlockIOValue',
     'SetFunctionBlockIOFlags',
+    'SetFunctionBlockIOFlag',
     'ConnectFunctionBlockInput',
     'GetSystemSector',
     'GetTaskList',
@@ -24,6 +27,9 @@ export const MessageCodeNames = [
     'GetFunctionBlockData',
     'GetFunctionBlockIOValues',
     'GetCircuitData',
+];
+export const EventCodeNames = [
+    'MonitoringValues'
 ];
 export function calcFunctionSize(inputCount, outputCount, staticCount) {
     const ioCount = inputCount + outputCount;
