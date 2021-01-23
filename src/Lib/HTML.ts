@@ -8,10 +8,22 @@ export function domElement<K extends keyof HTMLElementTagNameMap>(parentDOM: HTM
 
 type TableCellIterator = (cell: HTMLTableCellElement, row: number, col: number) => void
 
+export class Text {
+    DOMElement: HTMLDivElement
+    constructor (text: string, style?: Partial<CSSStyleDeclaration>) {
+        this.DOMElement = domElement(null, 'div', {
+            display: 'inline-block',
+            paddingLeft: '2px',
+            paddingRight: '2px',
+            ...style
+        })
+        this.DOMElement.textContent = text
+    }
+}
 
 export abstract class ButtonBase
 {
-    elem: HTMLDivElement
+    DOMElement: HTMLDivElement
     onClick?: (ev: MouseEvent) => void
     onDown?: (ev: PointerEvent) => void
     onUp?: (ev: PointerEvent) => void
@@ -24,43 +36,43 @@ export abstract class ButtonBase
 
     backgroundColor = this.color.base
 
-    constructor(parentElement: HTMLElement, text: string, charWidth = 9) {
-        this.elem = domElement(parentElement, 'div', {
+    constructor(text: string, charWidth = 9) {
+        this.DOMElement = domElement(null, 'div', {
             color: 'white',
             margin: '2px',
+            paddingLeft: '2px',
+            paddingRight: '2px',
             backgroundColor: this.backgroundColor,
             border: '1px solid ' + this.color.light,
-            width: text.length * charWidth + 'px',
-            borderRadius: '10%',
-            fontSize: '1em',
-            fontFamily: 'monospace',
+            //width: text.length * charWidth + 'px',
+            borderRadius: '2px',
             textAlign: 'center',
             display: 'inline-block',
             userSelect: 'none',
             cursor: 'pointer'
         })
-        this.elem.textContent = text
+        this.DOMElement.textContent = text
 
-        this.elem.onpointerenter = ev => this.elem.style.backgroundColor = this.color.light
-        this.elem.onpointerleave = ev => this.elem.style.backgroundColor = this.backgroundColor
+        this.DOMElement.onpointerenter = ev => this.DOMElement.style.backgroundColor = this.color.light
+        this.DOMElement.onpointerleave = ev => this.DOMElement.style.backgroundColor = this.backgroundColor
         
-        this.elem.onclick = ev => this.onClick?.(ev)
-        this.elem.onpointerdown = ev => this.onDown?.(ev)
-        this.elem.onpointerup = ev => this.onUp?.(ev)
+        this.DOMElement.onclick = ev => this.onClick?.(ev)
+        this.DOMElement.onpointerdown = ev => this.onDown?.(ev)
+        this.DOMElement.onpointerup = ev => this.onUp?.(ev)
     }
 
     flash(color: string) {
-        this.elem.style.backgroundColor = color
+        this.DOMElement.style.backgroundColor = color
         setTimeout(() => {
-            this.elem.style.backgroundColor = this.backgroundColor
+            this.DOMElement.style.backgroundColor = this.backgroundColor
         }, 30)
     }
 }
 
 export class Button extends ButtonBase
 {
-    constructor(parentElement: HTMLElement, text: string, action: () => void) {
-        super(parentElement, text)
+    constructor(text: string, action: () => void) {
+        super(text)
 
         this.onClick = () => {
             this.flash(this.color.active)
@@ -73,8 +85,8 @@ export class ToggleButton extends ButtonBase
 {
     state: boolean
     colors: []
-    constructor(parentElement: HTMLElement, text: string, toggle: (state: boolean) => boolean, initState=false) {
-        super(parentElement, text)
+    constructor(text: string, toggle: (state: boolean) => boolean, initState=false) {
+        super(text)
         this.state = initState
 
         this.onClick = () => {

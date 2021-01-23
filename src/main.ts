@@ -9,11 +9,12 @@ import IControllerInterface from './Controller/ControllerInterface.js';
 import { defaultStyle } from './CircuitView/CircuitTypes.js';
 import * as HTML from './lib/HTML.js'
 import { ControllerTerminal } from './Terminal.js';
+import { Menubar } from './GUI/Menubar.js'
 
 
 function createControlButtonBar(buttons: HTML.ButtonBase[]) {
-    const nav = document.getElementById('navi')
-    buttons.forEach(btn => nav.appendChild(btn.elem))
+    const nav = document.getElementById('mainMenubar')
+    buttons.forEach(btn => nav.appendChild(btn.DOMElement))
 }
 
 function setGridTemplateRows(gridContainer: HTMLElement, gridRowHeights: {[key: string]: number }) {
@@ -29,22 +30,6 @@ const CSSGridRowHeights: { [key: string]: number }  =
     terminal:   0
 }
 
-/////////////////////////
-//  GUI Testing
-function testGUI(circuit: Circuit) {
-    
-    const guiContainer = document.getElementById('gui')
-
-    const viewSize = vec2(80, 40)
-    const viewScale = vec2(14, 20)
-
-    const view = new CircuitView(guiContainer, viewSize, viewScale, defaultStyle)
-
-    view.loadCircuit(circuit)
-    
-    return view
-}
-
 const errorLogger = error => console.error(error)
 
 //////////////////////////
@@ -54,11 +39,16 @@ window.onload = () => app().catch(rejected => console.error(rejected))
 
 async function app()
 {
-    
-    const memSize = 64 * 1024;  // bytes
+    const mainMenubar = new Menubar(document.getElementById('mainMenubar'))
+    const guiMenubar = new Menubar(document.getElementById('guiMenubar'))
+    const terminalMenubar = new Menubar(document.getElementById('terminalMenubar'))
+
+    // Create controller interface
     const cpu = new VirtualControllerLink()
     
-    const result = await cpu.createController(memSize, 256, 16)
+    // Create a controller
+    const memSize = 64 * 1024
+    await cpu.createController(memSize, 256, 16)
     
     const terminal = new ControllerTerminal(document.getElementById('terminal'), cpu);
 
@@ -71,43 +61,28 @@ async function app()
     terminal.printSystemSector()
     terminal.printDatablockTable()
 
-    const circuit = await Circuit.loadFromOnlineCPU(cpu, circuitID)
+    const circuitSize = vec2(80, 40)
+    const circuitScale = vec2(14, 20)
     
-    const view = testGUI(circuit)
+    const guiContainer = document.getElementById('gui')
+    const view = new CircuitView(guiContainer, circuitSize, circuitScale, defaultStyle)
+    
+    const circuit = await Circuit.loadFromOnlineCPU(cpu, circuitID)
+    view.loadCircuit(circuit)
 
-    createControlButtonBar([
-
-        new HTML.Button(null, 'Run', async () => {
+    mainMenubar.addItems([
+        new HTML.Text('Controller'),
+        new HTML.Button('Run', async () => {
             await cpu.startController(20)
         }),
-        new HTML.Button(null, 'Stop', async () => {
+        new HTML.Button('Stop', async () => {
             await cpu.stopController()
         }),
-        new HTML.Button(null, 'Step', async () => {
+        new HTML.Button('Step', async () => {
             await cpu.stepController(20)
         }),
-        new HTML.Button(null, 'Upload', async () => {
-            console.log('Upload changes')
-            await circuit.sendChanges()
-            console.log('Step controller')
-        }),
-        new HTML.Button(null, 'debug', async () => {
-            terminal.printSystemSector()
-            terminal.printDatablockTable()
-            terminal.printTask(taskId)
-            terminal.printFunctionBlock(circuit.onlineID)
-            circuit.blocks.forEach(async block => terminal.printFunctionBlock(block.onlineID))
-        }),
-        new HTML.Button(null, 'Clear', () => terminal.clear()),
-        new HTML.ToggleButton(null, 'Immediate', state => circuit.setImmediateMode(state), circuit.immediateMode)
-
         // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
         // { name: 'Load', fn: () => loadFromJSON(obj => {
-        //     terminal(breakLine);
-        //     terminal('');
-        //     terminal('      LOADED A CONTROLLER FROM FILE:');
-        //     console.log('Loaded controller blueprint:', obj)
-
         //     const needed = getBlueprintResourceNeeded(obj)
         //     const dataMemSize = needed.dataMemSize + 4096
         //     const datablockTableLength = needed.datablockTableLength + 256
@@ -116,9 +91,22 @@ async function app()
         //     console.log(`Loading controller (needed mem: ${dataMemSize} bytes, table size: ${datablockTableLength}, task list size: ${taskListLength})`)
         //     const cpuLink = new SoftControllerLink(new SoftController(dataMemSize, datablockTableLength, taskListLength))
         //     loadControllerBlueprint(obj);
-        //     terminal(systemSectorToString(cpuLink));
-        //     terminal(datablockTableToString(cpuLink));
         // })},
+    ])
+    guiMenubar.addItems([
+        new HTML.Text('Circuit'),
+        new HTML.ToggleButton('Immediate', state => circuit.setImmediateMode(state), circuit.immediateMode),
+        new HTML.Button('Upload', async () => {
+            await circuit.sendChanges()
+        }),
+    ])
+    terminalMenubar.addItems([
+        new HTML.Text('Terminal'),
+        new HTML.Button('System', async () => terminal.printSystemSector()),
+        new HTML.Button('Table', async () => terminal.printDatablockTable()),
+        new HTML.Button('Circuit', async () => terminal.printFunctionBlock(circuit.onlineID)),
+        new HTML.Button('Blocks', async () => circuit.blocks.forEach(async block => terminal.printFunctionBlock(block.onlineID))),
+        new HTML.Button('Clear', () => terminal.clear()),
     ])
 }
 

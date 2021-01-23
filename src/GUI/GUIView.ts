@@ -8,14 +8,14 @@ interface Updateable {
 
 const DOUBLE_CLICK_INTERVAL = 400
 
-export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI> implements IElementGUI, IWindowGUI { 
+export default class GUIView<Element extends IChildElementGUI, Style extends IStyleGUI> implements IElementGUI, IWindowGUI { 
 
     DOMElement: HTMLElement
 
     gui = this
-    children: GUIContainer<T>
+    children: GUIContainer<Element>
 
-    eventTargetMap = new Map<EventTarget, T>()
+    eventTargetMap = new Map<EventTarget, Element>()
     updateRequests = new Set<Updateable>()
 
     pos = vec2(0, 0)
@@ -107,15 +107,15 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
     //     Element handling
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-    registerElement(elem: T) {
+    registerElement(elem: Element) {
         this.eventTargetMap.set(elem.DOMElement, elem)
     }
 
-    unregisterElement(elem: T) {
+    unregisterElement(elem: Element) {
         this.eventTargetMap.delete(elem.DOMElement)
     }
 
-    requestElementUpdate(elem: T) {
+    requestElementUpdate(elem: Element) {
         this.updateRequests.add(elem)
     }
 
@@ -123,7 +123,7 @@ export default class GUIView<T extends IChildElementGUI, Style extends IStyleGUI
     //   Pointer events
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-    pointer: GUIPointerState<T> =
+    pointer: GUIPointerState<Element> =
     {
         isDown:             false,
         isDragging:         false,

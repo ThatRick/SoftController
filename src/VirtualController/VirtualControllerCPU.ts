@@ -38,7 +38,7 @@ const MAX_MONITORED_IO_CHANGES = 100
 //      Virtual Controller
 //////////////////////////////////
 
-const debugLogging = true
+const debugLogging = false
 function logInfo(...args: any[]) { debugLogging && console.info('CPU:', ...args) };
 function logError(...args: any[]) { console.error('CPU:', ...args) };
 

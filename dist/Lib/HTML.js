@@ -4,45 +4,56 @@ export function domElement(parentDOM, tagName, style) {
     parentDOM?.appendChild(elem);
     return elem;
 }
+export class Text {
+    constructor(text, style) {
+        this.DOMElement = domElement(null, 'div', {
+            display: 'inline-block',
+            paddingLeft: '2px',
+            paddingRight: '2px',
+            ...style
+        });
+        this.DOMElement.textContent = text;
+    }
+}
 export class ButtonBase {
-    constructor(parentElement, text, charWidth = 9) {
+    constructor(text, charWidth = 9) {
         this.color = {
             base: '#557',
             light: '#779',
             active: '#99A'
         };
         this.backgroundColor = this.color.base;
-        this.elem = domElement(parentElement, 'div', {
+        this.DOMElement = domElement(null, 'div', {
             color: 'white',
             margin: '2px',
+            paddingLeft: '2px',
+            paddingRight: '2px',
             backgroundColor: this.backgroundColor,
             border: '1px solid ' + this.color.light,
-            width: text.length * charWidth + 'px',
-            borderRadius: '10%',
-            fontSize: '1em',
-            fontFamily: 'monospace',
+            //width: text.length * charWidth + 'px',
+            borderRadius: '2px',
             textAlign: 'center',
             display: 'inline-block',
             userSelect: 'none',
             cursor: 'pointer'
         });
-        this.elem.textContent = text;
-        this.elem.onpointerenter = ev => this.elem.style.backgroundColor = this.color.light;
-        this.elem.onpointerleave = ev => this.elem.style.backgroundColor = this.backgroundColor;
-        this.elem.onclick = ev => this.onClick?.(ev);
-        this.elem.onpointerdown = ev => this.onDown?.(ev);
-        this.elem.onpointerup = ev => this.onUp?.(ev);
+        this.DOMElement.textContent = text;
+        this.DOMElement.onpointerenter = ev => this.DOMElement.style.backgroundColor = this.color.light;
+        this.DOMElement.onpointerleave = ev => this.DOMElement.style.backgroundColor = this.backgroundColor;
+        this.DOMElement.onclick = ev => this.onClick?.(ev);
+        this.DOMElement.onpointerdown = ev => this.onDown?.(ev);
+        this.DOMElement.onpointerup = ev => this.onUp?.(ev);
     }
     flash(color) {
-        this.elem.style.backgroundColor = color;
+        this.DOMElement.style.backgroundColor = color;
         setTimeout(() => {
-            this.elem.style.backgroundColor = this.backgroundColor;
+            this.DOMElement.style.backgroundColor = this.backgroundColor;
         }, 30);
     }
 }
 export class Button extends ButtonBase {
-    constructor(parentElement, text, action) {
-        super(parentElement, text);
+    constructor(text, action) {
+        super(text);
         this.onClick = () => {
             this.flash(this.color.active);
             action();
@@ -50,8 +61,8 @@ export class Button extends ButtonBase {
     }
 }
 export class ToggleButton extends ButtonBase {
-    constructor(parentElement, text, toggle, initState = false) {
-        super(parentElement, text);
+    constructor(text, toggle, initState = false) {
+        super(text);
         this.state = initState;
         this.onClick = () => {
             this.state = toggle(!this.state);

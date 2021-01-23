@@ -49,10 +49,13 @@ function backgroundDotStyle(scale: Vec2, lineColor: string) {
     } as Partial<CSSStyleDeclaration>
 }
 
+
 ////////////////////////////////////
 //    Circuit Input/Output Area
 ////////////////////////////////////
-class IOArea extends GUIChildElement implements CircuitElement {
+
+class IOArea extends GUIChildElement implements CircuitElement
+{
     constructor(view: CircuitView, type: 'inputArea' | 'outputArea')
     {
         super(view.children, 'div',
@@ -86,10 +89,13 @@ class IOArea extends GUIChildElement implements CircuitElement {
     gui: CircuitView
 }
 
+
 /////////////////////////////
 //    Circuit Block Area
 /////////////////////////////
-class BlockArea extends GUIChildElement implements CircuitElement {
+
+class BlockArea extends GUIChildElement implements CircuitElement
+{
     constructor(view: CircuitView) {
         super(view.children, 'div',
             vec2(view.style.IOAreaWidth, 0),
@@ -115,6 +121,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
             backgroundColor: style.colorBackground,
             ...backgroundGridStyle(scale, style.colorGridLine)
         })
+        parent.style.backgroundColor = style.colorBackground
 
         this.traceLayer = new TraceLayerBezier(this.DOMElement, this.scale, this.gui.style)
         this.blockArea = new BlockArea(this)

@@ -1,5 +1,5 @@
 :root {
-    --rowHeight: 32px;
+    --rowHeight: 24px;
     --barColor: #333;
     --buttonColor: #555;
 
@@ -16,11 +16,13 @@ body {
     margin: 0px;
     height: 100vh;
     display: grid;
-    grid-template-rows: var(--rowHeight) 50vh 6px auto;
+    grid-template-rows: var(--rowHeight) var(--rowHeight) 60vh 4px var(--rowHeight) auto;
     grid-template-areas:
-        'header'
+        'mainMenubar'
+        'guiMenubar'
         'gui'
         'splitBar'
+        'terminalMenubar'
         'terminal';
 }
 
@@ -38,9 +40,13 @@ body {
     background: rgba(0, 0, 0, 0.2);
 }
 
-#navi {
-    grid-area: header;
-    padding: 4px;
+#mainMenubar {
+    grid-area: mainMenubar;
+    background-color: var(--barColor)
+}
+
+#guiMenubar {
+    grid-area: guiMenubar;
     background-color: var(--barColor)
 }
 
@@ -56,6 +62,11 @@ body {
     grid-area: splitBar;
     background-color: #333;
     cursor: row-resize;
+}
+
+#terminalMenubar {
+    grid-area: terminalMenubar;
+    background-color: var(--barColor)
 }
 
 #terminal {

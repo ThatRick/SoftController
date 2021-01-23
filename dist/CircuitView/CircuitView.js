@@ -187,6 +187,7 @@ export default class CircuitView extends GUIView {
             }
             this.draggingMode = 0 /* NONE */;
         };
+        parent.style.backgroundColor = style.colorBackground;
         this.traceLayer = new TraceLayerBezier(this.DOMElement, this.scale, this.gui.style);
         this.blockArea = new BlockArea(this);
         this.inputArea = new IOArea(this, 'inputArea');

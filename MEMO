@@ -1,0 +1,6 @@
+View model
+
+GUIView
+- DOMElement <- pointer event handlers
+    - size: circuit extends
+    - 
