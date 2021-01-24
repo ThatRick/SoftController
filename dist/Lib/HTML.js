@@ -18,9 +18,9 @@ export class Text {
 export class ButtonBase {
     constructor(text, charWidth = 9) {
         this.color = {
-            base: '#557',
-            light: '#779',
-            active: '#99A'
+            base: '#447',
+            light: '#66A',
+            active: '#77D'
         };
         this.backgroundColor = this.color.base;
         this.DOMElement = domElement(null, 'div', {
@@ -67,6 +67,7 @@ export class ToggleButton extends ButtonBase {
         this.onClick = () => {
             this.state = toggle(!this.state);
             this.backgroundColor = this.state ? this.color.light : this.color.base;
+            this.DOMElement.style.borderColor = this.state ? 'white' : this.color.light;
             this.flash(this.color.active);
         };
     }

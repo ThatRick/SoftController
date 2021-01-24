@@ -42,6 +42,10 @@ export interface CircuitStyle
     
     filterDefault:          string
     filterActive:           string
+
+    colorPending:           string
+    borderPending:          string
+    borderError:            string
     
     traceWidth:             number
     IOAreaWidth:            number
@@ -69,6 +73,10 @@ export const defaultStyle: CircuitStyle =
     
     filterDefault:          'none',
     filterActive:           'brightness(150%)',
+
+    colorPending:           'rgba(150, 255, 200, 0.15)',
+    borderPending:          'none', //'thin solid rgba(255, 255, 200, 0.2)',
+    borderError:            'thin solid rgba(255, 0, 0, 0.2)',
     
     traceWidth:             0.10,
     IOAreaWidth:            6

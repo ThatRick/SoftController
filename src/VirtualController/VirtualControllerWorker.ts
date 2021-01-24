@@ -1,5 +1,5 @@
 import VirtualController from './VirtualControllerCPU.js'
-import { ICircuitData, IConnectCircuitOutputParams, IConnectFunctionBlockInputParams, ICreateCircuitParams, ICreateControllerParams, ICreateFunctionBlockParams, ICreateTaskParams, IFunctionBlockData, ISetFunctionBlockIOFlagsParams, ISetFunctionBlockIOValueParams, ISetTaskCallTargetParams, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse, EventCode, ISetFunctionBlockFlagParams, ISetFunctionBlockIOFlagParams } from '../Controller/ControllerInterface.js'
+import { ICircuitData, IConnectCircuitOutputParams, IConnectFunctionBlockInputParams, ICreateCircuitParams, ICreateControllerParams, ICreateFunctionBlockParams, ICreateTaskParams, IFunctionBlockData, ISetFunctionBlockIOFlagsParams, ISetFunctionBlockIOValueParams, ISetTaskCallTargetParams, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse, EventCode, ISetFunctionBlockFlagParams, ISetFunctionBlockIOFlagParams, EventID } from '../Controller/ControllerInterface.js'
 import { DatablockType, ID } from '../Controller/ControllerDataTypes.js'
 
 type Tickable = { tick: (dt: number) => void }
@@ -49,7 +49,7 @@ function respondReject( id: number, code: number, error: string ) {
 }
 
 function handleControllerEvent(code: EventCode, data: unknown) {
-    const event: MessageResponse = { id: MessageCode.Event, code, success: true, data };
+    const event: MessageResponse = { id: EventID, code, success: true, data };
     
     sendMessage(event)
 }

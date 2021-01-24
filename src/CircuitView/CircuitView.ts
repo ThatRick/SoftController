@@ -2,7 +2,7 @@ import Vec2, { vec2 } from '../Lib/Vector2.js'
 import GUIView from '../GUI/GUIView.js'
 import CircuitGrid from './CircuitGrid.js'
 import { CircuitElement, CircuitStyle, defaultStyle, ElementType } from './CircuitTypes.js'
-import { Circuit, FunctionBlock, IOConnection } from './CircuitState.js'
+import { Circuit, FunctionBlock } from './CircuitState.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import * as HTML from '../Lib/HTML.js'
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
@@ -73,10 +73,10 @@ class IOArea extends GUIChildElement implements CircuitElement
         let ioNumEnd: number
         if (this.type == 'inputArea') {
             ioNumStart = 0
-            ioNumEnd = circuit.funcData.inputCount - 1
+            ioNumEnd = circuit.funcState.funcData.inputCount - 1
         } else {
-            ioNumStart = circuit.funcData.inputCount
-            ioNumEnd = ioNumStart + circuit.funcData.outputCount - 1
+            ioNumStart = circuit.funcState.funcData.inputCount
+            ioNumEnd = ioNumStart + circuit.funcState.funcData.outputCount - 1
         }
         for (let ioNum = ioNumStart; ioNum <= ioNumEnd; ioNum++) {
             this.ioViews.push(new CircuitIOView(this.children, circuit, ioNum, vec2(0, ioNum + 2) ))
@@ -85,7 +85,7 @@ class IOArea extends GUIChildElement implements CircuitElement
     circuit: Circuit
     type: ElementType
     ioViews: CircuitIOView[] = []
-    get id(): number { return this.circuit.offlineID }
+    get id(): number { return this.circuit.funcState.offlineID }
     gui: CircuitView
 }
 
@@ -157,8 +157,8 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     loadCircuit(circuit: Circuit) {
         this.circuit = circuit
-        this.circuit.onModificationUploaded = (type, success, blockID, ioNum) => {
-            
+        this.circuit.onOnlineModificationDone = (modification, success) => {
+
         }
         console.log('CircuitView: Load circuit')
         const margin = vec2(6, 2)
@@ -182,9 +182,10 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         // Create connection traces
         this.blocks.forEach(funcBlockElem => {
             funcBlockElem.inputPins.forEach(inputPin => {
-                if (inputPin.connection) {
-                    const outputPin = this.getConnectionSourcePin(inputPin.connection)
-                    this.createConnectionTrace(outputPin, inputPin)
+                if (inputPin.reference) {
+                    const outputPin = this.getConnectionSourcePin(inputPin.reference)
+                    const trace = this.createConnectionTrace(outputPin, inputPin)
+                    trace.validate()
                 }
             })
         })
@@ -204,23 +205,35 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     connect(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false) {
         logInfo('connect', outputPin.id, inputPin.id)
-        this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum)
+        
+        if (inputPin.funcState.isCircuit) {
+            this.circuit.setOutputRef(inputPin.ioNum, outputPin.funcState.offlineID, outputPin.ioNum)
+        }
+        else {
+            inputPin.funcState.setInputRef(inputPin.ioNum, outputPin.blockID, outputPin.ioNum)
+        }
         this.createConnectionTrace(outputPin, inputPin, inverted)
     }
     
     disconnect(inputPin: FunctionBlockPinView) {
         logInfo('disconnect', inputPin.id)
-        this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.ioNum)
+        if (inputPin.funcState.isCircuit) {
+            this.circuit.setOutputRef(inputPin.ioNum, null, 0)
+        }
+        else {
+            inputPin.funcState.setInputRef(inputPin.ioNum, null, 0)
+        }
         this.deleteConnectionTrace(inputPin.id)
     }
 
     createConnectionTrace(outputPin: FunctionBlockPinView, inputPin: FunctionBlockPinView, inverted = false) {
         logInfo('create trace', inputPin.id)
-        if (inputPin.connection) {
+        if (inputPin.reference) {
             this.deleteConnectionTrace(inputPin.id)
         }
         const trace = new CircuitTrace(this.traceLayer, outputPin, inputPin)
         this.traces.set(inputPin.id, trace)
+        return trace
     }
     
     deleteConnectionTrace(id: ID) {
@@ -323,7 +336,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
                     const outputPin = targetElem as FunctionBlockPinView
                     this.connect(outputPin, inputPin)
                 }
-                else if (inputPin.connection && targetElem?.type == 'inputPin' && targetElem != inputPin) {
+                else if (inputPin.reference && targetElem?.type == 'inputPin' && targetElem != inputPin) {
                     const trace = this.traces.get(inputPin.id)
                     this.connect(trace.outputPin, targetElem as FunctionBlockPinView)
                     this.disconnect(inputPin)
@@ -385,6 +398,19 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     onPointerDown = (ev: PointerEvent) => {
         const elem = this.pointer.downTargetElem
+        const selected = Array.from(this.selectedElements.values())[0]
+        console.log('Select:',selected?.type, elem.type, !(elem as FunctionBlockPinView).reference)
+
+        if (selected?.type == 'outputPin' && elem.type == 'inputPin' && !((elem as FunctionBlockPinView).reference)) {
+            this.connect(selected as FunctionBlockPinView, elem as FunctionBlockPinView)
+            this.unselectAll()
+            return
+        }
+        if (selected?.type == 'inputPin' && elem.type == 'outputPin' && !((selected as FunctionBlockPinView).reference)) {
+            this.connect(elem as FunctionBlockPinView, selected as FunctionBlockPinView)
+            this.unselectAll()
+            return
+        }
 
         if (elem?.isSelectable && !ev.shiftKey) {
             if (!this.selectedElements.has(elem)) {

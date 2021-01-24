@@ -18,7 +18,7 @@ export default class CircuitIOView extends GUIChildElement implements CircuitEle
 
     ioPin: FunctionBlockPinView
 
-    state: Circuit
+    circuit: Circuit
     ioNum: number
 
     // Restrict horizontal movement
@@ -27,7 +27,7 @@ export default class CircuitIOView extends GUIChildElement implements CircuitEle
         super.setPos(v)
     }
 
-    constructor(parent: IViewContainerGUI, circuitState: Circuit, ioNum: number, pos: Vec2)
+    constructor(parent: IViewContainerGUI, circuit: Circuit, ioNum: number, pos: Vec2)
     {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
             borderBottom: '1px solid',
@@ -39,9 +39,9 @@ export default class CircuitIOView extends GUIChildElement implements CircuitEle
             fontFamily: 'monospace',
             userSelect: 'none',
         }, true)
-        this.state = circuitState
+        this.circuit = circuit
         this.ioNum = ioNum
-        this.type = (ioNum < circuitState.funcData.inputCount) ? 'circuitInput' : 'circuitOutput'
+        this.type = (ioNum < circuit.funcState.funcData.inputCount) ? 'circuitInput' : 'circuitOutput'
 
         this.build()
     }
@@ -53,7 +53,7 @@ export default class CircuitIOView extends GUIChildElement implements CircuitEle
 
     createPin() {
         const pos = (this.type == 'circuitInput') ? vec2(this.gui.style.IOAreaWidth, 0) : vec2(-1, 0)
-        this.ioPin = new FunctionBlockPinView(this.children, this.state, this.ioNum, pos, true)
+        this.ioPin = new FunctionBlockPinView(this.children, this.circuit.funcState, this.ioNum, pos, true)
     }
 
     createIOName() {

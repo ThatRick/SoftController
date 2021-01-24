@@ -67,7 +67,7 @@ async function app()
     const guiContainer = document.getElementById('gui')
     const view = new CircuitView(guiContainer, circuitSize, circuitScale, defaultStyle)
     
-    const circuit = await Circuit.loadFromOnlineCPU(cpu, circuitID)
+    const circuit = await Circuit.getOnlineCircuit(cpu, circuitID)
     view.loadCircuit(circuit)
 
     mainMenubar.addItems([
@@ -97,7 +97,7 @@ async function app()
         new HTML.Text('Circuit'),
         new HTML.ToggleButton('Immediate', state => circuit.setImmediateMode(state), circuit.immediateMode),
         new HTML.Button('Upload', async () => {
-            await circuit.sendChanges()
+            await circuit.sendModifications()
         }),
     ])
     terminalMenubar.addItems([

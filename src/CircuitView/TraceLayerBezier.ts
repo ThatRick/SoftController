@@ -50,7 +50,7 @@ export default class TraceBezierLayer implements ICircuitTraceLayer
 
     scaledPinEndPos(pos: Vec2) {return Vec2.mul(pos, this.scale).add(this.cellOffset).round() }
 
-    addTrace(id: number, outputPos: Vec2, inputPos: Vec2, color: string)
+    addTrace(id: number, outputPos: Vec2, inputPos: Vec2, color: string, pending=false)
     {
         logInfo('add', parseID(id))
         const a = this.scaledPinEndPos(outputPos)
@@ -61,6 +61,7 @@ export default class TraceBezierLayer implements ICircuitTraceLayer
         const curve = this.cubicCurve(a, b)
 
         const path = this.createPath(curve, color)
+        if (pending) path.style.strokeDasharray = '4'
 
         this.traces.set(id, path)
 

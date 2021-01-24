@@ -1,4 +1,4 @@
-import { MessageCodeNames, } from "../Controller/ControllerInterface.js";
+import { MessageCodeNames, EventID, } from "../Controller/ControllerInterface.js";
 const debugLogging = false;
 function logInfo(...args) { debugLogging && console.info('LINK: ', ...args); }
 function logError(...args) { console.error('LINK: ', ...args); }
@@ -23,7 +23,7 @@ export default class VirtualControllerLink {
         }
         const response = e.data;
         (response.success ? logInfo : logError)('Received message:', response);
-        if (response.code == 0 /* Event */) {
+        if (response.id == EventID) {
             this.onEventReceived?.(response);
         }
         else {

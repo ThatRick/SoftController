@@ -45,7 +45,7 @@ export interface MessageResponse
 }
 
 export const enum MessageCode {
-    Event,
+    Undefined,
 
     CreateController,
     StartController,
@@ -84,7 +84,7 @@ export const enum MessageCode {
 }
 
 export const MessageCodeNames = [
-    'Event',
+    'Undefined',
 
     'CreateController',
     'StartController',
@@ -122,6 +122,8 @@ export const MessageCodeNames = [
     'GetCircuitData',
 
 ]
+
+export const EventID = 0
 
 export const enum EventCode {
     MonitoringValues

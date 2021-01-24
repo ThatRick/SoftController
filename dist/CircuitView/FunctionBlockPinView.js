@@ -32,10 +32,9 @@ export default class FunctionBlockPinView extends GUIChildElement {
     get blockID() {
         return this.funcState.offlineID;
     }
-    setValue(value) { this.funcState.parentCircuit.setFunctionBlockIOValue(this.blockID, this.ioNum, value); }
-    get connection() {
+    get reference() {
         const ref = (this.isInternalCircuitIO)
-            ? this.funcState.parentCircuit.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
+            ? this.funcState.circuit?.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
             : this.funcState.funcData.inputRefs[this.ioNum];
         return ref;
     }
@@ -43,7 +42,8 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.createPinElement(gui);
         this.createValueField(gui);
         this.updatePin();
-        this.funcState.onIOChanged[this.ioNum] = this.updatePin.bind(this);
+        this.funcState.onIOUpdate[this.ioNum] = this.updatePin.bind(this);
+        this.funcState.onValidateValueModification[this.ioNum] = this.validateValueModification.bind(this);
     }
     createPinElement(gui) {
         const size = vec2(0.5, gui.style.traceWidth);
@@ -56,7 +56,8 @@ export default class FunctionBlockPinView extends GUIChildElement {
             top: scaledOffset.y + 'px',
             width: scaledSize.x + 'px',
             height: scaledSize.y + 'px',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            boxSizing: ''
         });
     }
     createValueField(gui) {
@@ -80,6 +81,12 @@ export default class FunctionBlockPinView extends GUIChildElement {
             pointerEvents: 'none'
         });
     }
+    setValue(value) {
+        this.funcState.setIOValue(this.ioNum, value);
+        this.updatePin();
+        if (this.funcState.onlineID)
+            this.pendingValueModification();
+    }
     updatePin() {
         this.valueField.textContent = this.value.toString();
         const style = this.gui.style;
@@ -96,13 +103,21 @@ export default class FunctionBlockPinView extends GUIChildElement {
         }
         this.pin.style.backgroundColor = this.color;
         this.valueField.style.color = this.color;
-        //console.log('update pin:', this.id, this.io.value, this.onPinUpdated)
+        console.log('update pin:', this.id);
         this.onPinUpdated?.();
     }
     toggleValue() {
-        if (this.dataType == 2 /* BINARY */ && !this.connection) {
+        if (this.dataType == 2 /* BINARY */ && !this.reference) {
             this.setValue((this.value) ? 0 : 1);
         }
+    }
+    pendingValueModification() {
+        this.valueField.style.outline = this.gui.style.borderPending;
+        this.valueField.style.backgroundColor = this.gui.style.colorPending;
+    }
+    validateValueModification(successful) {
+        this.valueField.style.outline = (successful) ? 'none' : this.gui.style.borderError;
+        this.valueField.style.backgroundColor = this.gui.style.pinValueFieldBg;
     }
     onSelected() {
         this.pin.style.outline = this.gui.style.blockOutlineSelected;

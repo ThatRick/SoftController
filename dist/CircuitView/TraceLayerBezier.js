@@ -28,13 +28,15 @@ export default class TraceBezierLayer {
         parent.appendChild(svg);
     }
     scaledPinEndPos(pos) { return Vec2.mul(pos, this.scale).add(this.cellOffset).round(); }
-    addTrace(id, outputPos, inputPos, color) {
+    addTrace(id, outputPos, inputPos, color, pending = false) {
         logInfo('add', parseID(id));
         const a = this.scaledPinEndPos(outputPos);
         const b = this.scaledPinEndPos(inputPos);
         this.resizeToFit(a, b);
         const curve = this.cubicCurve(a, b);
         const path = this.createPath(curve, color);
+        if (pending)
+            path.style.strokeDasharray = '4';
         this.traces.set(id, path);
         this.svg.appendChild(path);
     }

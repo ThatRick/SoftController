@@ -20,6 +20,7 @@ import IControllerInterface, {
     MessageResponse,
     ISetFunctionBlockFlagParams,
     ISetFunctionBlockIOFlagParams,
+    EventID,
 } from "../Controller/ControllerInterface.js";
 
 import { IDatablockHeader, IFunctionHeader, ITask, ID, REF } from "../Controller/ControllerDataTypes.js";
@@ -64,7 +65,7 @@ export default class VirtualControllerLink implements IControllerInterface
         
         (response.success ? logInfo : logError)('Received message:', response)
 
-        if (response.code == MessageCode.Event) {
+        if (response.id == EventID) {
             this.onEventReceived?.(response)
         }
         else {

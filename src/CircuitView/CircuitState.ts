@@ -8,36 +8,44 @@ const debugLogging = true
 function logInfo(...args: any[]) { debugLogging && console.info('State:', ...args)}
 function logError(...args: any[]) { console.error('State:', ...args)}
 
-export interface IOConnection
+
+enum FunctionModificationType
 {
-    sourceBlockID:  number
-    ioNum:          number
-    inverted:       boolean
+    SetIOValue,
+    SetIOFlags,
+    SetIOFlag,
+    SetInputRef,
+    ChangeInputCount,
+    ChangeOutputCount
 }
 
-export enum ModificationType
+enum CircuitModificationType
 {
-    ADD_BLOCK,
-    ADD_CIRCUIT_INPUT,
-    ADD_CIRCUIT_OUTPUT,
-    SET_IO_VALUE,
-    CONNECT_FUNCTION_INPUT,
-    CONNECT_CIRCUIT_OUTPUT,
-    DELETE_BLOCK,
-    DELETE_CIRCUIT_INPUT,
-    DELETE_CIRCUIT_OUTPUT,
-    DELETE_CONNECTION
+    AddFunction,
+    DeleteFunction,
+    ReorderFunctionCall,
+    SetOutputRef
 }
 
-export interface Modification
+interface FunctionModification
 {
-    type: ModificationType,
-    blockID: ID,
+    type: FunctionModificationType
     ioNum?: number
+    value?: number
+    oldValue?: number
+} 
+
+interface CircuitModification
+{
+    type: CircuitModificationType,
+    blockID?: ID,
     blockOnlineID?: ID
+    ioNum?: number
+    value?: number
 }
 
 type ChangeEventHandler = () => void
+type ValidadedEventHandler = (success: boolean) => void
 
 ///////////////////////////////
 //      Function Block
@@ -55,17 +63,142 @@ export class FunctionBlock
     func?:          IFunction
     
     isCircuit:      boolean
-    parentCircuit?: Circuit
+    circuit?:       Circuit
+    parentCircuit:  Circuit
         
     cpu:            IControllerInterface
     onlineID?:      ID
 
-    onIOChanged:    ChangeEventHandler[] = []
+    onIOUpdate:    ChangeEventHandler[] = []
+
+    onValidateValueModification:        ValidadedEventHandler[] = []
+    onValidateFlagsModification:        ValidadedEventHandler[] = []
+    onValidateInputRefModification:     ValidadedEventHandler[] = []
+
+    modifications:  FunctionModification[] = []
 
     connectOnline(cpu: IControllerInterface, onlineID: ID) {
         cpu.setFunctionBlockFlag(onlineID, FunctionFlag.MONITOR, true)
         this.cpu = cpu
         this.onlineID = onlineID
+    }
+
+    ////////////////////////////////////////////
+    //      Updates from Controller
+    ////////////////////////////////////////////
+
+    updateIOValue(ioNum: number, value: number) {
+        const currentValues = this.funcData.ioValues
+        if (currentValues[ioNum] != value) {
+            currentValues[ioNum] = value
+            this.onIOUpdate[ioNum]?.()
+        }
+    }
+
+    ////////////////////////////////////////////
+    //        Modifications from UI
+    ////////////////////////////////////////////
+    
+    // Store modifications to online function
+    pushOnlineModification(type: FunctionModificationType, ioNum?: number) {
+        logInfo('Online Function Modification', FunctionModificationType[type], this.offlineID, ioNum)
+        const modification = { type, ioNum }
+
+        if (this.parentCircuit?.immediateMode || this.circuit?.immediateMode) {
+            this.sendModification(modification)
+        }
+        else if (!this.modifications.find(existing => (existing.type == type && existing.ioNum == ioNum))) {
+            this.modifications.push(modification)
+        }
+    }
+
+    setIOValue(ioNum: number, value: number) {
+        const currentValues = this.funcData.ioValues
+        if (currentValues[ioNum] != value) {
+            currentValues[ioNum] = value
+            if (this.onlineID) this.pushOnlineModification(FunctionModificationType.SetIOValue, ioNum)
+        }
+    }
+    setIOFlag(ioNum: number, flag: number, setEnabled: boolean) {
+        const currentFlags = this.funcData.ioFlags[ioNum]
+        const flags = (setEnabled)
+            ? currentFlags | flag
+            : currentFlags & ~flag
+        this.setIOFlags(ioNum, flags)
+    }
+    setIOFlags(ioNum: number, flags: number) {
+        const currentFlags = this.funcData.ioFlags
+        if (currentFlags[ioNum] != flags) {
+            currentFlags[ioNum] = flags
+            if (this.onlineID) this.pushOnlineModification(FunctionModificationType.SetIOValue, ioNum)
+        }
+    }
+    setInputRef(ioNum: number, sourceBlockID: ID, sourceIONum: number) {
+        this.funcData.inputRefs[ioNum] = (sourceBlockID) ? { id: sourceBlockID, ioNum: sourceIONum } : null
+        
+        if (this.cpu) this.pushOnlineModification(FunctionModificationType.SetInputRef, ioNum)
+    }
+    deleteFunction() {
+        this.parentCircuit.deleteFunctionBlock(this.offlineID)
+    }
+    changeInputCount() {}
+    changeOutputCount() {}
+
+    ///////////////////////
+
+    // Read function block IO values from online CPU
+    async updateOnlineValues() {
+        const ioValues = await this.cpu.getFunctionBlockIOValues(this.onlineID)
+        ioValues.forEach((onlineValue, ioNum) => {
+            this.updateIOValue(ioNum, onlineValue)
+        })
+    }
+    // Send all function online modifications
+    async sendModifications() {
+        for (const modification of this.modifications) {
+            await this.sendModification(modification)
+        }
+        this.modifications = []
+    }
+    // Send function modification to online CPU
+    async sendModification(modification: FunctionModification) {
+        
+        const ioNum = modification.ioNum
+
+        let success: boolean
+        let error: string
+
+        switch (modification.type)
+        {
+            case FunctionModificationType.SetIOValue:
+            {
+                const value = this.funcData.ioValues[ioNum]
+                success = await this.cpu.setFunctionBlockIOValue(this.onlineID, ioNum, value)
+                this.onValidateValueModification[ioNum]?.(success)
+                break
+            }
+            case FunctionModificationType.SetIOFlags:
+            {
+                const flags = this.funcData.ioFlags[ioNum]
+                success = await this.cpu.setFunctionBlockIOFlags(this.onlineID, ioNum, flags)
+                this.onValidateFlagsModification[ioNum]?.(success)
+                break
+            }
+            case FunctionModificationType.SetInputRef:
+            {
+                const connection = this.funcData.inputRefs[ioNum]
+                const sourceOnlineID = (connection) ? this.parentCircuit.getBlock(connection.id)?.onlineID : null
+                const sourceIONum = (connection) ? connection.ioNum : 0
+                                
+                success = await this.cpu.connectFunctionBlockInput(
+                    this.onlineID, ioNum, sourceOnlineID, sourceIONum)
+                    .catch(e => error = e)
+                this.onValidateInputRefModification[ioNum]?.(success)
+                break
+            }
+        }
+        logInfo('Modification result:', { modification, success, id: this.offlineID, ioNum })
+        return success
     }
 
     // Create new offline function block data
@@ -118,26 +251,27 @@ export class FunctionBlock
 //          Circuit
 ///////////////////////////////
 
-export class Circuit extends FunctionBlock
+export class Circuit
 {
     constructor(funcData: IFunctionBlockData, circuitData: ICircuitData)
     {
-        super(funcData, -1)
-        this.parentCircuit = this
+        this.funcState = new FunctionBlock(funcData, -1)
+        this.funcState.circuit = this
         this.circuitData = circuitData
     }
 
+    funcState:      FunctionBlock
     circuitData:    ICircuitData
 
     blocks:         FunctionBlock[] = []
     blocksByOnlineID =  new Map<ID, FunctionBlock>()
-    
-    modifications:  Modification[] = []
 
-    immediateMode = false
+    get onlineID() { return this.funcState.onlineID }
+    get cpu() { return this.funcState.cpu }
 
     connectOnline(cpu: IControllerInterface, onlineID: ID) {
-        super.connectOnline(cpu, onlineID)
+        this.funcState.connectOnline(cpu, onlineID)
+        this.blocksByOnlineID.set(onlineID, this.funcState)
         cpu.setMonitoring(true)
         cpu.onEventReceived = this.receiveEvent.bind(this)
     }
@@ -149,10 +283,10 @@ export class Circuit extends FunctionBlock
             case EventCode.MonitoringValues:
             {
                 const buffer = event.data as ArrayBuffer
-                const changes = readArrayOfStructs(buffer, 0, MonitorValueChangeStruct)
-                changes.forEach(change => {
-                    const offlineID = this.blocksByOnlineID.get(change.id).offlineID
-                    this.setFunctionBlockIOValue(offlineID, change.ioNum, change.value, true)
+                const updates = readArrayOfStructs(buffer, 0, MonitorValueChangeStruct)
+                updates.forEach(update => {
+                    const func = this.blocksByOnlineID.get(update.id)
+                    func.updateIOValue(update.ioNum, update.value)
                 })
             }
         }
@@ -160,38 +294,38 @@ export class Circuit extends FunctionBlock
 
     // Get block by ID
     getBlock(offlineID: ID) {
-        return (offlineID == -1) ? this : this.blocks[offlineID]
+        return (offlineID == -1) ? this.funcState : this.blocks[offlineID]
     }
-
-    // Store circuit modifications
-    async modified(type: ModificationType, blockID: ID, ioNum?: number, blockOnlineID?: ID) {
-        logInfo('Modification', ModificationType[type], blockID, ioNum)
-        if (type == ModificationType.DELETE_BLOCK) {
-            this.modifications = this.modifications.filter(modif => (modif.blockID != blockID))
-        }
-        if (this.immediateMode) {
-            this.sendModification(type, blockID, ioNum, blockOnlineID)
-        }
-        else this.modifications.push({ type, blockID, ioNum, blockOnlineID })
-    }
-
-    onModificationUploaded?: (type: ModificationType, successful: boolean, blockID: ID, ioNum?: number) => void
 
     ////////////////////////////
     //      Modifications
     ////////////////////////////
     
-    setFunctionBlockIOValue(blockID: ID, ioNum: number, value: number, isOnlineReadback=false) {
-        const block = this.getBlock(blockID)
-        const currentValues = block.funcData.ioValues
-        if (currentValues[ioNum] != value) {
-            currentValues[ioNum] = value
-            block.onIOChanged[ioNum]?.()
+    // In immediate mode online modifications are sent to CPU immediately
+    setImmediateMode(state: boolean) {
+        this.immediateMode = state
+        return this.immediateMode
+    }
+    immediateMode = false
+    modifications:  CircuitModification[] = []
 
-            if (this.cpu && !isOnlineReadback) this.modified(ModificationType.SET_IO_VALUE, blockID, ioNum)
+    onOnlineModificationDone?: (modification: CircuitModification, successful: boolean) => void
+
+    // Store circuit modifications
+    pushOnlineModification(type: CircuitModificationType, blockID: ID, ioNum?: number, blockOnlineID?: ID) {
+        logInfo('Modification', CircuitModificationType[type], blockID, ioNum)
+        const modification = { type, blockID, ioNum, blockOnlineID}
+        if (type == CircuitModificationType.DeleteFunction) {
+            
+        }
+        if (this.immediateMode) {
+            this.sendModification(modification)
+        }
+        else if (!this.modifications.find(existing => (existing.type == type && existing.blockID == blockID && existing.ioNum == ioNum))){
+            this.modifications.push(modification)
         }
     }
-
+     
     addFunctionBlock(library: number, opcode: number, customInputCount?: number, customOutputCount?: number, callIndex?: number) {
         const funcData = FunctionBlock.createNewData(library, opcode, customInputCount, customOutputCount)
         const offlineID = this.blocks.length
@@ -199,74 +333,104 @@ export class Circuit extends FunctionBlock
         this.blocks.push(funcBlock)
         funcBlock.parentCircuit = this
 
-        if (this.cpu) this.modified(ModificationType.ADD_BLOCK, offlineID)
+        if (this.onlineID) this.pushOnlineModification(CircuitModificationType.AddFunction, offlineID)
 
         return funcBlock
     }
 
     deleteFunctionBlock(id: ID) {
         const block = this.blocks[id]
-        if (this.cpu) this.modified(ModificationType.DELETE_BLOCK, id, undefined, block.onlineID)
+        if (this.onlineID) this.pushOnlineModification(CircuitModificationType.DeleteFunction, id, undefined, block.onlineID)
         this.blocksByOnlineID.delete(block.onlineID)
         delete this.blocks[id] 
         this.circuitData.callIDList = this.circuitData.callIDList.filter(callID => callID != id)
     }
 
-    connectFunctionBlockInput(targetBlockID: ID, targetIONum: number, sourceBlockID: ID, sourceIONum: number, inverted = false) {
-        const targetBlock = this.getBlock(targetBlockID)
-        // Connect circuit output
-        if (targetBlock == this) {
-            this.circuitData.outputRefs[targetIONum - this.funcData.inputCount] = { id: sourceBlockID, ioNum: sourceIONum }
-            if (this.cpu) this.modified(ModificationType.CONNECT_CIRCUIT_OUTPUT, targetBlock.offlineID, targetIONum)
-        }
-        // Connect block input
-        else {
-            targetBlock.funcData.inputRefs[targetIONum] = { id: sourceBlockID, ioNum: sourceIONum }
-            if (this.cpu) this.modified(ModificationType.CONNECT_FUNCTION_INPUT, targetBlock.offlineID, targetIONum)
-        }
+    setOutputRef(ioNum: number, sourceBlockID: ID, sourceIONum: number) {
+        const outputNum = ioNum - this.funcState.funcData.inputCount
+        this.circuitData.outputRefs[outputNum] = (sourceBlockID) ? { id: sourceBlockID, ioNum: sourceIONum } : null
+        
+        if (this.cpu) this.pushOnlineModification(CircuitModificationType.SetOutputRef, null, ioNum)
     }
 
-    disconnectFunctionBlockInput(blockID: ID, inputNum: number) {
-        const targetBlock = this.getBlock(blockID)
-        targetBlock.funcData.inputRefs[inputNum] = undefined
+    // Send circuit modifications to online CPU
 
-        if (this.cpu) this.modified(ModificationType.DELETE_CONNECTION, targetBlock.offlineID, inputNum)
+    async sendModifications() {
+        if (!this.cpu) { console.error('Upload changes: No online CPU connection'); return }
+
+        for (const block of this.blocks) {
+            await block?.sendModifications()
+        }
+        for (const modification of this.modifications) {
+            await this.sendModification(modification)
+        }
+        this.modifications = []
+    }
+
+    // Send circuit modification to online CPU
+    async sendModification(modification: CircuitModification)
+    {    
+        const { blockID, ioNum, blockOnlineID } = modification
+        
+        const block = this.getBlock(blockID)
+        
+        let success: boolean
+        let error: string
+
+        switch (modification.type)
+        {
+            case CircuitModificationType.AddFunction:
+            {
+                const data = block.funcData
+                const onlineID = await this.cpu.createFunctionBlock(
+                    data.library, data.opcode, this.onlineID, undefined,
+                    data.inputCount, data.outputCount, data.staticCount).catch(e => error = e)
+                if (onlineID) {
+                    block.connectOnline(this.cpu, onlineID)
+                    success = true
+                }
+                break
+            }
+            case CircuitModificationType.DeleteFunction:
+            {
+                success = await this.cpu.deleteFunctionBlock(blockOnlineID)
+                break
+            }
+            case CircuitModificationType.SetOutputRef:
+                {
+                    const outputNum = ioNum - this.funcState.funcData.inputCount
+
+                    const connection = this.circuitData.outputRefs[outputNum]
+
+                    const sourceOnlineID = (connection) ? this.getBlock(connection.id)?.onlineID : null
+                    const sourceIONum = (connection) ? connection.ioNum : 0
+                    success = await this.cpu.connectCircuitOutput(
+                        this.onlineID, outputNum, sourceOnlineID, sourceIONum).catch(e => error = e)
+                    break
+                }
+        }
+
+        logInfo('Modification result:', { type: CircuitModificationType[modification.type], success, blockOfflineID: blockID, ioNum })
+        this.onOnlineModificationDone?.(modification, success)
+        return success
     }
 
     ///////////////////////////////
     //      Online functions
     ///////////////////////////////
 
-
-    // In immediate mode changes are sent to CPU immediately
-    setImmediateMode(state: boolean) {
-        this.immediateMode = state
-        return this.immediateMode
-    }
-
     // Read circuit and it's blocks IO values from online CPU
-    async onlineReadIOValues() {
+    async getOnlineValues() {
         if (!this.cpu) return
-        await this.onlineReadBlockIOValues(this.offlineID)
+        await this.funcState.updateOnlineValues()
         this.blocks.forEach(block => {
-            this.onlineReadBlockIOValues(block.offlineID)
-        })
-    }
-
-    // Read function block IO values from online CPU
-    async onlineReadBlockIOValues(blockID: ID) {
-        const block = this.getBlock(blockID)
-        const ioValues = await this.cpu.getFunctionBlockIOValues(block.onlineID)
-        ioValues.forEach((onlineValue, ioNum) => {
-            this.setFunctionBlockIOValue(blockID, ioNum, onlineValue, true)
+            block.updateOnlineValues()
         })
     }
 
     // Load function blocks from online CPU
-    async onlineReadFunctionBlocks() {
+    async getOnlineFunctionBlocks() {
         if (!this.cpu) { console.error('Circuit: Can not load online blocks. no controller connected'); return }
-        // Set self to online blocks for connecting circuit inputs to block IO
-        this.blocksByOnlineID.set(this.onlineID, this)
         // Get first free offline ID
         let offlineID = this.blocks.length
         // Load circuit's function blocks from CPU
@@ -292,95 +456,6 @@ export class Circuit extends FunctionBlock
             })
         })
     }
-
-    // Send circuit modifications to online CPU
-    async sendChanges() {
-        if (!this.cpu) { console.error('Upload changes: No online CPU connection'); return }
-
-        for (const modification of this.modifications) {
-            await this.sendModification(modification.type, modification.blockID, modification.ioNum, modification.blockOnlineID)
-        }
-        this.modifications = []
-    }
-
-    // Send circuit modification to online CPU
-    async sendModification(type: ModificationType, blockOfflineID: ID, ioNum?: number, blockOnlineID?: number) {
-        const block = this.getBlock(blockOfflineID)
-        
-        let success: boolean
-        let error: string
-
-        switch (type)
-        {
-            case ModificationType.SET_IO_VALUE:
-            {
-                const value = block.funcData.ioValues[ioNum]
-                success = await this.cpu.setFunctionBlockIOValue(block.onlineID, ioNum, value)
-                break
-            }
-
-            case ModificationType.ADD_BLOCK:
-            {
-                const data = block.funcData
-                const onlineID = await this.cpu.createFunctionBlock(
-                    data.library, data.opcode, this.onlineID, undefined,
-                    data.inputCount, data.outputCount, data.staticCount).catch(e => error = e)
-                if (onlineID) {
-                    block.connectOnline(this.cpu, onlineID)
-                    success = true
-                }
-                break
-            }
-
-            case ModificationType.DELETE_BLOCK:
-            {
-                success = await this.cpu.deleteFunctionBlock(blockOnlineID)
-                break
-            }
-
-            case ModificationType.CONNECT_FUNCTION_INPUT:
-            {
-                const connection = block.funcData.inputRefs[ioNum]
-                const sourceBlock = (connection.id == -1) ? this : this.blocks[connection.id]
-
-                const targetOnlineID = block.onlineID
-                const sourceOnlineID = sourceBlock.onlineID
-                
-                if (!targetOnlineID || !sourceOnlineID) { error = 'Invalid source or target block ID'; break }
-                
-                success = await this.cpu.connectFunctionBlockInput(
-                    targetOnlineID, ioNum, sourceOnlineID, connection.ioNum).catch(e => error = e)
-                break
-            }
-
-            case ModificationType.CONNECT_CIRCUIT_OUTPUT:
-                {
-                    const outputNum = ioNum - this.funcData.inputCount
-
-                    const connection = this.circuitData.outputRefs[outputNum]
-                    const sourceBlock = this.getBlock(connection.id)
-    
-                    const targetOnlineID = this.onlineID
-                    const sourceOnlineID = sourceBlock.onlineID
-
-                    if (!targetOnlineID || !sourceOnlineID) { error = 'Invalid source or target block ID'; break }
-                    
-                    success = await this.cpu.connectCircuitOutput(
-                        targetOnlineID, outputNum, sourceOnlineID, connection.ioNum).catch(e => error = e)
-                    break
-                }
-
-            case ModificationType.DELETE_CONNECTION:
-            {
-                const targetBlock = this.blocks[blockOfflineID]
-                success = await this.cpu.connectFunctionBlockInput(targetBlock.onlineID, ioNum, 0, 0).catch(e => error = e)
-            }
-        }
-        logInfo('Modification result:', { type: ModificationType[type], success, blockOfflineID, ioNum })
-        this.onModificationUploaded?.(type, success, blockOfflineID, ioNum)
-        return success
-    }
-
     ///////////////////////////////
     //      STATIC FUNCTIONS
     ///////////////////////////////
@@ -407,13 +482,13 @@ export class Circuit extends FunctionBlock
     }
 
     // Download circuit from online CPU
-    static async loadFromOnlineCPU(cpu: IControllerInterface, circuitOnlineID: ID, loadBlocks = true) {
+    static async getOnlineCircuit(cpu: IControllerInterface, circuitOnlineID: ID, loadBlocks = true) {
         const funcData = await cpu.getFunctionBlockData(circuitOnlineID)
         const circuitData = await cpu.getCircuitData(circuitOnlineID)
         
         const circuit = new Circuit(funcData, circuitData)
         circuit.connectOnline(cpu, circuitOnlineID)
-        if (loadBlocks) await circuit.onlineReadFunctionBlocks()
+        if (loadBlocks) await circuit.getOnlineFunctionBlocks()
 
         return circuit
     }

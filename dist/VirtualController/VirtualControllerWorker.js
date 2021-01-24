@@ -1,4 +1,5 @@
 import VirtualController from './VirtualControllerCPU.js';
+import { EventID } from '../Controller/ControllerInterface.js';
 class Ticker {
     constructor(cpu) {
         this.cpu = cpu;
@@ -36,7 +37,7 @@ function respondReject(id, code, error) {
     sendMessage(response);
 }
 function handleControllerEvent(code, data) {
-    const event = { id: 0 /* Event */, code, success: true, data };
+    const event = { id: EventID, code, success: true, data };
     sendMessage(event);
 }
 // Post message

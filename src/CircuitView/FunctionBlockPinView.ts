@@ -10,27 +10,38 @@ import { DataType } from '../Lib/TypedStructs.js'
 
 export default class FunctionBlockPinView extends GUIChildElement implements CircuitElement
 {
+    constructor(parent: IViewContainerGUI, funcState: FunctionBlock, ioNum: number, pos: Vec2, isInternalCircuitIO = false) {
+        super(parent, 'div', pos, vec2(1, 1))
+        this.funcState = funcState
+        this.ioNum = ioNum
+        this.pinType = (ioNum < funcState.funcData.inputCount) ? 'inputPin' : 'outputPin'
+        
+        this.type = (!isInternalCircuitIO && this.pinType == 'inputPin' || isInternalCircuitIO && this.pinType == 'outputPin')
+        ? 'inputPin' : 'outputPin'
+
+        this.isInternalCircuitIO = isInternalCircuitIO
+        this.create(this.gui)
+    }
+    
     type: ElementType
     gui: CircuitView
-
+    
     isSelectable = true
     isDraggable = true
-
+    
     funcState: FunctionBlock
     ioNum: number
     pinType: PinType
-
+    
     pin: HTMLDivElement
     valueField: HTMLDivElement
-
+    
     isInternalCircuitIO: boolean
     
     color: string
     
     private _name: string
-
-    private doubleClickPending: boolean
-
+    
     get name()  { return this._name }
     get dataType()  { return getIODataType(this.flags) }
     get flags() { return this.funcState.funcData.ioFlags[this.ioNum] }
@@ -40,33 +51,20 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     get blockID() {
         return this.funcState.offlineID
     }
-    setValue(value: number) { this.funcState.parentCircuit.setFunctionBlockIOValue(this.blockID, this.ioNum, value) }
     
-    constructor(parent: IViewContainerGUI, funcState: FunctionBlock, ioNum: number, pos: Vec2, isInternalCircuitIO = false) {
-        super(parent, 'div', pos, vec2(1, 1))
-        this.funcState = funcState
-        this.ioNum = ioNum
-        this.pinType = (ioNum < funcState.funcData.inputCount) ? 'inputPin' : 'outputPin'
-
-        this.type = (!isInternalCircuitIO && this.pinType == 'inputPin' || isInternalCircuitIO && this.pinType == 'outputPin')
-            ? 'inputPin' : 'outputPin'
-
-        this.isInternalCircuitIO = isInternalCircuitIO
-        this.create(this.gui)
-    }
-
-    get connection() {
+    get reference() {
         const ref = (this.isInternalCircuitIO)
-            ? this.funcState.parentCircuit.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
-            : this.funcState.funcData.inputRefs[this.ioNum]
+        ? this.funcState.circuit?.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
+        : this.funcState.funcData.inputRefs[this.ioNum]
         return ref
     }
-
+    
     private create(gui: CircuitView) {
         this.createPinElement(gui)
         this.createValueField(gui)
         this.updatePin()
-        this.funcState.onIOChanged[this.ioNum] = this.updatePin.bind(this)
+        this.funcState.onIOUpdate[this.ioNum] = this.updatePin.bind(this)
+        this.funcState.onValidateValueModification[this.ioNum] = this.validateValueModification.bind(this)
     }
 
     createPinElement(gui: CircuitView) {
@@ -82,7 +80,8 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
             top:        scaledOffset.y + 'px',
             width:      scaledSize.x + 'px',
             height:     scaledSize.y + 'px',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            boxSizing: ''
         })
     }
 
@@ -110,6 +109,11 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
             pointerEvents: 'none'
         })
     }
+    setValue(value: number) {
+        this.funcState.setIOValue(this.ioNum, value)
+        this.updatePin()
+        if (this.funcState.onlineID) this.pendingValueModification()
+    }
 
     updatePin() {
         this.valueField.textContent = this.value.toString()
@@ -125,17 +129,26 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         this.pin.style.backgroundColor = this.color
         this.valueField.style.color = this.color
         
-        //console.log('update pin:', this.id, this.io.value, this.onPinUpdated)
+        console.log('update pin:', this.id)
         this.onPinUpdated?.()
     }
+    onPinUpdated?(): void
 
     toggleValue() {
-        if (this.dataType == IODataType.BINARY && !this.connection) {
+        if (this.dataType == IODataType.BINARY && !this.reference) {
             this.setValue((this.value) ? 0 : 1)
         }
     }
 
-    onPinUpdated?(): void
+    pendingValueModification() {
+        this.valueField.style.outline = this.gui.style.borderPending
+        this.valueField.style.backgroundColor = this.gui.style.colorPending
+    }
+
+    validateValueModification(successful: boolean) {
+        this.valueField.style.outline = (successful) ? 'none' : this.gui.style.borderError
+        this.valueField.style.backgroundColor = this.gui.style.pinValueFieldBg
+    }
 
     onSelected() {
         this.pin.style.outline = this.gui.style.blockOutlineSelected

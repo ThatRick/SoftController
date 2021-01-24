@@ -47,17 +47,17 @@ class IOArea extends GUIChildElement {
         let ioNumEnd;
         if (this.type == 'inputArea') {
             ioNumStart = 0;
-            ioNumEnd = circuit.funcData.inputCount - 1;
+            ioNumEnd = circuit.funcState.funcData.inputCount - 1;
         }
         else {
-            ioNumStart = circuit.funcData.inputCount;
-            ioNumEnd = ioNumStart + circuit.funcData.outputCount - 1;
+            ioNumStart = circuit.funcState.funcData.inputCount;
+            ioNumEnd = ioNumStart + circuit.funcState.funcData.outputCount - 1;
         }
         for (let ioNum = ioNumStart; ioNum <= ioNumEnd; ioNum++) {
             this.ioViews.push(new CircuitIOView(this.children, circuit, ioNum, vec2(0, ioNum + 2)));
         }
     }
-    get id() { return this.circuit.offlineID; }
+    get id() { return this.circuit.funcState.offlineID; }
 }
 /////////////////////////////
 //    Circuit Block Area
@@ -87,6 +87,18 @@ export default class CircuitView extends GUIView {
         ////////////////////////////////
         this.onPointerDown = (ev) => {
             const elem = this.pointer.downTargetElem;
+            const selected = Array.from(this.selectedElements.values())[0];
+            console.log('Select:', selected?.type, elem.type, !elem.reference);
+            if (selected?.type == 'outputPin' && elem.type == 'inputPin' && !(elem.reference)) {
+                this.connect(selected, elem);
+                this.unselectAll();
+                return;
+            }
+            if (selected?.type == 'inputPin' && elem.type == 'outputPin' && !(selected.reference)) {
+                this.connect(elem, selected);
+                this.unselectAll();
+                return;
+            }
             if (elem?.isSelectable && !ev.shiftKey) {
                 if (!this.selectedElements.has(elem)) {
                     this.unselectAll();
@@ -197,7 +209,7 @@ export default class CircuitView extends GUIView {
     }
     loadCircuit(circuit) {
         this.circuit = circuit;
-        this.circuit.onModificationUploaded = (type, success, blockID, ioNum) => {
+        this.circuit.onOnlineModificationDone = (modification, success) => {
         };
         console.log('CircuitView: Load circuit');
         const margin = vec2(6, 2);
@@ -218,9 +230,10 @@ export default class CircuitView extends GUIView {
         // Create connection traces
         this.blocks.forEach(funcBlockElem => {
             funcBlockElem.inputPins.forEach(inputPin => {
-                if (inputPin.connection) {
-                    const outputPin = this.getConnectionSourcePin(inputPin.connection);
-                    this.createConnectionTrace(outputPin, inputPin);
+                if (inputPin.reference) {
+                    const outputPin = this.getConnectionSourcePin(inputPin.reference);
+                    const trace = this.createConnectionTrace(outputPin, inputPin);
+                    trace.validate();
                 }
             });
         });
@@ -237,21 +250,32 @@ export default class CircuitView extends GUIView {
     }
     connect(outputPin, inputPin, inverted = false) {
         logInfo('connect', outputPin.id, inputPin.id);
-        this.circuit.connectFunctionBlockInput(inputPin.blockID, inputPin.ioNum, outputPin.blockID, outputPin.ioNum);
+        if (inputPin.funcState.isCircuit) {
+            this.circuit.setOutputRef(inputPin.ioNum, outputPin.funcState.offlineID, outputPin.ioNum);
+        }
+        else {
+            inputPin.funcState.setInputRef(inputPin.ioNum, outputPin.blockID, outputPin.ioNum);
+        }
         this.createConnectionTrace(outputPin, inputPin, inverted);
     }
     disconnect(inputPin) {
         logInfo('disconnect', inputPin.id);
-        this.circuit.disconnectFunctionBlockInput(inputPin.blockID, inputPin.ioNum);
+        if (inputPin.funcState.isCircuit) {
+            this.circuit.setOutputRef(inputPin.ioNum, null, 0);
+        }
+        else {
+            inputPin.funcState.setInputRef(inputPin.ioNum, null, 0);
+        }
         this.deleteConnectionTrace(inputPin.id);
     }
     createConnectionTrace(outputPin, inputPin, inverted = false) {
         logInfo('create trace', inputPin.id);
-        if (inputPin.connection) {
+        if (inputPin.reference) {
             this.deleteConnectionTrace(inputPin.id);
         }
         const trace = new CircuitTrace(this.traceLayer, outputPin, inputPin);
         this.traces.set(inputPin.id, trace);
+        return trace;
     }
     deleteConnectionTrace(id) {
         const trace = this.traces.get(id);
@@ -344,7 +368,7 @@ export default class CircuitView extends GUIView {
                     const outputPin = targetElem;
                     this.connect(outputPin, inputPin);
                 }
-                else if (inputPin.connection && targetElem?.type == 'inputPin' && targetElem != inputPin) {
+                else if (inputPin.reference && targetElem?.type == 'inputPin' && targetElem != inputPin) {
                     const trace = this.traces.get(inputPin.id);
                     this.connect(trace.outputPin, targetElem);
                     this.disconnect(inputPin);

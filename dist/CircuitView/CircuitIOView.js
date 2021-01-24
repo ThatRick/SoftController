@@ -2,7 +2,7 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import { vec2 } from '../Lib/Vector2.js';
 import FunctionBlockPinView from './FunctionBlockPinView.js';
 export default class CircuitIOView extends GUIChildElement {
-    constructor(parent, circuitState, ioNum, pos) {
+    constructor(parent, circuit, ioNum, pos) {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
             borderBottom: '1px solid',
             borderColor: parent.gui.style.colorPanelLines,
@@ -21,9 +21,9 @@ export default class CircuitIOView extends GUIChildElement {
         this.onPointerLeave = () => {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
         };
-        this.state = circuitState;
+        this.circuit = circuit;
         this.ioNum = ioNum;
-        this.type = (ioNum < circuitState.funcData.inputCount) ? 'circuitInput' : 'circuitOutput';
+        this.type = (ioNum < circuit.funcState.funcData.inputCount) ? 'circuitInput' : 'circuitOutput';
         this.build();
     }
     get id() { return this.ioPin.id; }
@@ -38,7 +38,7 @@ export default class CircuitIOView extends GUIChildElement {
     }
     createPin() {
         const pos = (this.type == 'circuitInput') ? vec2(this.gui.style.IOAreaWidth, 0) : vec2(-1, 0);
-        this.ioPin = new FunctionBlockPinView(this.children, this.state, this.ioNum, pos, true);
+        this.ioPin = new FunctionBlockPinView(this.children, this.circuit.funcState, this.ioNum, pos, true);
     }
     createIOName() {
         this.DOMElement.textContent = this.ioNum.toString();

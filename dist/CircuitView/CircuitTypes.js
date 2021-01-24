@@ -16,6 +16,9 @@ export const defaultStyle = {
     pinValueFieldBg: 'transparent',
     filterDefault: 'none',
     filterActive: 'brightness(150%)',
+    colorPending: 'rgba(150, 255, 200, 0.15)',
+    borderPending: 'none',
+    borderError: 'thin solid rgba(255, 0, 0, 0.2)',
     traceWidth: 0.10,
     IOAreaWidth: 6
 };

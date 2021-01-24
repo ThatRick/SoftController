@@ -4,8 +4,19 @@ export class CircuitTrace {
         this.outputPin = outputPin;
         this.inputPin = inputPin;
         this.id = inputPin.id;
-        layer.addTrace(this.id, outputPin.absPos, inputPin.absPos, inputPin.color);
-        inputPin.onPinUpdated = this.updateColor.bind(this);
+        const pending = (!!inputPin.funcState.onlineID);
+        const color = pending ? this.inputPin.gui.style.colorPending : inputPin.color;
+        layer.addTrace(this.id, outputPin.absPos, inputPin.absPos, color);
+        if (pending) {
+            inputPin.funcState.onValidateInputRefModification[inputPin.ioNum] = this.validate.bind(this);
+        }
+        else {
+            this.validate();
+        }
+    }
+    validate() {
+        this.inputPin.onPinUpdated = this.updateColor.bind(this);
+        this.updateColor();
     }
     updateColor() {
         this.layer.setTraceColor(this.id, this.inputPin.color);

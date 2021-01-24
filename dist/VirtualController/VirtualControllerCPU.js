@@ -317,9 +317,9 @@ export default class VirtualController {
     connectCircuitOutput(circuitId, outputNum, sourceFuncId, sourceIONum) {
         const sourceIOPointer = this.getFunctionIOPointer(sourceFuncId, sourceIONum);
         const outputRefPointer = this.getCircuitOutputRefPointer(circuitId, outputNum);
-        if (!sourceIOPointer || !outputRefPointer)
+        if (!outputRefPointer)
             return false;
-        this.ints[outputRefPointer] = sourceIOPointer;
+        this.ints[outputRefPointer] = sourceIOPointer || 0;
         return true;
     }
     readCircuitOutputRefsByID(id) {

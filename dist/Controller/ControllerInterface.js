@@ -1,6 +1,6 @@
 import { alignBytes, BYTES_PER_REF, functionHeaderByteLength } from './ControllerDataTypes.js';
 export const MessageCodeNames = [
-    'Event',
+    'Undefined',
     'CreateController',
     'StartController',
     'StopController',
@@ -29,6 +29,7 @@ export const MessageCodeNames = [
     'GetFunctionBlockIOValues',
     'GetCircuitData',
 ];
+export const EventID = 0;
 export const EventCodeNames = [
     'MonitoringValues'
 ];
