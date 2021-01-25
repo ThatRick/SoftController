@@ -222,13 +222,15 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
     
             // Clicked
             if (!this.pointer.isDragging)  {
+                // Double
                 if (this.doubleClickPending) {
-                    this.onDoubleClicked?.(ev)
                     if (this.pointer.targetElem == this.pointer.downTargetElem) this.pointer.targetElem?.onDoubleClicked?.(ev, this.pointer)
+                    this.onDoubleClicked?.(ev)
                 }
+                // Single
                 else {
-                    this.onClicked?.(ev)
                     if (this.pointer.targetElem == this.pointer.downTargetElem) this.pointer.targetElem?.onClicked?.(ev, this.pointer)
+                    this.onClicked?.(ev)
                     this.doubleClickPending = true
                     setTimeout(() => this.doubleClickPending = false, DOUBLE_CLICK_INTERVAL)
                 }

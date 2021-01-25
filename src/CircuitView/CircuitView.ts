@@ -2,7 +2,7 @@ import Vec2, { vec2 } from '../Lib/Vector2.js'
 import GUIView from '../GUI/GUIView.js'
 import CircuitGrid from './CircuitGrid.js'
 import { CircuitElement, CircuitStyle, defaultStyle, ElementType } from './CircuitTypes.js'
-import { Circuit, FunctionBlock } from './CircuitState.js'
+import { Circuit } from './CircuitState.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import * as HTML from '../Lib/HTML.js'
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
@@ -12,6 +12,7 @@ import FunctionBlockPinView from './FunctionBlockPinView.js'
 import GUIContainer from '../GUI/GUIContainer.js'
 import { CircuitTrace, ICircuitTraceLayer } from './CircuitTrace.js'
 import CircuitIOView from './CircuitIOView.js'
+import { FunctionBlock } from './FunctionBlockState.js'
 
 const enum DraggingMode {
     NONE,
@@ -399,7 +400,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     onPointerDown = (ev: PointerEvent) => {
         const elem = this.pointer.downTargetElem
         const selected = Array.from(this.selectedElements.values())[0]
-        console.log('Select:',selected?.type, elem.type, !(elem as FunctionBlockPinView).reference)
 
         if (selected?.type == 'outputPin' && elem.type == 'inputPin' && !((elem as FunctionBlockPinView).reference)) {
             this.connect(selected as FunctionBlockPinView, elem as FunctionBlockPinView)

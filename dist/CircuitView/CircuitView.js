@@ -88,7 +88,6 @@ export default class CircuitView extends GUIView {
         this.onPointerDown = (ev) => {
             const elem = this.pointer.downTargetElem;
             const selected = Array.from(this.selectedElements.values())[0];
-            console.log('Select:', selected?.type, elem.type, !elem.reference);
             if (selected?.type == 'outputPin' && elem.type == 'inputPin' && !(elem.reference)) {
                 this.connect(selected, elem);
                 this.unselectAll();

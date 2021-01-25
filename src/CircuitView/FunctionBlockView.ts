@@ -1,7 +1,7 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
-import { FunctionBlock } from './CircuitState.js'
+import { FunctionBlock } from './FunctionBlockState.js'
 import CircuitView from './CircuitView.js'
 import { Table } from '../Lib/HTML.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'

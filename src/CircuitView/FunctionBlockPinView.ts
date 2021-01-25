@@ -1,11 +1,11 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
-import { FunctionBlock } from './CircuitState.js'
+import { FunctionBlock } from './FunctionBlockState.js'
 import { domElement } from '../Lib/HTML.js'
 import { CircuitElement, ElementType, PinType } from './CircuitTypes.js'
 import CircuitView from './CircuitView.js'
-import { getIODataType, IODataType } from '../Controller/ControllerDataTypes.js'
+import { getIODataType, IODataType, IOFlag } from '../Controller/ControllerDataTypes.js'
 import { DataType } from '../Lib/TypedStructs.js'
 
 export default class FunctionBlockPinView extends GUIChildElement implements CircuitElement
@@ -39,6 +39,13 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     isInternalCircuitIO: boolean
     
     color: string
+    get traceColor() {
+        const col = (this.inverted)
+            ? (this.value == 0) ? this.gui.style.colorPinBinary1 : this.gui.style.colorPinBinary0
+            : this.color
+        console.log('get trace color', this.inverted, col)
+        return col
+    }
     
     private _name: string
     
@@ -47,6 +54,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     get flags() { return this.funcState.funcData.ioFlags[this.ioNum] }
     get value() { return this.funcState.funcData.ioValues[this.ioNum] }
     get id()    { return this.funcState.offlineID * 1000 + this.ioNum }
+    get inverted() { return !!(this.flags & IOFlag.INVERTED) }
     
     get blockID() {
         return this.funcState.offlineID
@@ -60,29 +68,54 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
     
     private create(gui: CircuitView) {
-        this.createPinElement(gui)
+        const pinStyle = (this.inverted) ? this.invertedPinStyle : this.pinStyle
+        this.pin = domElement(this.DOMElement, 'div', pinStyle)
         this.createValueField(gui)
         this.updatePin()
         this.funcState.onIOUpdate[this.ioNum] = this.updatePin.bind(this)
         this.funcState.onValidateValueModification[this.ioNum] = this.validateValueModification.bind(this)
+        this.funcState.onValidateFlagsModification[this.ioNum] = this.validateFlagsModification.bind(this)
     }
 
-    createPinElement(gui: CircuitView) {
-        const size = vec2(0.5, gui.style.traceWidth)
+    get pinStyle() {
+        const size = vec2(0.5, this.gui.style.traceWidth)
         const yOffset = 0.5 - size.y / 2
         
-        const scaledOffset = Vec2.mul((this.type == 'inputPin') ? vec2(1-size.x, yOffset) : vec2(0, yOffset), gui.scale)
-        const scaledSize = Vec2.mul(size, gui.scale)
+        const scaledOffset = Vec2.mul((this.type == 'inputPin') ? vec2(1-size.x, yOffset) : vec2(0, yOffset), this.gui.scale)
+        const scaledSize = Vec2.mul(size, this.gui.scale)
 
-        this.pin = domElement(this.DOMElement, 'div', {
+        return {
             position:   'absolute',
             left:       scaledOffset.x + 'px',
             top:        scaledOffset.y + 'px',
             width:      scaledSize.x + 'px',
             height:     scaledSize.y + 'px',
+            border:     'none',
+            borderRadius: '0',
             pointerEvents: 'none',
-            boxSizing: ''
-        })
+        } as Partial<CSSStyleDeclaration>
+    }
+
+    get invertedPinStyle() {
+        const scale = this.gui.scale
+        const scaledSize = vec2(scale.x * 0.6)
+        const yOffset = (scale.y - scaledSize.y) / 2
+        
+        const scaledOffset = (this.type == 'inputPin') ? vec2(scale.x - scaledSize.x, yOffset) : vec2(0, yOffset)
+
+        return {
+            position:   'absolute',
+            left:       scaledOffset.x + 'px',
+            top:        scaledOffset.y + 'px',
+            width:      scaledSize.x + 'px',
+            height:     scaledSize.y + 'px',
+            borderStyle:    'solid',
+            borderWidth:    this.gui.style.traceWidth * scale.y + 'px',
+            borderRadius:   (scaledSize.x / 2) + 'px',
+            backgroundColor: 'transparent',
+            pointerEvents:  'none',
+            boxSizing: 'border-box'
+        } as Partial<CSSStyleDeclaration>
     }
 
     createValueField(gui: CircuitView) {
@@ -105,7 +138,6 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
             height:     scaledSize.y + 'px',
             lineHeight: scaledSize.y + 'px',
             textAlign,
-            backgroundColor: gui.style.pinValueFieldBg,
             pointerEvents: 'none'
         })
     }
@@ -115,7 +147,14 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         if (this.funcState.onlineID) this.pendingValueModification()
     }
 
-    updatePin() {
+    setFlag(flag: number, enabled: boolean) {
+        this.funcState.setIOFlag(this.ioNum, flag, enabled)
+        Object.assign(this.pin.style, (this.inverted) ? this.invertedPinStyle : this.pinStyle)
+        this.updatePin(false)
+        if (this.funcState.onlineID) this.pendingFlagsModification()
+    }
+
+    updatePin(bubbles = true) {
         this.valueField.textContent = this.value.toString()
         
         const style = this.gui.style
@@ -126,17 +165,23 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
             case IODataType.FLOAT:    this.color = style.colorPinFloat; break
         }
         
-        this.pin.style.backgroundColor = this.color
+        (this.inverted)
+            ? this.pin.style.borderColor = this.color
+            : this.pin.style.backgroundColor = this.color
+        
         this.valueField.style.color = this.color
         
         console.log('update pin:', this.id)
-        this.onPinUpdated?.()
+        bubbles && this.onPinUpdated?.()
     }
     onPinUpdated?(): void
 
-    toggleValue() {
+    togglePin() {
         if (this.dataType == IODataType.BINARY && !this.reference) {
             this.setValue((this.value) ? 0 : 1)
+        }
+        else if (this.dataType == IODataType.BINARY && this.reference) {
+            this.setFlag(IOFlag.INVERTED, !this.inverted)
         }
     }
 
@@ -149,6 +194,15 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         this.valueField.style.outline = (successful) ? 'none' : this.gui.style.borderError
         this.valueField.style.backgroundColor = this.gui.style.pinValueFieldBg
     }
+    
+    pendingFlagsModification() {
+        this.DOMElement.style.backgroundColor = this.gui.style.colorPending
+    }
+
+    validateFlagsModification(successful: boolean) {
+        console.log('flags validated!')
+        this.DOMElement.style.backgroundColor = 'transparent'
+    }
 
     onSelected() {
         this.pin.style.outline = this.gui.style.blockOutlineSelected
@@ -157,7 +211,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
 
     onUnselected() {
         this.pin.style.outline = this.gui.style.blockOutlineUnselected
-        this.updatePin()
+        this.updatePin(false)
     }
 
     onPointerEnter = (ev: PointerEvent) => {
@@ -169,7 +223,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
 
     onDoubleClicked = ev => {
-        this.toggleValue()
+        this.togglePin()
     }
 
 }

@@ -9,7 +9,7 @@ export const defaultStyle = {
     blockOutlineUnselected: 'none',
     blockOutlineSelected: 'thin solid #AAF',
     colorPinHover: '#AAA',
-    colorPinBinary0: '#666',
+    colorPinBinary0: '#777',
     colorPinBinary1: '#CC9',
     colorPinInteger: '#99D',
     colorPinFloat: '#9D9',

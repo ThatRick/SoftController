@@ -19,10 +19,12 @@ export class CircuitTrace {
     ) {
         this.id = inputPin.id
         const pending = (!!inputPin.funcState.onlineID)
-        const color = pending ? this.inputPin.gui.style.colorPending : inputPin.color
+        const color = pending ? this.inputPin.gui.style.colorPending : inputPin.traceColor
         layer.addTrace(this.id, outputPin.absPos, inputPin.absPos, color)
         if (pending) {
-            inputPin.funcState.onValidateInputRefModification[inputPin.ioNum] = this.validate.bind(this)
+            (inputPin.funcState.isCircuit)
+                ? inputPin.funcState.circuit.onValidateOutputRefModification[inputPin.ioNum] = this.validate.bind(this)
+                : inputPin.funcState.onValidateInputRefModification[inputPin.ioNum] = this.validate.bind(this)
         } else {
             this.validate()
         }
@@ -35,7 +37,8 @@ export class CircuitTrace {
     }
 
     updateColor() {
-        this.layer.setTraceColor(this.id, this.inputPin.color)
+        console.log('trace: update color')
+        this.layer.setTraceColor(this.id, this.inputPin.traceColor)
     }
 
     update() {
