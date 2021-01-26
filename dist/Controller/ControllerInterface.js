@@ -10,6 +10,7 @@ export const MessageCodeNames = [
     'SetTaskCallTarget',
     'CreateCircuit',
     'ConnectCircuitOutput',
+    'SetFunctionCallIndex',
     'CreateFunctionBlock',
     'DeleteFunctionBlock',
     'SetFunctionBlockFlag',

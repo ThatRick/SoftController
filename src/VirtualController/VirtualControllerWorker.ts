@@ -1,5 +1,5 @@
 import VirtualController from './VirtualControllerCPU.js'
-import { ICircuitData, IConnectCircuitOutputParams, IConnectFunctionBlockInputParams, ICreateCircuitParams, ICreateControllerParams, ICreateFunctionBlockParams, ICreateTaskParams, IFunctionBlockData, ISetFunctionBlockIOFlagsParams, ISetFunctionBlockIOValueParams, ISetTaskCallTargetParams, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse, EventCode, ISetFunctionBlockFlagParams, ISetFunctionBlockIOFlagParams, EventID } from '../Controller/ControllerInterface.js'
+import { ICircuitData, IConnectCircuitOutputParams, IConnectFunctionBlockInputParams, ICreateCircuitParams, ICreateControllerParams, ICreateFunctionBlockParams, ICreateTaskParams, IFunctionBlockData, ISetFunctionBlockIOFlagsParams, ISetFunctionBlockIOValueParams, ISetTaskCallTargetParams, IStepControllerParams, ISystemSector, Message, MessageCode, MessageResponse, EventCode, ISetFunctionBlockFlagParams, ISetFunctionBlockIOFlagParams, EventID, ISetFunctionCallIndexParams } from '../Controller/ControllerInterface.js'
 import { DatablockType, ID } from '../Controller/ControllerDataTypes.js'
 
 type Tickable = { tick: (dt: number) => void }
@@ -149,6 +149,12 @@ onmessage = (e) =>
         {
             const par = msg.params as IConnectCircuitOutputParams
             response = cpu.connectCircuitOutput(par.circID, par.outputNum, par.sourceID, par.sourceIONum)
+            break
+        }
+        case MessageCode.SetFunctionCallIndex:
+        {
+            const par = msg.params as ISetFunctionCallIndexParams
+            response = cpu.setFunctionCallIndex(par.circID, par.funcID, par.index)
             break
         }
         case MessageCode.CreateFunctionBlock:

@@ -39,7 +39,7 @@ async function app() {
     const terminal = new ControllerTerminal(document.getElementById('terminal'), cpu);
     // const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
-    const circuitID = await createTestCircuit(cpu, 20);
+    const circuitID = await createTestCircuit(cpu, 10);
     const taskId = await cpu.createTask(circuitID, 100, 10);
     terminal.printSystemSector();
     terminal.printDatablockTable();

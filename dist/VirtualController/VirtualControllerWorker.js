@@ -135,7 +135,13 @@ onmessage = (e) => {
                 response = cpu.connectCircuitOutput(par.circID, par.outputNum, par.sourceID, par.sourceIONum);
                 break;
             }
-        case 10 /* CreateFunctionBlock */:
+        case 10 /* SetFunctionCallIndex */:
+            {
+                const par = msg.params;
+                response = cpu.setFunctionCallIndex(par.circID, par.funcID, par.index);
+                break;
+            }
+        case 11 /* CreateFunctionBlock */:
             {
                 const par = msg.params;
                 const id = cpu.createFunctionBlock(par.library, par.opcode, par.circuitID, par.callIndex, par.inputCount, par.outputCount, par.staticCount);
@@ -143,43 +149,43 @@ onmessage = (e) => {
                     response = id;
                 break;
             }
-        case 11 /* DeleteFunctionBlock */:
+        case 12 /* DeleteFunctionBlock */:
             {
                 const id = msg.params;
                 response = cpu.deleteDatablock(id);
                 break;
             }
-        case 12 /* SetFunctionBlockFlag */:
+        case 13 /* SetFunctionBlockFlag */:
             {
                 const par = msg.params;
                 response = cpu.setFunctionFlag(par.funcID, par.flag, par.enabled);
                 break;
             }
-        case 15 /* SetFunctionBlockIOFlag */:
+        case 16 /* SetFunctionBlockIOFlag */:
             {
                 const par = msg.params;
                 response = cpu.setFunctionIOFlag(par.funcID, par.ioNum, par.flag, par.enabled);
                 break;
             }
-        case 14 /* SetFunctionBlockIOFlags */:
+        case 15 /* SetFunctionBlockIOFlags */:
             {
                 const par = msg.params;
                 response = cpu.setFunctionIOFlags(par.funcID, par.ioNum, par.flags);
                 break;
             }
-        case 13 /* SetFunctionBlockIOValue */:
+        case 14 /* SetFunctionBlockIOValue */:
             {
                 const par = msg.params;
                 response = cpu.setFunctionIOValue(par.funcID, par.ioNum, par.value);
                 break;
             }
-        case 16 /* ConnectFunctionBlockInput */:
+        case 17 /* ConnectFunctionBlockInput */:
             {
                 const par = msg.params;
                 response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum);
                 break;
             }
-        case 17 /* GetSystemSector */:
+        case 18 /* GetSystemSector */:
             {
                 const systemSector = cpu.getSystemSector();
                 const data = {
@@ -197,47 +203,47 @@ onmessage = (e) => {
                 response = data;
                 break;
             }
-        case 18 /* GetTaskList */:
+        case 19 /* GetTaskList */:
             {
                 response = cpu.getTaskIDList();
                 break;
             }
-        case 19 /* GetTask */:
+        case 20 /* GetTask */:
             {
                 const id = msg.params;
                 response = cpu.getTaskByID(id);
                 break;
             }
-        case 20 /* GetDatablockTable */:
+        case 21 /* GetDatablockTable */:
             {
                 response = cpu.getDatablockTable();
                 break;
             }
-        case 21 /* GetDatablockHeader */:
+        case 22 /* GetDatablockHeader */:
             {
                 const id = msg.params;
                 response = cpu.getDatablockHeaderByID(id);
                 break;
             }
-        case 22 /* GetDatablockRef */:
+        case 23 /* GetDatablockRef */:
             {
                 const id = msg.params;
                 response = cpu.getDatablockRef(id);
                 break;
             }
-        case 23 /* GetDatablockID */:
+        case 24 /* GetDatablockID */:
             {
                 const ref = msg.params;
                 response = cpu.getDatablockID(ref);
                 break;
             }
-        case 24 /* GetFunctionBlockHeader */:
+        case 25 /* GetFunctionBlockHeader */:
             {
                 const id = msg.params;
                 response = cpu.readFunctionHeaderByID(id);
                 break;
             }
-        case 25 /* GetFunctionBlockData */:
+        case 26 /* GetFunctionBlockData */:
             {
                 const id = msg.params;
                 const funcHeader = cpu.readFunctionHeaderByID(id);
@@ -257,7 +263,7 @@ onmessage = (e) => {
                 response = data;
                 break;
             }
-        case 26 /* GetFunctionBlockIOValues */:
+        case 27 /* GetFunctionBlockIOValues */:
             {
                 const id = msg.params;
                 const values = cpu.readFunctionIOValuesByID(id);
@@ -268,7 +274,7 @@ onmessage = (e) => {
                 response = Array.from(values);
                 break;
             }
-        case 27 /* GetCircuitData */:
+        case 28 /* GetCircuitData */:
             {
                 const id = msg.params;
                 if (cpu.getDatablockHeaderByID(id).type != 3 /* CIRCUIT */) {

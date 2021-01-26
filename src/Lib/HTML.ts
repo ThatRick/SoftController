@@ -10,7 +10,7 @@ type TableCellIterator = (cell: HTMLTableCellElement, row: number, col: number) 
 
 export class Text {
     DOMElement: HTMLDivElement
-    constructor (text: string, style?: Partial<CSSStyleDeclaration>) {
+    constructor (text: string, style?: Partial<CSSStyleDeclaration>, parent?: HTMLElement) {
         this.DOMElement = domElement(null, 'div', {
             display: 'inline-block',
             paddingLeft: '2px',
@@ -18,6 +18,7 @@ export class Text {
             ...style
         })
         this.DOMElement.textContent = text
+        parent?.appendChild(this.DOMElement)
     }
 }
 
@@ -36,7 +37,7 @@ export abstract class ButtonBase
 
     backgroundColor = this.color.base
 
-    constructor(text: string, charWidth = 9) {
+    constructor(text: string, parent?: HTMLElement) {
         this.DOMElement = domElement(null, 'div', {
             color: 'white',
             margin: '2px',
@@ -59,6 +60,7 @@ export abstract class ButtonBase
         this.DOMElement.onclick = ev => this.onClick?.(ev)
         this.DOMElement.onpointerdown = ev => this.onDown?.(ev)
         this.DOMElement.onpointerup = ev => this.onUp?.(ev)
+        parent?.appendChild(this.DOMElement)
     }
 
     flash(color: string) {
@@ -71,8 +73,8 @@ export abstract class ButtonBase
 
 export class Button extends ButtonBase
 {
-    constructor(text: string, action: () => void) {
-        super(text)
+    constructor(text: string, action: () => void, parent?: HTMLElement) {
+        super(text, parent)
 
         this.onClick = () => {
             this.flash(this.color.active)
@@ -85,8 +87,8 @@ export class ToggleButton extends ButtonBase
 {
     state: boolean
     colors: []
-    constructor(text: string, toggle: (state: boolean) => boolean, initState=false) {
-        super(text)
+    constructor(text: string, toggle: (state: boolean) => boolean, initState=false, parent?: HTMLElement) {
+        super(text, parent)
         this.state = initState
 
         this.onClick = () => {

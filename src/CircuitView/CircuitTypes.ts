@@ -38,7 +38,9 @@ export interface CircuitStyle
     colorPinBinary1:        string
     colorPinInteger:        string
     colorPinFloat:          string
-    pinValueFieldBg:        string
+    colorValueBg:           string
+    colorCallIndex:         string
+    colorCallIndexBg:       string
     
     filterDefault:          string
     filterActive:           string
@@ -69,8 +71,10 @@ export const defaultStyle: CircuitStyle =
     colorPinBinary1:        '#CC9',
     colorPinInteger:        '#99D',
     colorPinFloat:          '#9D9',
-    pinValueFieldBg:        'transparent',
-    
+    colorValueBg:           'transparent',
+    colorCallIndex:         '#8AB',
+    colorCallIndexBg:       'transparent', //'rgba(200, 255, 255, 0.1)',
+
     filterDefault:          'none',
     filterActive:           'brightness(150%)',
 

@@ -3,7 +3,7 @@ import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock } from './FunctionBlockState.js'
 import CircuitView from './CircuitView.js'
-import { Table } from '../Lib/HTML.js'
+import * as HTML from '../Lib/HTML.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'
 import { CircuitElement, ElementType } from './CircuitTypes.js'
 
@@ -14,7 +14,7 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
     }
 
     static getBlockSize(state: FunctionBlock) {
-        const w = (FunctionBlockView.isMinimal(state)) ? 3 : 6
+        const w = (FunctionBlockView.isMinimal(state) || state.func?.outputs[0].name == undefined) ? 3 : 6
         const h = Math.max(state.funcData.inputCount, state.funcData.outputCount)
         return vec2(w, h)
     }
@@ -35,7 +35,10 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
 
     name: string
     
-    private IONameTable: Table
+    private IONameTable: HTML.Table
+    callIndexView: GUIChildElement
+
+    get callIndex() { return this.state.parentCircuit?.getBlockCallIndex(this.id) }
 
     constructor(circuitView: IViewContainerGUI, pos: Vec2, state: FunctionBlock)
     {
@@ -61,6 +64,7 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
 
         this.createIONames()
         this.createPins()
+        this.createCallIndex()
     }
 
     createPins() {
@@ -80,17 +84,19 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
     createIONames() {
         const gui = this.gui
         if (this.isMinimal) {
-            this.DOMElement.textContent = this.name
-            this.setStyle({
+            const nameElem = new HTML.Text(this.name, {
                 textAlign: 'center',
                 verticalAlign: 'middle',
-                lineHeight: this._sizeScaled.y + 'px'
-            })
+                lineHeight: this._sizeScaled.y + 'px',
+                width: '100%',
+                padding: '0',
+                pointerEvents: 'none'
+            }, this.DOMElement)
         }
         else {
             const [INPUT, OUTPUT] = [0, 1]
     
-            this.IONameTable = new Table({
+            this.IONameTable = new HTML.Table({
                 rows: this.size.y,
                 columns: 2,
                 parentElement: this.DOMElement,
@@ -115,6 +121,23 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
                 }
             })
         }
+    }
+    
+    createCallIndex() {
+        const size = vec2(this.size.x, 0.8)
+        const pos = vec2(0, this.size.y)
+        this.callIndexView = new GUIChildElement(this.children, 'div', pos, size, {
+            color: this.gui.style.colorCallIndex,
+            backgroundColor: this.gui.style.colorCallIndexBg,
+            lineHeight: size.y * this.gui.scale.y + 'px',
+            textAlign: 'center'
+        })
+        this.callIndexView.DOMElement.textContent = this.callIndex.toString()
+        this.setCallIndexVisibility('hidden')
+    }
+
+    setCallIndexVisibility(visibility: 'visible' | 'hidden') {
+        this.callIndexView.DOMElement.style.visibility = visibility
     }
 
     onSelected() {

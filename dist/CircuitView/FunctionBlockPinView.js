@@ -158,7 +158,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
     }
     validateValueModification(successful) {
         this.valueField.style.outline = (successful) ? 'none' : this.gui.style.borderError;
-        this.valueField.style.backgroundColor = this.gui.style.pinValueFieldBg;
+        this.valueField.style.backgroundColor = this.gui.style.colorValueBg;
     }
     pendingFlagsModification() {
         this.DOMElement.style.backgroundColor = this.gui.style.colorPending;

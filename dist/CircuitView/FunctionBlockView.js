@@ -1,6 +1,6 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import { vec2 } from '../Lib/Vector2.js';
-import { Table } from '../Lib/HTML.js';
+import * as HTML from '../Lib/HTML.js';
 import FunctionBlockPinView from './FunctionBlockPinView.js';
 export default class FunctionBlockView extends GUIChildElement {
     constructor(circuitView, pos, state) {
@@ -31,11 +31,12 @@ export default class FunctionBlockView extends GUIChildElement {
         return (state.func?.inputs[0].name == undefined);
     }
     static getBlockSize(state) {
-        const w = (FunctionBlockView.isMinimal(state)) ? 3 : 6;
+        const w = (FunctionBlockView.isMinimal(state) || state.func?.outputs[0].name == undefined) ? 3 : 6;
         const h = Math.max(state.funcData.inputCount, state.funcData.outputCount);
         return vec2(w, h);
     }
     get id() { return this.state.offlineID; }
+    get callIndex() { return this.state.parentCircuit?.getBlockCallIndex(this.id); }
     build(gui) {
         this.setStyle({
             backgroundColor: this.gui.style.colorBlock,
@@ -43,6 +44,7 @@ export default class FunctionBlockView extends GUIChildElement {
         });
         this.createIONames();
         this.createPins();
+        this.createCallIndex();
     }
     createPins() {
         const state = this.state;
@@ -60,16 +62,18 @@ export default class FunctionBlockView extends GUIChildElement {
     createIONames() {
         const gui = this.gui;
         if (this.isMinimal) {
-            this.DOMElement.textContent = this.name;
-            this.setStyle({
+            const nameElem = new HTML.Text(this.name, {
                 textAlign: 'center',
                 verticalAlign: 'middle',
-                lineHeight: this._sizeScaled.y + 'px'
-            });
+                lineHeight: this._sizeScaled.y + 'px',
+                width: '100%',
+                padding: '0',
+                pointerEvents: 'none'
+            }, this.DOMElement);
         }
         else {
             const [INPUT, OUTPUT] = [0, 1];
-            this.IONameTable = new Table({
+            this.IONameTable = new HTML.Table({
                 rows: this.size.y,
                 columns: 2,
                 parentElement: this.DOMElement,
@@ -93,6 +97,21 @@ export default class FunctionBlockView extends GUIChildElement {
                 }
             });
         }
+    }
+    createCallIndex() {
+        const size = vec2(this.size.x, 0.8);
+        const pos = vec2(0, this.size.y);
+        this.callIndexView = new GUIChildElement(this.children, 'div', pos, size, {
+            color: this.gui.style.colorCallIndex,
+            backgroundColor: this.gui.style.colorCallIndexBg,
+            lineHeight: size.y * this.gui.scale.y + 'px',
+            textAlign: 'center'
+        });
+        this.callIndexView.DOMElement.textContent = this.callIndex.toString();
+        this.setCallIndexVisibility('hidden');
+    }
+    setCallIndexVisibility(visibility) {
+        this.callIndexView.DOMElement.style.visibility = visibility;
     }
     onSelected() {
         this.DOMElement.style.outline = this.gui.style.blockOutlineSelected;

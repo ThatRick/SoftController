@@ -192,7 +192,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
 
     validateValueModification(successful: boolean) {
         this.valueField.style.outline = (successful) ? 'none' : this.gui.style.borderError
-        this.valueField.style.backgroundColor = this.gui.style.pinValueFieldBg
+        this.valueField.style.backgroundColor = this.gui.style.colorValueBg
     }
     
     pendingFlagsModification() {

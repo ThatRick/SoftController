@@ -404,14 +404,21 @@ export default class CircuitView extends GUIView {
         this.selectedElements.add(elem);
         elem.onSelected();
         switch (elem.type) {
-            case 'block': { }
+            case 'block': {
+                this.blocks.forEach(block => block.setCallIndexVisibility('visible'));
+                break;
+            }
         }
     }
     unselectElement(elem) {
         this.selectedElements.delete(elem);
         elem.onUnselected();
         switch (elem.type) {
-            case 'block': { }
+            case 'block': {
+                if (this.selectedElements.size == 0)
+                    this.blocks.forEach(block => block.setCallIndexVisibility('hidden'));
+                break;
+            }
         }
     }
     unselectAll() {

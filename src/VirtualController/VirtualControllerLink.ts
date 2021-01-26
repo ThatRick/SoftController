@@ -21,6 +21,7 @@ import IControllerInterface, {
     ISetFunctionBlockFlagParams,
     ISetFunctionBlockIOFlagParams,
     EventID,
+    ISetFunctionCallIndexParams,
 } from "../Controller/ControllerInterface.js";
 
 import { IDatablockHeader, IFunctionHeader, ITask, ID, REF } from "../Controller/ControllerDataTypes.js";
@@ -144,6 +145,14 @@ export default class VirtualControllerLink implements IControllerInterface
         })
         return promise
     }
+    setFunctionCallIndex( circID: ID, funcID: ID, index: number ) {
+        const params: ISetFunctionCallIndexParams = { circID, funcID, index }
+        const promise = new Promise<boolean>((resolve, reject) => {
+            this.sendMessage( MessageCode.SetFunctionCallIndex, params, resolve, reject )
+        })
+        return promise
+    }
+
     createFunctionBlock( library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number )
     {
         const params: ICreateFunctionBlockParams = { library, opcode, circuitID, callIndex, inputCount, outputCount, staticCount }

@@ -5,7 +5,7 @@ export function domElement(parentDOM, tagName, style) {
     return elem;
 }
 export class Text {
-    constructor(text, style) {
+    constructor(text, style, parent) {
         this.DOMElement = domElement(null, 'div', {
             display: 'inline-block',
             paddingLeft: '2px',
@@ -13,10 +13,11 @@ export class Text {
             ...style
         });
         this.DOMElement.textContent = text;
+        parent?.appendChild(this.DOMElement);
     }
 }
 export class ButtonBase {
-    constructor(text, charWidth = 9) {
+    constructor(text, parent) {
         this.color = {
             base: '#447',
             light: '#66A',
@@ -43,6 +44,7 @@ export class ButtonBase {
         this.DOMElement.onclick = ev => this.onClick?.(ev);
         this.DOMElement.onpointerdown = ev => this.onDown?.(ev);
         this.DOMElement.onpointerup = ev => this.onUp?.(ev);
+        parent?.appendChild(this.DOMElement);
     }
     flash(color) {
         this.DOMElement.style.backgroundColor = color;
@@ -52,8 +54,8 @@ export class ButtonBase {
     }
 }
 export class Button extends ButtonBase {
-    constructor(text, action) {
-        super(text);
+    constructor(text, action, parent) {
+        super(text, parent);
         this.onClick = () => {
             this.flash(this.color.active);
             action();
@@ -61,8 +63,8 @@ export class Button extends ButtonBase {
     }
 }
 export class ToggleButton extends ButtonBase {
-    constructor(text, toggle, initState = false) {
-        super(text);
+    constructor(text, toggle, initState = false, parent) {
+        super(text, parent);
         this.state = initState;
         this.onClick = () => {
             this.state = toggle(!this.state);

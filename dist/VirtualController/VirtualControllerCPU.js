@@ -307,6 +307,28 @@ export default class VirtualController {
         }
         return true;
     }
+    setFunctionCallIndex(circuitID, functionID, index) {
+        const circRef = this.datablockTable[circuitID];
+        const funcCallList = this.getCircuitCallRefList(circRef);
+        const functionRef = this.datablockTable[functionID];
+        const currentIndex = funcCallList.indexOf(functionRef); // find first vacant call index
+        if (currentIndex == -1) {
+            logError('Circuit function call index not found for ID', functionID);
+            return false;
+        }
+        if (currentIndex == index)
+            return true;
+        // Decrease call index
+        if (index < currentIndex) {
+            funcCallList.copyWithin(index + 1, index, currentIndex - 1); // shift existing function calls
+        }
+        // Increase call index
+        else {
+            funcCallList.copyWithin(currentIndex, currentIndex + 1, index); // shift existing function calls
+        }
+        funcCallList[index] = functionRef; // set new function call to specified index
+        return true;
+    }
     getCircuitOutputRefPointer(id, outputRefNum) {
         const header = this.readFunctionHeaderByID(id);
         if (!header)

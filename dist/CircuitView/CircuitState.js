@@ -8,7 +8,7 @@ var CircuitModificationType;
 (function (CircuitModificationType) {
     CircuitModificationType[CircuitModificationType["AddFunction"] = 0] = "AddFunction";
     CircuitModificationType[CircuitModificationType["DeleteFunction"] = 1] = "DeleteFunction";
-    CircuitModificationType[CircuitModificationType["ReorderFunctionCall"] = 2] = "ReorderFunctionCall";
+    CircuitModificationType[CircuitModificationType["SetBlockCallIndex"] = 2] = "SetBlockCallIndex";
     CircuitModificationType[CircuitModificationType["SetOutputRef"] = 3] = "SetOutputRef";
 })(CircuitModificationType || (CircuitModificationType = {}));
 ///////////////////////////////
@@ -51,6 +51,11 @@ export class Circuit {
     getBlock(offlineID) {
         return (offlineID == -1) ? this.funcState : this.blocks[offlineID];
     }
+    getBlockCallIndex(offlineID) {
+        const index = this.circuitData.callIDList.findIndex(callID => (callID == offlineID));
+        console.log('get call index', offlineID, index);
+        return index;
+    }
     ////////////////////////////
     //      Modifications
     ////////////////////////////
@@ -64,6 +69,7 @@ export class Circuit {
         logInfo('Modification', CircuitModificationType[type], blockID, ioNum);
         const modification = { type, blockID, ioNum, blockOnlineID };
         if (type == CircuitModificationType.DeleteFunction) {
+            this.modifications = this.modifications.filter(modif => (modif.blockID != blockID));
         }
         if (this.immediateMode) {
             this.sendModification(modification);
@@ -78,6 +84,7 @@ export class Circuit {
         const funcBlock = new FunctionBlock(funcData, offlineID, this);
         this.blocks.push(funcBlock);
         funcBlock.parentCircuit = this;
+        callIndex ??= offlineID;
         if (this.onlineID)
             this.pushOnlineModification(CircuitModificationType.AddFunction, offlineID);
         return funcBlock;
@@ -89,6 +96,17 @@ export class Circuit {
         this.blocksByOnlineID.delete(block.onlineID);
         delete this.blocks[id];
         this.circuitData.callIDList = this.circuitData.callIDList.filter(callID => callID != id);
+    }
+    setBlockCallIndex(id, newIndex) {
+        const currentIndex = this.getBlockCallIndex(id);
+        if (currentIndex == -1) {
+            this.circuitData.callIDList.splice(newIndex, 0, id);
+        }
+        else {
+            this.circuitData.callIDList.splice(newIndex, 0, this.circuitData.callIDList.splice(currentIndex, 1)[0]);
+        }
+        if (this.cpu)
+            this.pushOnlineModification(CircuitModificationType.SetBlockCallIndex, id);
     }
     setOutputRef(ioNum, sourceBlockID, sourceIONum) {
         const outputNum = ioNum - this.funcState.funcData.inputCount;
@@ -120,7 +138,7 @@ export class Circuit {
             case CircuitModificationType.AddFunction:
                 {
                     const data = block.funcData;
-                    const onlineID = await this.cpu.createFunctionBlock(data.library, data.opcode, this.onlineID, undefined, data.inputCount, data.outputCount, data.staticCount).catch(e => error = e);
+                    const onlineID = await this.cpu.createFunctionBlock(data.library, data.opcode, this.onlineID, this.getBlockCallIndex(block.offlineID), data.inputCount, data.outputCount, data.staticCount).catch(e => error = e);
                     if (onlineID) {
                         block.connectOnline(this.cpu, onlineID);
                         success = true;
@@ -130,6 +148,12 @@ export class Circuit {
             case CircuitModificationType.DeleteFunction:
                 {
                     success = await this.cpu.deleteFunctionBlock(blockOnlineID);
+                    break;
+                }
+            case CircuitModificationType.SetBlockCallIndex:
+                {
+                    const index = this.getBlockCallIndex(blockID);
+                    success = await this.cpu.setFunctionCallIndex(this.onlineID, block.onlineID, index);
                     break;
                 }
             case CircuitModificationType.SetOutputRef:
@@ -165,17 +189,25 @@ export class Circuit {
             console.error('Circuit: Can not load online blocks. no controller connected');
             return;
         }
-        // Get first free offline ID
-        let offlineID = this.blocks.length;
         // Load circuit's function blocks from CPU
-        this.blocks = await Promise.all(this.circuitData.callIDList.map(async (onlineID) => {
+        this.blocks = await Promise.all(this.circuitData.callIDList.map(async (onlineID, offlineID) => {
+            // Create new function block with online data
             const data = await FunctionBlock.getOnlineData(this.cpu, onlineID);
-            const block = new FunctionBlock(data, offlineID++, this);
+            const block = new FunctionBlock(data, offlineID, this);
             block.connectOnline(this.cpu, onlineID);
+            // Store onlineID reference for created function block
             this.blocksByOnlineID.set(onlineID, block);
+            // Convert call list references from onlineID to offlineID
+            this.circuitData.callIDList[offlineID] = offlineID;
+            console.log('callList', offlineID);
             return block;
         }));
-        // Resolve input references (onlineID -> offlineID)
+        // Convert circuit output references from online to offline IDs
+        this.circuitData.outputRefs.forEach(ref => {
+            if (ref)
+                ref.id = this.blocksByOnlineID.get(ref.id).offlineID;
+        });
+        // Convert input references from online to offline IDs
         this.blocks.forEach(block => {
             block.funcData.inputRefs.forEach((ioRef, i, ioRefs) => {
                 if (ioRef) {

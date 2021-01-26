@@ -58,6 +58,7 @@ export const enum MessageCode {
 
     CreateCircuit,
     ConnectCircuitOutput,
+    SetFunctionCallIndex,
 
     CreateFunctionBlock,
     DeleteFunctionBlock,
@@ -97,6 +98,7 @@ export const MessageCodeNames = [
 
     'CreateCircuit',
     'ConnectCircuitOutput',
+    'SetFunctionCallIndex',
 
     'CreateFunctionBlock',
     'DeleteFunctionBlock',
@@ -141,6 +143,7 @@ export interface ICreateTaskParams { callTargetID: ID, interval: number, offset?
 export interface ISetTaskCallTargetParams { taskID: ID, callTargetID: ID }
 export interface ICreateCircuitParams { inputCount: number, outputCount: number, funcCallCount: number }
 export interface IConnectCircuitOutputParams { circID: ID, outputNum: number, sourceID: ID, sourceIONum: number }
+export interface ISetFunctionCallIndexParams { circID: ID, funcID: ID, index: number }
 export interface ICreateFunctionBlockParams { library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number }
 export interface ISetFunctionBlockFlagParams { funcID: ID, flag: number, enabled: boolean }
 export interface ISetFunctionBlockIOFlagParams { funcID: ID, ioNum: number, flag: number, enabled: boolean }
@@ -172,6 +175,7 @@ export default interface IControllerInterface
     // CIRCUIT
     createCircuit( inputCount: number, outputCount: number, funcCallCount: number ): Promise<ID>
     connectCircuitOutput( circID: ID, outputNum: number, sourceID: ID, sourceIONum: number ): Promise<boolean>
+    setFunctionCallIndex( circID: ID, funcID: ID, index: number ): Promise<boolean>
 
     // FUNCTION BLOCK
     createFunctionBlock( library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number ): Promise<ID>
