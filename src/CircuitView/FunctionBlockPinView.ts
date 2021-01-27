@@ -119,13 +119,13 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
 
     createValueField(gui: CircuitView) {
-        const width = (this.dataType == IODataType.BINARY) ? 1 : 5
+        const width = (this.dataType == IODataType.BINARY) ? 1 : 4
         const height = 0.7
         const size = vec2(width, height)
         const yOffset = -0.3
-        const xOffset = 0.3
+        const xOffset = 0.4
 
-        const textAlign = (this.dataType == IODataType.BINARY) ? 'center' : 'left'
+        const textAlign = (this.type == 'inputPin') ? 'right' : 'left'
         
         const scaledOffset = Vec2.mul((this.type == 'inputPin') ? vec2(1 - width - xOffset, yOffset) : vec2(xOffset, yOffset), gui.scale)
         const scaledSize = Vec2.mul(size, gui.scale)
