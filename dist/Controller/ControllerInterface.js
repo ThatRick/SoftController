@@ -1,3 +1,4 @@
+import { instructions } from '../FunctionCollection.js';
 import { alignBytes, BYTES_PER_REF, functionHeaderByteLength } from './ControllerDataTypes.js';
 export const MessageCodeNames = [
     'Undefined',
@@ -34,6 +35,7 @@ export const EventID = 0;
 export const EventCodeNames = [
     'MonitoringValues'
 ];
+export { instructions };
 export function calcFunctionSize(inputCount, outputCount, staticCount) {
     const ioCount = inputCount + outputCount;
     let byteLength = functionHeaderByteLength; // Function header

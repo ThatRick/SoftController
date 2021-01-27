@@ -1,7 +1,6 @@
-import { IFunction, getFunction } from '../FunctionCollection.js'
 import { IOFlag, IODataType, getIODataType, setIODataType, IORef, ID, FunctionFlag, MonitorValueChangeStruct } from '../Controller/ControllerDataTypes.js'
 import { PinType } from './CircuitTypes.js'
-import IControllerInterface, { EventCode, ICircuitData, IFunctionBlockData, MessageResponse } from '../Controller/ControllerInterface.js'
+import { IControllerInterface, instructions, EventCode, ICircuitData, IFunctionBlockData, MessageResponse } from '../Controller/ControllerInterface.js'
 import { readArrayOfStructs } from '../Lib/TypedStructs.js'
 import { FunctionBlock, ValidatedEventHandler } from './FunctionBlockState.js'
 

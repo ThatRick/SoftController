@@ -1,3 +1,4 @@
+import { instructions } from '../FunctionCollection.js'
 import {alignBytes, BYTES_PER_REF, functionHeaderByteLength, ID, IDatablockHeader, IFunctionHeader, IORef, ITask, REF} from './ControllerDataTypes.js'
 
 export interface IFunctionBlockData extends IFunctionHeader
@@ -151,7 +152,7 @@ export interface ISetFunctionBlockIOFlagsParams { funcID: ID, ioNum: number, fla
 export interface ISetFunctionBlockIOValueParams { funcID: ID, ioNum: number, value: number }
 export interface IConnectFunctionBlockInputParams { targetID: ID, targetInputNum: number, sourceID: ID, sourceIONum: number, inverted?: boolean }
 
-export default interface IControllerInterface
+export interface IControllerInterface
 {
     onEventReceived: (eventHandler: EventHandlerFunction) => void
 
@@ -211,6 +212,8 @@ export default interface IControllerInterface
     getCircuitData( id: ID ): Promise<ICircuitData>
 
 }
+
+export { instructions }
 
 export function calcFunctionSize(inputCount, outputCount, staticCount): number {
     const ioCount = inputCount + outputCount

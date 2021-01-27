@@ -1,4 +1,5 @@
-import IControllerInterface, {
+import {
+    IControllerInterface, 
     EventHandlerFunction,
     EventCode,
     ICircuitData,

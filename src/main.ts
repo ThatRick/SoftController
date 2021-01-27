@@ -1,11 +1,10 @@
-import { getFunction } from './FunctionCollection.js'
 import { IODataType } from './Controller/ControllerDataTypes.js';
 // import { createControllerBlueprint, getBlueprintResourceNeeded, loadControllerBlueprint } from './SoftController/SoftSerializer.js'
 import CircuitView from './CircuitView/CircuitView.js'
 import Vec2, {vec2} from './Lib/Vector2.js'
 import { Circuit } from './CircuitView/CircuitState.js';
 import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
-import IControllerInterface from './Controller/ControllerInterface.js';
+import { IControllerInterface, instructions } from './Controller/ControllerInterface.js';
 import { defaultStyle } from './CircuitView/CircuitTypes.js';
 import * as HTML from './lib/HTML.js'
 import { ControllerTerminal } from './Terminal.js';
@@ -55,7 +54,7 @@ async function app()
     // const blueprint = createControllerBlueprint(cpu);
     // saveAsJSON(blueprint, 'cpu.json');
     
-    const circuitID = await createTestCircuit(cpu, 10)
+    const circuitID = await createTestCircuit(cpu)
     const taskId = await cpu.createTask(circuitID, 100, 10)
     
     terminal.printSystemSector()
@@ -113,28 +112,37 @@ async function app()
 ////////////////////
 //  CREATE A TEST
 //
-async function createTestCircuit(cpu: IControllerInterface, blockCount = 10) {
+async function createTestCircuit(cpu: IControllerInterface) {
     // test
-    const circID = await cpu.createCircuit(4, 2, blockCount)
-    for (let i=0; i<4+2; i++) cpu.setFunctionBlockIOFlags(circID, i, IODataType.BINARY)
+    const funcCount = Array.from(instructions.libraries.values()).reduce((sum, lib) => sum + lib.functions.length, 0)
+    const blockCount = funcCount + 10
+    const circ = {
+        inputs: [IODataType.BINARY, IODataType.INTEGER, IODataType.FLOAT],
+        outputs: [IODataType.BINARY, IODataType.INTEGER, IODataType.FLOAT]
+    }
+    const circID = await cpu.createCircuit(circ.inputs.length, circ.outputs.length, blockCount)
+    let i = 0
+    circ.inputs.forEach(input => cpu.setFunctionBlockIOFlags(circID, i++, input))
+    circ.outputs.forEach(output => cpu.setFunctionBlockIOFlags(circID, i++, output))
     
-    if (!circID) { console.error('Create test circuit: Creation failed miserable'); return }
     const funcs: number[] = [circID]
-    const maxOpcode = 7
-    const logicLib = 1;
-    for (let i = 1; i < blockCount+1; i++) {
-        const opcode = i % maxOpcode
-        const funcType = getFunction(logicLib, opcode)
-        const inputCount = funcType.variableInputCount ? 2 + Math.round(Math.random() * 4): undefined
-        const funcId = await cpu.createFunctionBlock(logicLib, opcode, circID, undefined, inputCount);
-        funcs.push(funcId);
-        const funcInfo = await cpu.getFunctionBlockHeader(funcId);
-        const sourceId = funcs[i-1];
-        const sourceInfo = await cpu.getFunctionBlockHeader(sourceId);
-        const inputNum = i % funcInfo.inputCount;
-        const sourceIONum = (i==1) ? 1 : sourceInfo.inputCount;
-        const inverted = !(i % 2);
-        await cpu.connectFunctionBlockInput(funcId, inputNum, sourceId, sourceIONum, inverted);
+    
+    for (const [libID, lib] of instructions.libraries.entries()) {
+        for (const [opcode, funcType] of lib.functions.entries()) {
+            console.log('Instruction:', libID, opcode, funcType)
+            const inputCount = funcType.variableInputCount ? 2 + Math.round(Math.random() * 4): undefined
+            const funcID = await cpu.createFunctionBlock(libID, opcode, circID, undefined, inputCount);
+            funcs.push(funcID);
+            const funcInfo = await cpu.getFunctionBlockHeader(funcID);
+            const sourceID = funcs[funcs.length - 2];
+            const sourceInfo = await cpu.getFunctionBlockHeader(sourceID);
+            const inputNum = opcode % funcInfo.inputCount;
+            const sourceIONum = (sourceID==circID) ? 1 : sourceInfo.inputCount;
+            const inverted = !(opcode % 2) && (libID == 1);
+            await cpu.connectFunctionBlockInput(funcID, inputNum, sourceID, sourceIONum, inverted);
+            console.log('connect', funcID, inputNum, sourceID, sourceIONum)
+
+        }
     }
     await cpu.setFunctionBlockIOValue(1, 0, 1);
     return circID

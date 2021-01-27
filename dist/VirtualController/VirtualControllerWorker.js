@@ -182,7 +182,7 @@ onmessage = (e) => {
         case 17 /* ConnectFunctionBlockInput */:
             {
                 const par = msg.params;
-                response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum);
+                response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum, par.inverted);
                 break;
             }
         case 18 /* GetSystemSector */:

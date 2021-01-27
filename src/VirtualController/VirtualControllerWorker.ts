@@ -197,7 +197,7 @@ onmessage = (e) =>
         case MessageCode.ConnectFunctionBlockInput:
         {
             const par = msg.params as IConnectFunctionBlockInputParams
-            response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum)
+            response = cpu.connectFunctionInput(par.targetID, par.targetInputNum, par.sourceID, par.sourceIONum, par.inverted)
             break
         }
         case MessageCode.GetSystemSector:

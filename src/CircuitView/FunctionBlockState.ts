@@ -1,6 +1,6 @@
 import { FunctionFlag, ID } from "../Controller/ControllerDataTypes.js"
-import IControllerInterface, { IFunctionBlockData } from "../Controller/ControllerInterface.js"
-import { getFunction, IFunction } from "../FunctionCollection.js"
+import { instructions, IControllerInterface, IFunctionBlockData } from "../Controller/ControllerInterface.js"
+import { IFunction } from "../FunctionCollection.js"
 import { Circuit } from "./CircuitState.js"
 
 const debugLogging = true
@@ -37,7 +37,7 @@ export class FunctionBlock
     constructor(readonly funcData: IFunctionBlockData, readonly offlineID: ID, parentCircuit?: Circuit)
     {
         this.isCircuit = (funcData.library == 0)
-        this.func = (this.isCircuit) ? null : getFunction(funcData.library, funcData.opcode)
+        this.func = (this.isCircuit) ? null : instructions.getFunction(funcData.library, funcData.opcode)
         this.parentCircuit = parentCircuit    
     }
 
@@ -186,7 +186,7 @@ export class FunctionBlock
 
     // Create new offline function block data
     static createNewData(library: number, opcode: number, customInputCount?: number, customOutputCount?: number) {
-        const func = getFunction(library, opcode)
+        const func = instructions.getFunction(library, opcode)
         if (!func) { console.error('Invalid function library/opcode'); return }
 
         const inputCount = (customInputCount && func.variableInputCount &&

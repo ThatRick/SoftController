@@ -4,8 +4,7 @@ import {ID, IORef, IOFlag, IODataType, getIODataType, setIODataType, DatablockTy
 import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionCallParams} from '../Controller/ControllerDataTypes.js'
 import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from '../Controller/ControllerDataTypes.js'
 import {ITask, TaskStruct, taskStructByteLength} from '../Controller/ControllerDataTypes.js'
-import {getFunction, getFunctionName} from '../FunctionCollection.js'
-import { calcCircuitSize, calcFunctionSize, EventCode } from '../Controller/ControllerInterface.js'
+import { instructions, calcCircuitSize, calcFunctionSize, EventCode } from '../Controller/ControllerInterface.js'
 
 
 /*
@@ -464,7 +463,10 @@ export default class VirtualController
     readCircuitCallRefListByID(id: number) {
         const ref = this.datablockTable[id]
         if (!ref) return null
-        return this.getCircuitCallRefList(ref).slice();
+        const callList = this.getCircuitCallRefList(ref)
+        const nullRefIndex = callList.findIndex(ref => ref == 0)
+        const end = (nullRefIndex == -1) ? undefined : nullRefIndex
+        return this.getCircuitCallRefList(ref).slice(0, end);
     }
 
 /****************************
@@ -521,7 +523,7 @@ export default class VirtualController
         if (sourceFuncId && !sourceIOPointer) return false
         
         this.ints[inputRefPointer] = sourceIOPointer;
-        if (inverted) this.setFunctionIOFlag(funcId, inputNum, IOFlag.INVERTED, true);
+        this.setFunctionIOFlag(funcId, inputNum, IOFlag.INVERTED, inverted);
         
         return true
     }
@@ -529,7 +531,7 @@ export default class VirtualController
     // Creates new function data block
     createFunctionBlock(library: number, opcode: number, circuitID?: ID, callIndex?: number, inputCount?: number, outputCount?: number, staticCount?: number): ID
     {
-        const func = getFunction(library, opcode);
+        const func = instructions.getFunction(library, opcode);
         if (!func) return null;
 
         inputCount = (func.variableInputCount && inputCount != undefined
@@ -597,7 +599,7 @@ export default class VirtualController
             this.addFunctionCall(circuitID, id, callIndex);
         }
 
-        logInfo(`for function ${getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        logInfo(`for function ${instructions.getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
 
         return id;
     }
@@ -751,7 +753,7 @@ export default class VirtualController
 
         if (blockHeader.type == DatablockType.FUNCTION)             // Run function
         {
-            const func = getFunction(funcHeader.library, funcHeader.opcode);
+            const func = instructions.getFunction(funcHeader.library, funcHeader.opcode);
 
             const params: IFunctionCallParams = {
                 inputCount:     funcHeader.inputCount,

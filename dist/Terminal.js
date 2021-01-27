@@ -1,5 +1,5 @@
 import { getIODataType } from "./Controller/ControllerDataTypes.js";
-import { getFunction, getFunctionName } from "./FunctionCollection.js";
+import { instructions } from "./Controller/ControllerInterface.js";
 export class ControllerTerminal {
     constructor(div, cpu) {
         this.div = div;
@@ -99,8 +99,8 @@ ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  
         let text = '';
         const addLine = (line) => text += (line + '\n');
         const funcBlock = await cpu.getFunctionBlockData(funcID);
-        const func = (type == 4 /* FUNCTION */) ? getFunction(funcBlock.library, funcBlock.opcode) : null;
-        const funcName = (func) ? getFunctionName(funcBlock.library, funcBlock.opcode) : 'CIRCUIT';
+        const func = (type == 4 /* FUNCTION */) ? instructions.getFunction(funcBlock.library, funcBlock.opcode) : null;
+        const funcName = (func) ? instructions.getFunctionName(funcBlock.library, funcBlock.opcode) : 'CIRCUIT';
         const inputRefLen = 6;
         const valueLen = 8;
         const precision = 6;

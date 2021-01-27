@@ -109,6 +109,7 @@ const RS = {
     }
 };
 export const BooleanLogic = {
+    id: 1,
     name: 'Boolean Logic',
     functions: [
         AND,

@@ -1,4 +1,4 @@
-import { getFunction } from "../FunctionCollection.js";
+import { instructions } from "../Controller/ControllerInterface.js";
 const debugLogging = true;
 function logInfo(...args) { debugLogging && console.info('Function state:', ...args); }
 function logError(...args) { console.error('Function state:', ...args); }
@@ -24,7 +24,7 @@ export class FunctionBlock {
         this.onValidateInputRefModification = [];
         this.modifications = [];
         this.isCircuit = (funcData.library == 0);
-        this.func = (this.isCircuit) ? null : getFunction(funcData.library, funcData.opcode);
+        this.func = (this.isCircuit) ? null : instructions.getFunction(funcData.library, funcData.opcode);
         this.parentCircuit = parentCircuit;
     }
     ////////////////////////////////////////////
@@ -141,7 +141,7 @@ export class FunctionBlock {
     }
     // Create new offline function block data
     static createNewData(library, opcode, customInputCount, customOutputCount) {
-        const func = getFunction(library, opcode);
+        const func = instructions.getFunction(library, opcode);
         if (!func) {
             console.error('Invalid function library/opcode');
             return;

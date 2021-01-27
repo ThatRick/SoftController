@@ -1,6 +1,5 @@
 import { DatablockType, getIODataType, IODataType, IOFlag, IORef } from "./Controller/ControllerDataTypes.js";
-import IControllerInterface from "./Controller/ControllerInterface.js";
-import { getFunction, getFunctionName } from "./FunctionCollection.js";
+import { IControllerInterface, instructions } from "./Controller/ControllerInterface.js";
 
 export class ControllerTerminal
 {
@@ -122,8 +121,8 @@ ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  
 
         const funcBlock = await cpu.getFunctionBlockData(funcID)
         
-        const func = (type == DatablockType.FUNCTION) ? getFunction(funcBlock.library, funcBlock.opcode) : null;
-        const funcName = (func) ? getFunctionName(funcBlock.library, funcBlock.opcode) : 'CIRCUIT';
+        const func = (type == DatablockType.FUNCTION) ? instructions.getFunction(funcBlock.library, funcBlock.opcode) : null;
+        const funcName = (func) ? instructions.getFunctionName(funcBlock.library, funcBlock.opcode) : 'CIRCUIT';
 
         const inputRefLen = 6;
         const valueLen = 8;

@@ -3,8 +3,7 @@ import { getIODataType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF, MonitorValue
 import { FunctionHeaderStruct, functionHeaderByteLength } from '../Controller/ControllerDataTypes.js';
 import { DatablockHeaderStruct, datablockHeaderByteLength } from '../Controller/ControllerDataTypes.js';
 import { TaskStruct, taskStructByteLength } from '../Controller/ControllerDataTypes.js';
-import { getFunction, getFunctionName } from '../FunctionCollection.js';
-import { calcCircuitSize, calcFunctionSize } from '../Controller/ControllerInterface.js';
+import { instructions, calcCircuitSize, calcFunctionSize } from '../Controller/ControllerInterface.js';
 const systemSectorLength = 10;
 const MAX_MONITORED_IO_CHANGES = 100;
 //////////////////////////////////
@@ -357,7 +356,10 @@ export default class VirtualController {
         const ref = this.datablockTable[id];
         if (!ref)
             return null;
-        return this.getCircuitCallRefList(ref).slice();
+        const callList = this.getCircuitCallRefList(ref);
+        const nullRefIndex = callList.findIndex(ref => ref == 0);
+        const end = (nullRefIndex == -1) ? undefined : nullRefIndex;
+        return this.getCircuitCallRefList(ref).slice(0, end);
     }
     /****************************
      *    FUNCTION PROCEDURES   *
@@ -411,13 +413,12 @@ export default class VirtualController {
         if (sourceFuncId && !sourceIOPointer)
             return false;
         this.ints[inputRefPointer] = sourceIOPointer;
-        if (inverted)
-            this.setFunctionIOFlag(funcId, inputNum, 8 /* INVERTED */, true);
+        this.setFunctionIOFlag(funcId, inputNum, 8 /* INVERTED */, inverted);
         return true;
     }
     // Creates new function data block
     createFunctionBlock(library, opcode, circuitID, callIndex, inputCount, outputCount, staticCount) {
-        const func = getFunction(library, opcode);
+        const func = instructions.getFunction(library, opcode);
         if (!func)
             return null;
         inputCount = (func.variableInputCount && inputCount != undefined
@@ -473,7 +474,7 @@ export default class VirtualController {
         if (circuitID) {
             this.addFunctionCall(circuitID, id, callIndex);
         }
-        logInfo(`for function ${getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
+        logInfo(`for function ${instructions.getFunctionName(library, opcode)} [inputs ${inputCount}, outputs ${outputCount}, statics ${staticCount}]`);
         return id;
     }
     deleteFunctionBlock(id) {
@@ -616,7 +617,7 @@ export default class VirtualController {
         }
         if (blockHeader.type == 4 /* FUNCTION */) // Run function
          {
-            const func = getFunction(funcHeader.library, funcHeader.opcode);
+            const func = instructions.getFunction(funcHeader.library, funcHeader.opcode);
             const params = {
                 inputCount: funcHeader.inputCount,
                 outputCount: funcHeader.outputCount,

@@ -1,6 +1,7 @@
 
 import { IFunctionCallParams } from './Controller/ControllerDataTypes.js';
 import { BooleanLogic } from './FunctionLibrary/BooleanLogic.js'
+import { Arithmetic } from './FunctionLibrary/Arithmetic.js'
 
 
 // FUNCTION
@@ -30,35 +31,40 @@ export interface IFunction
 // FUNCTION LIBRARY
 export interface IFunctionLibrary
 {
+    id: number
     name: string
     functions: IFunction[]
 }
 
-// Load function libraries
-const functionLibraries: IFunctionLibrary[] = [
-    null,
-    BooleanLogic
-]
-
-export function getFunction(libraryID: number, opcode: number): IFunction
+class FunctionCollection
 {
-    if (libraryID < 1 || libraryID >= functionLibraries.length) {
-        console.error('Invalid function library id', libraryID)
-        return null
+    constructor(libraries: IFunctionLibrary[])
+    {
+        libraries.forEach(lib => this.libraries.set(lib.id, lib))
     }
-    const library = functionLibraries[libraryID]
+    
+    libraries = new Map<number, IFunctionLibrary>()
+    
+    getFunction(libID: number, opcode: number) {
+        const lib = this.libraries.get(libID)
+        if (!lib) {
+            console.error('Invalid function library id', libID)
+            return
+        }
+        const func = lib?.functions[opcode]
+        if (!func) {
+            console.error('Invalid function opcode', opcode)
+            return
+        }
+        return func
+    }
 
-    if (opcode >= library.functions.length) {
-        console.error('Invalid function opcode', opcode)
-        return null
+    getFunctionName(libID: number, opcode: number) {
+        return this.getFunction(libID, opcode)?.name
     }
-    const func = library.functions[opcode]
-    if (!func) console.error('Error getting library function', libraryID, opcode)
-    return func
 }
 
-export function getFunctionName(libraryID: number, opcode: number): string
-{
-    const func = getFunction(libraryID, opcode)
-    return func?.name
-}
+export const instructions = new FunctionCollection([
+    BooleanLogic,
+    Arithmetic
+])
