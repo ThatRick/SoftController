@@ -53,6 +53,8 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         this.isMinimal = FunctionBlockView.isMinimal(state)
         this.name = state.func?.name
 
+        state.onStateUpdated = this.onStateUpdated.bind(this)
+
         this.build(this.gui)
     }
 
@@ -65,6 +67,10 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         this.createIONames()
         this.createPins()
         this.createCallIndex()
+    }
+
+    onStateUpdated() {
+        this.callIndexView.DOMElement.textContent = this.callIndex.toString()
     }
 
     createPins() {

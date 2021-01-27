@@ -50,7 +50,8 @@ export class FunctionBlock
     cpu:            IControllerInterface
     onlineID?:      ID
 
-    onIOUpdate:    ChangeEventHandler[] = []
+    onIOUpdated:    ChangeEventHandler[] = []
+    onStateUpdated: ChangeEventHandler
 
     onValidateValueModification:        ValidatedEventHandler[] = []
     onValidateFlagsModification:        ValidatedEventHandler[] = []
@@ -66,7 +67,7 @@ export class FunctionBlock
         const currentValues = this.funcData.ioValues
         if (currentValues[ioNum] != value) {
             currentValues[ioNum] = value
-            this.onIOUpdate[ioNum]?.()
+            this.onIOUpdated[ioNum]?.()
         }
     }
 
@@ -109,7 +110,7 @@ export class FunctionBlock
         }
     }
     setInputRef(ioNum: number, sourceBlockID: ID, sourceIONum: number) {
-        this.funcData.inputRefs[ioNum] = (sourceBlockID) ? { id: sourceBlockID, ioNum: sourceIONum } : null
+        this.funcData.inputRefs[ioNum] = (sourceBlockID != null) ? { id: sourceBlockID, ioNum: sourceIONum } : null
         
         if (this.cpu) this.pushOnlineModification(FunctionModificationType.SetInputRef, ioNum)
     }

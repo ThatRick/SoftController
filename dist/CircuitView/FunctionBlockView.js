@@ -25,6 +25,7 @@ export default class FunctionBlockView extends GUIChildElement {
         this.state = state;
         this.isMinimal = FunctionBlockView.isMinimal(state);
         this.name = state.func?.name;
+        state.onStateUpdated = this.onStateUpdated.bind(this);
         this.build(this.gui);
     }
     static isMinimal(state) {
@@ -45,6 +46,9 @@ export default class FunctionBlockView extends GUIChildElement {
         this.createIONames();
         this.createPins();
         this.createCallIndex();
+    }
+    onStateUpdated() {
+        this.callIndexView.DOMElement.textContent = this.callIndex.toString();
     }
     createPins() {
         const state = this.state;

@@ -96,6 +96,7 @@ export class Circuit {
         this.blocksByOnlineID.delete(block.onlineID);
         delete this.blocks[id];
         this.circuitData.callIDList = this.circuitData.callIDList.filter(callID => callID != id);
+        this.blocks.forEach(block => block.onStateUpdated?.());
     }
     setBlockCallIndex(id, newIndex) {
         const currentIndex = this.getBlockCallIndex(id);
@@ -105,6 +106,7 @@ export class Circuit {
         else {
             this.circuitData.callIDList.splice(newIndex, 0, this.circuitData.callIDList.splice(currentIndex, 1)[0]);
         }
+        this.blocks.forEach(block => block.onStateUpdated?.());
         if (this.cpu)
             this.pushOnlineModification(CircuitModificationType.SetBlockCallIndex, id);
     }

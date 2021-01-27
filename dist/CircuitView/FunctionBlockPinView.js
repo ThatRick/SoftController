@@ -51,7 +51,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.pin = domElement(this.DOMElement, 'div', pinStyle);
         this.createValueField(gui);
         this.updatePin();
-        this.funcState.onIOUpdate[this.ioNum] = this.updatePin.bind(this);
+        this.funcState.onIOUpdated[this.ioNum] = this.updatePin.bind(this);
         this.funcState.onValidateValueModification[this.ioNum] = this.validateValueModification.bind(this);
         this.funcState.onValidateFlagsModification[this.ioNum] = this.validateFlagsModification.bind(this);
     }

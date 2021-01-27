@@ -18,7 +18,7 @@ export class FunctionBlock {
     constructor(funcData, offlineID, parentCircuit) {
         this.funcData = funcData;
         this.offlineID = offlineID;
-        this.onIOUpdate = [];
+        this.onIOUpdated = [];
         this.onValidateValueModification = [];
         this.onValidateFlagsModification = [];
         this.onValidateInputRefModification = [];
@@ -34,7 +34,7 @@ export class FunctionBlock {
         const currentValues = this.funcData.ioValues;
         if (currentValues[ioNum] != value) {
             currentValues[ioNum] = value;
-            this.onIOUpdate[ioNum]?.();
+            this.onIOUpdated[ioNum]?.();
         }
     }
     ////////////////////////////////////////////
@@ -75,7 +75,7 @@ export class FunctionBlock {
         }
     }
     setInputRef(ioNum, sourceBlockID, sourceIONum) {
-        this.funcData.inputRefs[ioNum] = (sourceBlockID) ? { id: sourceBlockID, ioNum: sourceIONum } : null;
+        this.funcData.inputRefs[ioNum] = (sourceBlockID != null) ? { id: sourceBlockID, ioNum: sourceIONum } : null;
         if (this.cpu)
             this.pushOnlineModification(FunctionModificationType.SetInputRef, ioNum);
     }

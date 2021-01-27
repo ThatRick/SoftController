@@ -130,10 +130,14 @@ export class Circuit
 
     deleteFunctionBlock(id: ID) {
         const block = this.blocks[id]
+        
         if (this.onlineID) this.pushOnlineModification(CircuitModificationType.DeleteFunction, id, undefined, block.onlineID)
+
         this.blocksByOnlineID.delete(block.onlineID)
         delete this.blocks[id] 
         this.circuitData.callIDList = this.circuitData.callIDList.filter(callID => callID != id)
+
+        this.blocks.forEach(block => block.onStateUpdated?.())
     }
 
     setBlockCallIndex(id: ID, newIndex: number) {
@@ -143,6 +147,7 @@ export class Circuit
         } else {
             this.circuitData.callIDList.splice(newIndex, 0, this.circuitData.callIDList.splice(currentIndex, 1)[0])
         }
+        this.blocks.forEach(block => block.onStateUpdated?.())
 
         if (this.cpu) this.pushOnlineModification(CircuitModificationType.SetBlockCallIndex, id)
     }

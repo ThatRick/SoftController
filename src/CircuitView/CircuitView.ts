@@ -445,13 +445,13 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     onDragStarted = (ev: PointerEvent) => {
         // Start scrolling view
-        if (this.pointer.targetElem == this.blockArea && ev.buttons == MouseButton.RIGHT) {
+        if (this.pointer.downTargetElem == this.blockArea && ev.buttons == MouseButton.RIGHT) {
             this.draggingMode = DraggingMode.SCROLL_VIEW
             this.scrollStartPos = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop)
             this.DOMElement.style.cursor = 'grab'
         }
         // Start selection box
-        else if (this.pointer.targetElem == this.blockArea && ev.buttons == MouseButton.LEFT) {
+        else if (this.pointer.downTargetElem == this.blockArea && ev.buttons == MouseButton.LEFT) {
             this.draggingMode = DraggingMode.SELECTION_BOX
             this.selectionBoxInitPos = this.blockArea.relativePixelPos(this.pointer.downPos)
             this.selectionBox = HTML.domElement(this.blockArea.DOMElement, 'div', {
