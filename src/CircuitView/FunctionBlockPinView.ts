@@ -2,7 +2,7 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock } from './FunctionBlockState.js'
-import { domElement } from '../Lib/HTML.js'
+import * as HTML from '../Lib/HTML.js'
 import { CircuitElement, ElementType, PinType } from './CircuitTypes.js'
 import CircuitView from './CircuitView.js'
 import { getIODataType, IODataType, IOFlag } from '../Controller/ControllerDataTypes.js'
@@ -62,15 +62,15 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     
     get reference() {
         const ref = (this.isInternalCircuitIO)
-        ? this.funcState.circuit?.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
-        : this.funcState.funcData.inputRefs[this.ioNum]
+            ? this.funcState.circuit?.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
+            : this.funcState.funcData.inputRefs[this.ioNum]
         return ref
     }
     
     private create(gui: CircuitView) {
         const pinStyle = (this.inverted) ? this.invertedPinStyle : this.pinStyle
-        this.pin = domElement(this.DOMElement, 'div', pinStyle)
-        this.createValueField(gui)
+        this.pin = HTML.domElement(this.DOMElement, 'div', pinStyle)
+        this.createValueField()
         this.updatePin()
         this.funcState.onIOUpdated[this.ioNum] = this.updatePin.bind(this)
         this.funcState.onValidateValueModification[this.ioNum] = this.validateValueModification.bind(this)
@@ -118,25 +118,20 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         } as Partial<CSSStyleDeclaration>
     }
 
-    createValueField(gui: CircuitView) {
-        const width = (this.dataType == IODataType.BINARY) ? 1 : 4
-        const height = 0.7
-        const size = vec2(width, height)
-        const yOffset = -0.3
-        const xOffset = 0.4
-
+    createValueField() {
+        const gui = this.gui
         const textAlign = (this.type == 'inputPin') ? 'right' : 'left'
         
-        const scaledOffset = Vec2.mul((this.type == 'inputPin') ? vec2(1 - width - xOffset, yOffset) : vec2(xOffset, yOffset), gui.scale)
-        const scaledSize = Vec2.mul(size, gui.scale)
+        const scaledYOffset = gui.style.valueFieldyOffset * gui.scale.y
+        const scaledXOffset = gui.style.valueFieldxOffset * gui.scale.x
+        const scaledHeight = gui.style.valueFieldHeight * gui.scale.y
 
-        this.valueField = domElement(this.DOMElement, 'div', {
+        this.valueField = HTML.domElement(this.DOMElement, 'div', {
             position:   'absolute',
-            left:       scaledOffset.x + 'px',
-            top:        scaledOffset.y + 'px',
-            width:      scaledSize.x + 'px',
-            height:     scaledSize.y + 'px',
-            lineHeight: scaledSize.y + 'px',
+            [textAlign]: scaledXOffset + 'px',
+            top:        scaledYOffset + 'px',
+            height:     scaledHeight + 'px',
+            lineHeight: scaledHeight + 'px',
             textAlign,
             pointerEvents: 'none'
         })
@@ -154,8 +149,16 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         if (this.funcState.onlineID) this.pendingFlagsModification()
     }
 
+    formatValue(value: number) {
+        const maxLength = 8
+        let [ints, decs] = value.toString().split('.')
+        if (!decs) return value.toString()
+        const numDesimals = Math.min(decs.length, maxLength - (ints.length + 1))
+        return Number(value.toFixed(numDesimals)).toString()
+    }
+
     updatePin(bubbles = true) {
-        this.valueField.textContent = this.value.toString()
+        this.valueField.textContent = this.formatValue(this.value)
         
         const style = this.gui.style
         
@@ -176,12 +179,56 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
     onPinUpdated?(): void
 
+    editValue() {
+        const gui = this.gui
+        const textAlign = (this.type == 'inputPin') ? 'right' : 'left'
+
+        const scaledYOffset = gui.style.valueFieldyOffset * gui.scale.y
+        const scaledXOffset = gui.style.valueFieldxOffset * gui.scale.x
+        const scaledHeight = gui.style.valueFieldHeight * gui.scale.y
+
+        const inputField = HTML.domElement(this.DOMElement, 'input', {
+            zIndex: '2',
+            position: 'absolute',
+            [textAlign]: scaledXOffset + 'px',
+            top:        scaledYOffset + 'px',
+            width: '64px',
+            backgroundColor: 'black',
+            color: this.color,
+            textAlign,
+        })
+        inputField.type = 'text'
+        inputField.value = this.value.toString()
+        inputField.select()
+        inputField.onkeydown = ev => {
+            if (ev.key == 'Enter') {
+                let raw = inputField.value
+                raw = raw.replace(',', '.')
+                let value = Number(raw)
+                if (this.dataType == IODataType.INTEGER) value = Math.trunc(value)
+                console.log('input value', raw, value)
+                if (!Number.isNaN(value)) {
+                    this.setValue(value)
+                    this.DOMElement.removeChild(inputField)
+                } else {
+                    inputField.select()
+                }
+            } else if (ev.key == 'Escape') {
+                this.DOMElement.removeChild(inputField)
+            }
+        }
+        inputField.onblur = () => this.DOMElement.removeChild(inputField)
+    }
+
     togglePin() {
         if (this.dataType == IODataType.BINARY && !this.reference) {
             this.setValue((this.value) ? 0 : 1)
         }
         else if (this.dataType == IODataType.BINARY && this.reference) {
             this.setFlag(IOFlag.INVERTED, !this.inverted)
+        }
+        else {
+            this.editValue()
         }
     }
 

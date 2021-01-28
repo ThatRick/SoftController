@@ -466,7 +466,7 @@ export default class VirtualController
         const callList = this.getCircuitCallRefList(ref)
         const nullRefIndex = callList.findIndex(ref => ref == 0)
         const end = (nullRefIndex == -1) ? undefined : nullRefIndex
-        return this.getCircuitCallRefList(ref).slice(0, end);
+        return this.getCircuitCallRefList(ref).slice(0, end+1);
     }
 
 /****************************
@@ -516,14 +516,14 @@ export default class VirtualController
         return true
     }
 
-    connectFunctionInput(funcId: ID, inputNum: number, sourceFuncId: ID, sourceIONum: number, inverted = false) {
+    connectFunctionInput(funcId: ID, inputNum: number, sourceFuncId: ID, sourceIONum: number, inverted?: boolean) {
         const inputRefPointer = this.getFunctionInputRefPointer(funcId, inputNum);
         
         const sourceIOPointer = (sourceFuncId) ? this.getFunctionIOPointer(sourceFuncId, sourceIONum) : 0;
         if (sourceFuncId && !sourceIOPointer) return false
         
         this.ints[inputRefPointer] = sourceIOPointer;
-        this.setFunctionIOFlag(funcId, inputNum, IOFlag.INVERTED, inverted);
+        inverted ?? this.setFunctionIOFlag(funcId, inputNum, IOFlag.INVERTED, inverted);
         
         return true
     }
@@ -745,7 +745,7 @@ export default class VirtualController
                     value = (value && 1) ^ (ioFlag & IOFlag.INVERTED && 1)
                 }
                 else if (getIODataType(ioFlag) == IODataType.INTEGER) {
-                    value = Math.floor(value)
+                    value = Math.trunc(value)
                 }
                 this.floats[pointers.inputs + i] = value;
             }
@@ -764,6 +764,13 @@ export default class VirtualController
                 static:         pointers.statics,
                 dt
             }
+            /*
+            // Test alternative call method
+            const inputs = this.floats.subarray(params.input, params.input + params.inputCount)
+            const outputs = this.floats.subarray(params.output, params.output + params.outputCount)
+            const statics = this.floats.subarray(params.static, params.static + params.staticCount)
+            // ----------------------------
+            */
             func.run(params, this.floats);
         }
 

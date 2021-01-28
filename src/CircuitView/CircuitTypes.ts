@@ -40,7 +40,8 @@ export interface CircuitStyle
     colorPinFloat:          string
     colorValueBg:           string
     colorCallIndex:         string
-    colorCallIndexBg:       string
+    colorOfflineID:         string
+    colorOnlineID:          string
     
     filterDefault:          string
     filterActive:           string
@@ -51,6 +52,10 @@ export interface CircuitStyle
     
     traceWidth:             number
     IOAreaWidth:            number
+    
+    valueFieldHeight:       number
+    valueFieldyOffset:      number
+    valueFieldxOffset:      number
 }
 
 export const defaultStyle: CircuitStyle =
@@ -59,8 +64,8 @@ export const defaultStyle: CircuitStyle =
     colorGridLine:          '#252525',
     colorPanel:             '#282828',
     colorPanelLines:        '#333333',
-    colorBlock:             '#447',
-    colorBlockHover:        '#558',
+    colorBlock:             '#446',
+    colorBlockHover:        '#668',
     colorSelected:          '#AAF',
     
     blockOutlineUnselected: 'none',
@@ -69,11 +74,12 @@ export const defaultStyle: CircuitStyle =
     colorPinHover:          '#AAA',
     colorPinBinary0:        '#777',
     colorPinBinary1:        '#CC9',
-    colorPinInteger:        '#99D',
-    colorPinFloat:          '#9D9',
+    colorPinInteger:        '#88A',
+    colorPinFloat:          '#8A8',
     colorValueBg:           'transparent',
     colorCallIndex:         '#8AB',
-    colorCallIndexBg:       'transparent', //'rgba(200, 255, 255, 0.1)',
+    colorOfflineID:         '#AAA',
+    colorOnlineID:          '#88F',
 
     filterDefault:          'none',
     filterActive:           'brightness(150%)',
@@ -83,5 +89,9 @@ export const defaultStyle: CircuitStyle =
     borderError:            'thin solid rgba(255, 0, 0, 0.2)',
     
     traceWidth:             0.10,
-    IOAreaWidth:            6
+    IOAreaWidth:            6,
+
+    valueFieldHeight:       0.7,
+    valueFieldyOffset:     -0.3,
+    valueFieldxOffset:      0.4
 }

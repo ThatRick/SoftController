@@ -73,10 +73,17 @@ export default class TraceBezierLayer {
     }
     cubicCurve(a, b) {
         const point = (v) => v.x + ' ' + v.y;
-        const dx = Math.min(Math.max(Math.round(Math.abs(b.x - a.x) / 2), this.minControlOffset), this.maxControlOffset);
-        const ac = Vec2.add(a, vec2(dx, 0));
-        const bc = Vec2.add(b, vec2(-dx, 0));
-        const cubic = `M ${point(a)} C ${point(ac)}, ${point(bc)}, ${point(b)}`;
+        const d = Vec2.sub(b, a);
+        const dx = Math.round(d.x / 2);
+        //const ctrlOffset = Math.min(Math.max(Math.abs(dx), this.minControlOffset), this.maxControlOffset)
+        const ctrlOffset = 4 * this.scale.x;
+        const aCtrl = Vec2.add(a, vec2(ctrlOffset, 0));
+        const bCtrl = Vec2.add(b, vec2(-ctrlOffset, 0));
+        const c = Vec2.add(a, b).scale(0.5);
+        const cCtrl = vec2(Math.min(c.x - d.x, aCtrl.x), c.y);
+        const cubic = (dx > 0)
+            ? `M ${point(a)} C ${point(aCtrl)}, ${point(bCtrl)}, ${point(b)}`
+            : `M ${point(a)} C ${point(aCtrl)}, ${point(cCtrl)}, ${point(c)} S ${point(bCtrl)}, ${point(b)}`;
         return cubic;
     }
     createPath(curve, color) {

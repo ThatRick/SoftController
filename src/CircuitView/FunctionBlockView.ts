@@ -35,8 +35,9 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
 
     name: string
     
-    private IONameTable: HTML.Table
+    IONameTable: HTML.Table
     callIndexView: GUIChildElement
+    IDView: GUIChildElement
 
     get callIndex() { return this.state.parentCircuit?.getBlockCallIndex(this.id) }
 
@@ -46,7 +47,9 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
             color: 'white',
             boxSizing: 'border-box',
             fontFamily: 'monospace',
-            userSelect: 'none'
+            userSelect: 'none',
+            backgroundColor: circuitView.gui.style.colorBlock,
+            fontSize: Math.round(circuitView.gui.scale.y * 0.65)+'px'
         }, true)
         
         this.state = state
@@ -56,24 +59,21 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         state.onStateUpdated = this.onStateUpdated.bind(this)
 
         this.build(this.gui)
+        this.setInfoVisibility('hidden')
     }
 
     private build(gui: CircuitView) {
-        this.setStyle({
-            backgroundColor: this.gui.style.colorBlock,
-            fontSize: Math.round(gui.scale.y * 0.65)+'px'
-        })
-
         this.createIONames()
-        this.createPins()
-        this.createCallIndex()
+        this.createPinViews()
+        this.createCallIndexView()
+        this.createIDView()
     }
 
     onStateUpdated() {
         this.callIndexView.DOMElement.textContent = this.callIndex.toString()
     }
 
-    createPins() {
+    createPinViews() {
         const state = this.state
         for (let inputNum = 0; inputNum < state.funcData.inputCount; inputNum++) {
             const ioNum = inputNum
@@ -89,16 +89,20 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
 
     createIONames() {
         const gui = this.gui
+        // show centered block name
         if (this.isMinimal) {
+            const fontSize = (this.name.length == 1) ? '150%' : '100%'
             const nameElem = new HTML.Text(this.name, {
                 textAlign: 'center',
                 verticalAlign: 'middle',
                 lineHeight: this._sizeScaled.y + 'px',
                 width: '100%',
                 padding: '0',
-                pointerEvents: 'none'
+                pointerEvents: 'none',
+                fontSize
             }, this.DOMElement)
         }
+        // show io names
         else {
             const [INPUT, OUTPUT] = [0, 1]
     
@@ -129,21 +133,33 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         }
     }
     
-    createCallIndex() {
+    createCallIndexView() {
         const size = vec2(this.size.x, 0.8)
-        const pos = vec2(0, this.size.y)
+        const pos = vec2(0, -size.y)
         this.callIndexView = new GUIChildElement(this.children, 'div', pos, size, {
             color: this.gui.style.colorCallIndex,
-            backgroundColor: this.gui.style.colorCallIndexBg,
             lineHeight: size.y * this.gui.scale.y + 'px',
             textAlign: 'center'
         })
         this.callIndexView.DOMElement.textContent = this.callIndex.toString()
-        this.setCallIndexVisibility('hidden')
     }
 
-    setCallIndexVisibility(visibility: 'visible' | 'hidden') {
+    createIDView() {
+        const size = vec2(this.size.x, 0.8)
+        const pos = vec2(0, this.size.y)
+        this.IDView = new GUIChildElement(this.children, 'div', pos, size, {
+            color: this.gui.style.colorOfflineID,
+            lineHeight: size.y * this.gui.scale.y + 'px',
+            textAlign: 'center',
+            overflow: 'visible'
+        })
+        const text = (this.state.onlineID) ? 'DB '+this.state.onlineID : ''
+        this.IDView.DOMElement.textContent = text
+    }
+
+    setInfoVisibility(visibility: 'visible' | 'hidden') {
         this.callIndexView.DOMElement.style.visibility = visibility
+        this.IDView.DOMElement.style.visibility = visibility
     }
 
     onSelected() {

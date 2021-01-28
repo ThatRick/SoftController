@@ -405,7 +405,7 @@ export default class CircuitView extends GUIView {
         elem.onSelected();
         switch (elem.type) {
             case 'block': {
-                this.blocks.forEach(block => block.setCallIndexVisibility('visible'));
+                this.blocks.forEach(block => block.setInfoVisibility('visible'));
                 break;
             }
         }
@@ -416,7 +416,7 @@ export default class CircuitView extends GUIView {
         switch (elem.type) {
             case 'block': {
                 if (this.selectedElements.size == 0)
-                    this.blocks.forEach(block => block.setCallIndexVisibility('hidden'));
+                    this.blocks.forEach(block => block.setInfoVisibility('hidden'));
                 break;
             }
         }
