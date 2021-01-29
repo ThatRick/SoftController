@@ -1,4 +1,4 @@
-import { Vec2 } from './GUITypes';
+import { Vec2 } from './GUITypes.js';
 import * as HTML from '../Lib/HTML.js'
 
 interface IMenuStyle
@@ -11,7 +11,7 @@ interface IMenuItem
     DOMElement: HTMLElement
 }
 
-export class Menubar
+export class GUIMenubar
 {
     height: number
     DOMElement: HTMLDivElement

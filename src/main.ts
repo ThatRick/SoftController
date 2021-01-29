@@ -8,7 +8,8 @@ import { IControllerInterface, instructions } from './Controller/ControllerInter
 import { defaultStyle } from './CircuitView/CircuitTypes.js';
 import * as HTML from './lib/HTML.js'
 import { ControllerTerminal } from './Terminal.js';
-import { Menubar } from './GUI/Menubar.js'
+import { GUIMenubar } from './GUI/GUIMenubar.js'
+import { CircuitMenuBar } from './CircuitView/CircuitMenuBar.js';
 
 
 function createControlButtonBar(buttons: HTML.ButtonBase[]) {
@@ -38,9 +39,9 @@ window.onload = () => app().catch(rejected => console.error(rejected))
 
 async function app()
 {
-    const mainMenubar = new Menubar(document.getElementById('mainMenubar'))
-    const guiMenubar = new Menubar(document.getElementById('guiMenubar'))
-    const terminalMenubar = new Menubar(document.getElementById('terminalMenubar'))
+    const mainMenubar = new GUIMenubar(document.getElementById('mainMenubar'))
+    const circuitMenubar = new CircuitMenuBar(document.getElementById('guiMenubar'))
+    const terminalMenubar = new GUIMenubar(document.getElementById('terminalMenubar'))
 
     // Create controller interface
     const cpu = new VirtualControllerLink()
@@ -50,9 +51,6 @@ async function app()
     await cpu.createController(memSize, 256, 16)
     
     const terminal = new ControllerTerminal(document.getElementById('terminal'), cpu);
-
-    // const blueprint = createControllerBlueprint(cpu);
-    // saveAsJSON(blueprint, 'cpu.json');
     
     const circuitID = await createTestCircuit(cpu)
     const taskId = await cpu.createTask(circuitID, 100, 10)
@@ -69,36 +67,21 @@ async function app()
     const circuit = await Circuit.getOnlineCircuit(cpu, circuitID)
     view.loadCircuit(circuit)
 
+    circuitMenubar.attachCircuit(circuit)
+
     mainMenubar.addItems([
         new HTML.Text('Controller'),
         new HTML.Button('Run', async () => {
-            await cpu.startController(20)
+            await cpu.startController(100)
         }),
         new HTML.Button('Stop', async () => {
             await cpu.stopController()
         }),
         new HTML.Button('Step', async () => {
-            await cpu.stepController(20)
-        }),
-        // { name: 'Save', fn: () => saveAsJSON(blueprint, 'cpu.json') },
-        // { name: 'Load', fn: () => loadFromJSON(obj => {
-        //     const needed = getBlueprintResourceNeeded(obj)
-        //     const dataMemSize = needed.dataMemSize + 4096
-        //     const datablockTableLength = needed.datablockTableLength + 256
-        //     const taskListLength = needed.taskListLength + 16
-            
-        //     console.log(`Loading controller (needed mem: ${dataMemSize} bytes, table size: ${datablockTableLength}, task list size: ${taskListLength})`)
-        //     const cpuLink = new SoftControllerLink(new SoftController(dataMemSize, datablockTableLength, taskListLength))
-        //     loadControllerBlueprint(obj);
-        // })},
-    ])
-    guiMenubar.addItems([
-        new HTML.Text('Circuit'),
-        new HTML.ToggleButton('Immediate', state => circuit.setImmediateMode(state), circuit.immediateMode),
-        new HTML.Button('Upload', async () => {
-            await circuit.sendModifications()
+            await cpu.stepController(100)
         }),
     ])
+
     terminalMenubar.addItems([
         new HTML.Text('Terminal'),
         new HTML.Button('System', async () => terminal.printSystemSector()),

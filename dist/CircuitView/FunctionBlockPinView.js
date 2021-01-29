@@ -187,7 +187,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
                 this.DOMElement.removeChild(inputField);
             }
         };
-        inputField.onblur = ev => this.DOMElement.removeChild(inputField);
+        inputField.onblur = () => this.DOMElement.removeChild(inputField);
     }
     togglePin() {
         if (this.dataType == 2 /* BINARY */ && !this.reference) {
