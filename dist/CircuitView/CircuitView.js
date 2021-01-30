@@ -74,7 +74,9 @@ export default class CircuitView extends GUIView {
     constructor(parent, size, scale, style) {
         super(parent, Vec2.add(size, vec2(style.IOAreaWidth * 2, 0)), scale, style, {
             backgroundColor: style.colorBackground,
-            ...backgroundGridStyle(scale, style.colorGridLine)
+            ...backgroundGridStyle(scale, style.colorGridLine),
+            fontFamily: 'system-ui',
+            fontSize: Math.round(scale.y * style.fontSize) + 'px'
         });
         this.gridMap = new CircuitGrid();
         this.connectingTraceID = -1;

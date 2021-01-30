@@ -1,14 +1,18 @@
-import { GUIMenubar } from "../GUI/GUIMenubar.js";
 import * as HTML from '../lib/HTML.js'
+import { DropdownButton } from '../Lib/HTMLDropdownButton.js';
+import { Menubar } from '../Lib/HTMLMenubar.js';
+
 import { Circuit } from "./CircuitState.js";
 
 export class CircuitMenuBar
 {
-    menu: GUIMenubar
+    menu: Menubar
 
     constructor(parent: HTMLElement)
     {
-        this.menu = new GUIMenubar(parent)
+        this.menu = new Menubar(parent, {
+            overflow: 'visible'
+        })
     }
 
     attachCircuit(circuit: Circuit) {
@@ -19,6 +23,7 @@ export class CircuitMenuBar
             new HTML.Button('Upload', async () => {
                 await circuit.sendModifications()
             }),
+            new DropdownButton('Logic', ['One', 'Two', 'Three'])
         ])
     }
 

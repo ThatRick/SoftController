@@ -102,8 +102,11 @@ export default class FunctionBlockPinView extends GUIChildElement {
             top: scaledYOffset + 'px',
             height: scaledHeight + 'px',
             lineHeight: scaledHeight + 'px',
+            paddingLeft: '2px',
+            paddingRight: '2px',
             textAlign,
-            pointerEvents: 'none'
+            pointerEvents: 'none',
+            backgroundColor: this.gui.style.colorValueBg
         });
     }
     setValue(value) {
@@ -163,10 +166,18 @@ export default class FunctionBlockPinView extends GUIChildElement {
             backgroundColor: 'black',
             color: this.color,
             textAlign,
+            outlineColor: gui.style.colorPanelLines,
+            userSelect: 'text',
+            pointerEvents: 'auto',
         });
         inputField.type = 'text';
         inputField.value = this.value.toString();
         inputField.select();
+        const removeInputField = () => {
+            inputField.onblur = undefined;
+            this.DOMElement.removeChild(inputField);
+        };
+        inputField.onblur = () => removeInputField();
         inputField.onkeydown = ev => {
             if (ev.key == 'Enter') {
                 let raw = inputField.value;
@@ -177,17 +188,16 @@ export default class FunctionBlockPinView extends GUIChildElement {
                 console.log('input value', raw, value);
                 if (!Number.isNaN(value)) {
                     this.setValue(value);
-                    this.DOMElement.removeChild(inputField);
+                    removeInputField();
                 }
                 else {
                     inputField.select();
                 }
             }
             else if (ev.key == 'Escape') {
-                this.DOMElement.removeChild(inputField);
+                removeInputField();
             }
         };
-        inputField.onblur = () => this.DOMElement.removeChild(inputField);
     }
     togglePin() {
         if (this.dataType == 2 /* BINARY */ && !this.reference) {
@@ -202,11 +212,11 @@ export default class FunctionBlockPinView extends GUIChildElement {
     }
     pendingValueModification() {
         this.valueField.style.outline = this.gui.style.borderPending;
-        this.valueField.style.backgroundColor = this.gui.style.colorPending;
+        // this.valueField.style.backgroundColor = this.gui.style.colorPending
     }
     validateValueModification(successful) {
         this.valueField.style.outline = (successful) ? 'none' : this.gui.style.borderError;
-        this.valueField.style.backgroundColor = this.gui.style.colorValueBg;
+        // this.valueField.style.backgroundColor = this.gui.style.colorValueBg
     }
     pendingFlagsModification() {
         this.DOMElement.style.backgroundColor = this.gui.style.colorPending;

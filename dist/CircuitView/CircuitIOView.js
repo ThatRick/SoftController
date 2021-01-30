@@ -7,10 +7,8 @@ export default class CircuitIOView extends GUIChildElement {
             borderBottom: '1px solid',
             borderColor: parent.gui.style.colorPanelLines,
             backgroundColor: parent.gui.style.colorBlock,
-            fontSize: Math.round(parent.gui.scale.y * 0.65) + 'px',
             color: 'white',
             boxSizing: 'border-box',
-            fontFamily: 'monospace',
             userSelect: 'none',
         }, true);
         this.isDraggable = true;

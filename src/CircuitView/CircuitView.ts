@@ -120,7 +120,10 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     {
         super(parent, Vec2.add(size, vec2(style.IOAreaWidth*2, 0)), scale, style, {
             backgroundColor: style.colorBackground,
-            ...backgroundGridStyle(scale, style.colorGridLine)
+            ...backgroundGridStyle(scale, style.colorGridLine),
+            fontFamily: 'system-ui',
+            fontSize: Math.round(scale.y * style.fontSize)+'px'
+
         })
         parent.style.backgroundColor = style.colorBackground
 

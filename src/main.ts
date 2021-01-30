@@ -8,7 +8,7 @@ import { IControllerInterface, instructions } from './Controller/ControllerInter
 import { defaultStyle } from './CircuitView/CircuitTypes.js';
 import * as HTML from './lib/HTML.js'
 import { ControllerTerminal } from './Terminal.js';
-import { GUIMenubar } from './GUI/GUIMenubar.js'
+import { Menubar } from './Lib/HTMLMenubar.js'
 import { CircuitMenuBar } from './CircuitView/CircuitMenuBar.js';
 
 
@@ -39,9 +39,9 @@ window.onload = () => app().catch(rejected => console.error(rejected))
 
 async function app()
 {
-    const mainMenubar = new GUIMenubar(document.getElementById('mainMenubar'))
+    const mainMenubar = new Menubar(document.getElementById('mainMenubar'))
     const circuitMenubar = new CircuitMenuBar(document.getElementById('guiMenubar'))
-    const terminalMenubar = new GUIMenubar(document.getElementById('terminalMenubar'))
+    const terminalMenubar = new Menubar(document.getElementById('terminalMenubar'))
 
     // Create controller interface
     const cpu = new VirtualControllerLink()

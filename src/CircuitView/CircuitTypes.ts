@@ -50,6 +50,7 @@ export interface CircuitStyle
     borderPending:          string
     borderError:            string
     
+    fontSize:               number
     traceWidth:             number
     IOAreaWidth:            number
     
@@ -76,7 +77,7 @@ export const defaultStyle: CircuitStyle =
     colorPinBinary1:        '#CC9',
     colorPinInteger:        '#88A',
     colorPinFloat:          '#8A8',
-    colorValueBg:           'transparent',
+    colorValueBg:           'rgba(0, 0, 0, 0.4)',
     colorCallIndex:         '#8AB',
     colorOfflineID:         '#AAA',
     colorOnlineID:          '#88F',
@@ -84,10 +85,11 @@ export const defaultStyle: CircuitStyle =
     filterDefault:          'none',
     filterActive:           'brightness(150%)',
 
-    colorPending:           'rgba(150, 255, 200, 0.15)',
-    borderPending:          'none', //'thin solid rgba(255, 255, 200, 0.2)',
+    colorPending:           'rgba(150, 255, 200, 0.2)',
+    borderPending:          'thin solid rgba(255, 255, 200, 0.3)',
     borderError:            'thin solid rgba(255, 0, 0, 0.2)',
     
+    fontSize:               0.6,
     traceWidth:             0.10,
     IOAreaWidth:            6,
 

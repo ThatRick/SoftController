@@ -1,3 +1,9 @@
+import { Menubar } from './HTMLMenubar.js'
+
+export interface IElement
+{
+    DOMElement: HTMLElement
+}
 
 export function domElement<K extends keyof HTMLElementTagNameMap>(parentDOM: HTMLElement, tagName: K, style?: Partial<CSSStyleDeclaration>): HTMLElementTagNameMap[K] {
     const elem = document.createElement(tagName)
@@ -102,7 +108,7 @@ export class ToggleButton extends ButtonBase
 
 export class Table
 {
-    table: HTMLTableElement
+    DOMElement: HTMLTableElement
     rows: HTMLTableRowElement[] = []
     cells: HTMLTableCellElement[][] = []
 
@@ -116,10 +122,10 @@ export class Table
         cellIterator?: TableCellIterator
     }) 
     {
-        this.table = domElement(options.parentElement, 'table', options.tableStyle)
+        this.DOMElement = domElement(options.parentElement, 'table', options.tableStyle)
 
         for (let y = 0; y < options.rows; y++) {
-            const row = domElement(this.table, 'tr', options.rowStyle)
+            const row = domElement(this.DOMElement, 'tr', options.rowStyle)
             this.rows[y] = row
             this.cells[y] = []
             for (let x = 0; x < options.columns; x++) {
@@ -135,4 +141,6 @@ export class Table
     iterateCells(iterator: TableCellIterator) {
         this.cells.forEach((row, y) => row.forEach((cell, x) => iterator(cell, y, x)))
     }
+
+    
 }

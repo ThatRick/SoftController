@@ -1,43 +1,33 @@
-import { Vec2 } from './GUITypes.js';
-import * as HTML from '../Lib/HTML.js'
+import { Vec2 } from '../GUI/GUITypes.js';
+import {IElement, domElement }from './HTML.js'
 
-interface IMenuStyle
-{
-
-}
-
-interface IMenuItem
-{
-    DOMElement: HTMLElement
-}
-
-export class GUIMenubar
+export class Menubar
 {
     height: number
     DOMElement: HTMLDivElement
     constructor (
         private parent: HTMLElement,
         private style?: Partial<CSSStyleDeclaration>,
-        private menuItems: IMenuItem[] = [])
+        private menuItems: IElement[] = [])
     {
         this.height = parent.clientHeight
         console.log('menu height', parent.clientHeight, this.height)
         const menuBarStyle = {
             color: 'white',
-            fontFamily: 'monospace',
+            fontFamily: 'system-ui',
             fontSize: Math.round(this.height * 0.6) + 'px',
             borderBottom: 'thin solid black',
             ...style
         } as Partial<CSSStyleDeclaration>
 
-        this.DOMElement = HTML.domElement(parent, 'div', menuBarStyle)
+        this.DOMElement = domElement(parent, 'div', menuBarStyle)
         this.menuItems = menuItems
     }
 
-    addItem(item: IMenuItem) {
+    addItem(item: IElement) {
         this.DOMElement.appendChild(item.DOMElement)
     }
-    addItems(items: IMenuItem[]) {
+    addItems(items: IElement[]) {
         items.forEach(item => this.addItem(item))
     }
 

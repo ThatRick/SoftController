@@ -46,10 +46,8 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         super(circuitView, 'div', pos, FunctionBlockView.getBlockSize(state), {
             color: 'white',
             boxSizing: 'border-box',
-            fontFamily: 'monospace',
             userSelect: 'none',
             backgroundColor: circuitView.gui.style.colorBlock,
-            fontSize: Math.round(circuitView.gui.scale.y * 0.65)+'px'
         }, true)
         
         this.state = state

@@ -78,9 +78,9 @@ export class Table {
     constructor(options) {
         this.rows = [];
         this.cells = [];
-        this.table = domElement(options.parentElement, 'table', options.tableStyle);
+        this.DOMElement = domElement(options.parentElement, 'table', options.tableStyle);
         for (let y = 0; y < options.rows; y++) {
-            const row = domElement(this.table, 'tr', options.rowStyle);
+            const row = domElement(this.DOMElement, 'tr', options.rowStyle);
             this.rows[y] = row;
             this.cells[y] = [];
             for (let x = 0; x < options.columns; x++) {
