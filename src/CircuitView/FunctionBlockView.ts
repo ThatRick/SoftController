@@ -47,7 +47,9 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
-            backgroundColor: circuitView.gui.style.colorBlock,
+            backgroundColor: (state.onlineID)
+                ? circuitView.gui.style.colorBlockOnline
+                : circuitView.gui.style.colorBlock,
         }, true)
         
         this.state = state
@@ -69,6 +71,11 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
 
     onStateUpdated() {
         this.callIndexView.DOMElement.textContent = this.callIndex.toString()
+        const text = (this.state.onlineID) ? 'DB '+this.state.onlineID : ''
+        this.IDView.DOMElement.textContent = text
+        this.DOMElement.style.backgroundColor = (this.state.onlineID)
+            ? this.gui.style.colorBlockOnline
+            : this.gui.style.colorBlock
     }
 
     createPinViews() {
@@ -177,6 +184,8 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
     }
 
     onPointerLeave = () => {
-        this.DOMElement.style.backgroundColor = this.gui.style.colorBlock
+        this.DOMElement.style.backgroundColor = (this.state.onlineID)
+            ? this.gui.style.colorBlockOnline
+            : this.gui.style.colorBlock
     }
 }

@@ -27,6 +27,7 @@ export interface CircuitStyle
     colorPanel:             string
     colorPanelLines:        string
     colorBlock:             string
+    colorBlockOnline:       string
     colorBlockHover:        string
     colorSelected:          string
     
@@ -65,7 +66,8 @@ export const defaultStyle: CircuitStyle =
     colorGridLine:          '#252525',
     colorPanel:             '#282828',
     colorPanelLines:        '#333333',
-    colorBlock:             '#446',
+    colorBlock:             '#445',
+    colorBlockOnline:       '#446',
     colorBlockHover:        '#668',
     colorSelected:          '#AAF',
     

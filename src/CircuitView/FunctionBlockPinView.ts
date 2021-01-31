@@ -6,7 +6,10 @@ import * as HTML from '../Lib/HTML.js'
 import { CircuitElement, ElementType, PinType } from './CircuitTypes.js'
 import CircuitView from './CircuitView.js'
 import { getIODataType, IODataType, IOFlag } from '../Controller/ControllerDataTypes.js'
-import { DataType } from '../Lib/TypedStructs.js'
+
+const debugLogging = false
+function logInfo(...args: any[]) { debugLogging && console.info('Circuit View:', ...args)}
+function logError(...args: any[]) { console.error('Circuit View:', ...args)}
 
 export default class FunctionBlockPinView extends GUIChildElement implements CircuitElement
 {
@@ -43,7 +46,6 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         const col = (this.inverted)
             ? (this.value == 0) ? this.gui.style.colorPinBinary1 : this.gui.style.colorPinBinary0
             : this.color
-        console.log('get trace color', this.inverted, col)
         return col
     }
     
@@ -127,15 +129,15 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         const scaledHeight = gui.style.valueFieldHeight * gui.scale.y
 
         this.valueField = HTML.domElement(this.DOMElement, 'div', {
-            position:   'absolute',
-            [textAlign]: scaledXOffset + 'px',
-            top:        scaledYOffset + 'px',
-            height:     scaledHeight + 'px',
-            lineHeight: scaledHeight + 'px',
-            paddingLeft: '2px',
-            paddingRight: '2px',
+            position:       'absolute',
+            [textAlign]:    scaledXOffset + 'px',
+            top:            scaledYOffset + 'px',
+            height:         scaledHeight + 'px',
+            lineHeight:     scaledHeight + 'px',
+            paddingLeft:    '2px',
+            paddingRight:   '2px',
             textAlign,
-            pointerEvents: 'none',
+            pointerEvents:  'none',
             backgroundColor: this.gui.style.colorValueBg
         })
     }
@@ -177,7 +179,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         
         this.valueField.style.color = this.color
         
-        console.log('update pin:', this.id)
+        logInfo('update pin:', this.id)
         bubbles && this.onPinUpdated?.()
     }
     onPinUpdated?(): void
@@ -217,7 +219,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
                 raw = raw.replace(',', '.')
                 let value = Number(raw)
                 if (this.dataType == IODataType.INTEGER) value = Math.trunc(value)
-                console.log('input value', raw, value)
+                logInfo('user input value', raw, value)
                 if (!Number.isNaN(value)) {
                     this.setValue(value)
                     removeInputField()
@@ -257,7 +259,6 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
 
     validateFlagsModification(successful: boolean) {
-        console.log('flags validated!')
         this.DOMElement.style.backgroundColor = 'transparent'
     }
 

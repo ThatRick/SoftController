@@ -27,7 +27,7 @@ const enum MouseButton {
     MIDDLE = 4
 }
 
-const debugLogging = true
+const debugLogging = false
 function logInfo(...args: any[]) { debugLogging && console.info('Circuit View:', ...args)}
 function logError(...args: any[]) { console.error('Circuit View:', ...args)}
 
@@ -429,7 +429,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     pointerCircuitPos() {
         const scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop)
-        console.log('scroll', scrollOffset)
         return Vec2.sub(this.pointer.pos, this.viewOffset)
             .add(scrollOffset)
             .div(this.scale)

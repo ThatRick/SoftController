@@ -8,7 +8,9 @@ export default class FunctionBlockView extends GUIChildElement {
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
-            backgroundColor: circuitView.gui.style.colorBlock,
+            backgroundColor: (state.onlineID)
+                ? circuitView.gui.style.colorBlockOnline
+                : circuitView.gui.style.colorBlock,
         }, true);
         this.type = 'block';
         this.isDraggable = true;
@@ -20,7 +22,9 @@ export default class FunctionBlockView extends GUIChildElement {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
         };
         this.onPointerLeave = () => {
-            this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
+            this.DOMElement.style.backgroundColor = (this.state.onlineID)
+                ? this.gui.style.colorBlockOnline
+                : this.gui.style.colorBlock;
         };
         this.state = state;
         this.isMinimal = FunctionBlockView.isMinimal(state);
@@ -47,6 +51,11 @@ export default class FunctionBlockView extends GUIChildElement {
     }
     onStateUpdated() {
         this.callIndexView.DOMElement.textContent = this.callIndex.toString();
+        const text = (this.state.onlineID) ? 'DB ' + this.state.onlineID : '';
+        this.IDView.DOMElement.textContent = text;
+        this.DOMElement.style.backgroundColor = (this.state.onlineID)
+            ? this.gui.style.colorBlockOnline
+            : this.gui.style.colorBlock;
     }
     createPinViews() {
         const state = this.state;

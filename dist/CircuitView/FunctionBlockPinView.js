@@ -2,6 +2,9 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import * as HTML from '../Lib/HTML.js';
 import { getIODataType } from '../Controller/ControllerDataTypes.js';
+const debugLogging = false;
+function logInfo(...args) { debugLogging && console.info('Circuit View:', ...args); }
+function logError(...args) { console.error('Circuit View:', ...args); }
 export default class FunctionBlockPinView extends GUIChildElement {
     constructor(parent, funcState, ioNum, pos, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1));
@@ -28,7 +31,6 @@ export default class FunctionBlockPinView extends GUIChildElement {
         const col = (this.inverted)
             ? (this.value == 0) ? this.gui.style.colorPinBinary1 : this.gui.style.colorPinBinary0
             : this.color;
-        console.log('get trace color', this.inverted, col);
         return col;
     }
     get name() { return this._name; }
@@ -148,7 +150,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
             ? this.pin.style.borderColor = this.color
             : this.pin.style.backgroundColor = this.color;
         this.valueField.style.color = this.color;
-        console.log('update pin:', this.id);
+        logInfo('update pin:', this.id);
         bubbles && this.onPinUpdated?.();
     }
     editValue() {
@@ -185,7 +187,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
                 let value = Number(raw);
                 if (this.dataType == 1 /* INTEGER */)
                     value = Math.trunc(value);
-                console.log('input value', raw, value);
+                logInfo('user input value', raw, value);
                 if (!Number.isNaN(value)) {
                     this.setValue(value);
                     removeInputField();
@@ -222,7 +224,6 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.DOMElement.style.backgroundColor = this.gui.style.colorPending;
     }
     validateFlagsModification(successful) {
-        console.log('flags validated!');
         this.DOMElement.style.backgroundColor = 'transparent';
     }
     onSelected() {

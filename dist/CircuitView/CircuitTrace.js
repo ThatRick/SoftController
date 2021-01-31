@@ -21,7 +21,6 @@ export class CircuitTrace {
         this.updateColor();
     }
     updateColor() {
-        console.log('trace: update color');
         this.layer.setTraceColor(this.id, this.inputPin.traceColor);
     }
     update() {

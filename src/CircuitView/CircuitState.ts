@@ -100,16 +100,17 @@ export class Circuit
 
     // Store circuit modifications
     pushOnlineModification(type: CircuitModificationType, blockID: ID, ioNum?: number, blockOnlineID?: ID) {
-        logInfo('Modification', CircuitModificationType[type], blockID, ioNum)
         const modification = { type, blockID, ioNum, blockOnlineID}
-
+        
         if (type == CircuitModificationType.DeleteFunction) {
             this.modifications = this.modifications.filter(modif => (modif.blockID != blockID))
         }
         if (this.immediateMode) {
+            logInfo('Immediate modification', CircuitModificationType[type], blockID, ioNum)
             this.sendModification(modification)
         }
         else if (!this.modifications.find(existing => (existing.type == type && existing.blockID == blockID && existing.ioNum == ioNum))){
+            logInfo('Push modification', CircuitModificationType[type], blockID, ioNum)
             this.modifications.push(modification)
         }
     }
@@ -119,8 +120,9 @@ export class Circuit
         const offlineID = this.blocks.length
         const funcBlock = new FunctionBlock(funcData, offlineID, this)
         this.blocks.push(funcBlock)
-        funcBlock.parentCircuit = this
         callIndex ??= offlineID
+        this.setBlockCallIndex(offlineID, callIndex)
+        logInfo('add function (offlineID, callIndex)', offlineID, callIndex)
 
         if (this.onlineID) this.pushOnlineModification(CircuitModificationType.AddFunction, offlineID)
 
@@ -148,7 +150,8 @@ export class Circuit
         }
         this.blocks.forEach(block => block.onStateUpdated?.())
 
-        if (this.cpu) this.pushOnlineModification(CircuitModificationType.SetBlockCallIndex, id)
+        const block = this.getBlock(id)
+        if (block?.onlineID) this.pushOnlineModification(CircuitModificationType.SetBlockCallIndex, id)
     }
 
     setOutputRef(ioNum: number, sourceBlockID: ID, sourceIONum: number) {
@@ -191,7 +194,9 @@ export class Circuit
                     data.library, data.opcode, this.onlineID, this.getBlockCallIndex(block.offlineID),
                     data.inputCount, data.outputCount, data.staticCount).catch(e => error = e)
                 if (onlineID) {
+                    logInfo('cpu gave onlineID:', onlineID)
                     block.connectOnline(this.cpu, onlineID)
+                    this.blocksByOnlineID.set(onlineID, block)
                     success = true
                 }
                 break
@@ -254,7 +259,6 @@ export class Circuit
                 this.blocksByOnlineID.set(onlineID, block)
                 // Convert call list references from onlineID to offlineID
                 this.circuitData.callIDList[offlineID] = offlineID
-                console.log('callList', offlineID)
                 return block
             })
         )

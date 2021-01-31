@@ -144,6 +144,7 @@ onmessage = (e) => {
         case 11 /* CreateFunctionBlock */:
             {
                 const par = msg.params;
+                console.log('Worker: create func:', par);
                 const id = cpu.createFunctionBlock(par.library, par.opcode, par.circuitID, par.callIndex, par.inputCount, par.outputCount, par.staticCount);
                 if (id > 0)
                     response = id;

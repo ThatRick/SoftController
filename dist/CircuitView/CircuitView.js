@@ -7,7 +7,7 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import TraceLayerBezier from './TraceLayerBezier.js';
 import { CircuitTrace } from './CircuitTrace.js';
 import CircuitIOView from './CircuitIOView.js';
-const debugLogging = true;
+const debugLogging = false;
 function logInfo(...args) { debugLogging && console.info('Circuit View:', ...args); }
 function logError(...args) { console.error('Circuit View:', ...args); }
 function backgroundGridStyle(scale, lineColor) {
@@ -456,7 +456,6 @@ export default class CircuitView extends GUIView {
     ////////////////////////////////
     pointerCircuitPos() {
         const scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop);
-        console.log('scroll', scrollOffset);
         return Vec2.sub(this.pointer.pos, this.viewOffset)
             .add(scrollOffset)
             .div(this.scale)

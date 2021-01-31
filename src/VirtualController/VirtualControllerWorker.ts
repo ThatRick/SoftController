@@ -160,6 +160,7 @@ onmessage = (e) =>
         case MessageCode.CreateFunctionBlock:
         {
             const par = msg.params as ICreateFunctionBlockParams
+            console.log('Worker: create func:', par)
             const id = cpu.createFunctionBlock(par.library, par.opcode, par.circuitID, par.callIndex, par.inputCount, par.outputCount, par.staticCount)
             if (id > 0) response = id
             break

@@ -138,6 +138,7 @@ export class FunctionBlock {
         cpu.setFunctionBlockFlag(onlineID, 1 /* MONITOR */, true);
         this.cpu = cpu;
         this.onlineID = onlineID;
+        this.onStateUpdated?.();
     }
     // Create new offline function block data
     static createNewData(library, opcode, customInputCount, customOutputCount) {
