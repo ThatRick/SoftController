@@ -83,7 +83,7 @@ const DIV: IFunction =
 export const Arithmetic: IFunctionLibrary =
 {
     id: 2,
-    name: 'Arithmetic',
+    name: 'Math',
     functions: [    //  opcode
         ADD,        //    0              
         SUB,        //    1

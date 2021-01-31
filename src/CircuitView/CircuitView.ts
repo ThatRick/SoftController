@@ -18,7 +18,7 @@ const enum DraggingMode {
     NONE,
     SCROLL_VIEW,
     DRAG_ELEMENT,
-    SELECTION_BOX
+    SELECTION_BOX,
 }
 
 const enum MouseButton {
@@ -100,13 +100,14 @@ class BlockArea extends GUIChildElement implements CircuitElement
     constructor(view: CircuitView) {
         super(view.children, 'div',
             vec2(view.style.IOAreaWidth, 0),
-            Vec2.sub(view.size, vec2(view.style.IOAreaWidth*2, 0)), {
-
-            }, true)
+            Vec2.sub(view.size, vec2(view.style.IOAreaWidth*2, 0)), {}, true
+        )
     }
     type: 'blockArea'
     id: ID
     gui: CircuitView
+
+    viewOffset: Vec2
 }
 
 
@@ -134,8 +135,10 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
         window.onkeydown = this.onKeyDown.bind(this)
         window.onkeyup = this.onKeyUp.bind(this)
-    }
 
+        const bounds = this.DOMElement.getBoundingClientRect();
+        this.viewOffset = vec2(bounds.x, bounds.y)
+    }
 
     circuit: Circuit
     gridMap = new CircuitGrid()
@@ -149,6 +152,9 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     scrollStartPos: Vec2
     connectingTraceID: ID = -1
 
+    funcPendingPlacement: FunctionBlock
+    blockInPlacement: FunctionBlockView
+
     selectedElements = new Set<CircuitElement>()
     selectedElementsInitPos = new Map<CircuitElement, Vec2>()
     
@@ -158,6 +164,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     blocks = new Map<ID, FunctionBlockView>()
     traces = new Map<ID, CircuitTrace>()
 
+    viewOffset: Vec2
 
     loadCircuit(circuit: Circuit) {
         this.circuit = circuit
@@ -198,6 +205,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     createFunctionBlockView(funcBlock: FunctionBlock, pos: Vec2, ) {
         const block = new FunctionBlockView(this.blockArea.children, pos, funcBlock)
         this.blocks.set(funcBlock.offlineID, block)
+        return block
     }
 
     deleteFunctionBlock(block: FunctionBlockView) {
@@ -282,6 +290,19 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         }
     }
 
+    insertBlock(lib: number, opcode: number) {
+        this.funcPendingPlacement = this.circuit.addFunctionBlock(lib, opcode)
+        if (this.pointer.targetElem == this.blockArea) {
+
+        }
+    }
+
+    startBlockPlacement() {
+        logInfo('Start block placement')
+        this.blockInPlacement = this.createFunctionBlockView(this.funcPendingPlacement, this.pointerCircuitPos())
+        this.blockInPlacement.DOMElement.style.pointerEvents = 'none'
+        this.funcPendingPlacement = undefined
+    }
 
     /////////////////////////
     //      DRAGGING
@@ -406,9 +427,34 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     //      POINTER HANDLING
     ////////////////////////////////
 
+    pointerCircuitPos() {
+        const scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop)
+        console.log('scroll', scrollOffset)
+        return Vec2.sub(this.pointer.pos, this.viewOffset)
+            .add(scrollOffset)
+            .div(this.scale)
+            .sub(this.blockArea.absPos)
+    }
+
+    onPointerMove = (ev: PointerEvent) => {
+        if (this.funcPendingPlacement && this.pointer.targetElem == this.blockArea) {
+            this.startBlockPlacement()
+        }
+        else if (this.blockInPlacement) {
+            this.blockInPlacement.setPos(this.pointerCircuitPos())
+        }
+    }
+
     onPointerDown = (ev: PointerEvent) => {
         const elem = this.pointer.downTargetElem
         const selected = Array.from(this.selectedElements.values())[0]
+
+        if (this.blockInPlacement) {
+            const pos = this.pointerCircuitPos().round()
+            this.blockInPlacement.setPos(pos)
+            this.blockInPlacement.DOMElement.style.pointerEvents = 'auto'
+            this.blockInPlacement = undefined
+        }
 
         if (selected?.type == 'outputPin' && elem.type == 'inputPin' && !((elem as FunctionBlockPinView).reference)) {
             this.connect(selected as FunctionBlockPinView, elem as FunctionBlockPinView)
@@ -439,7 +485,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
             this.unselectAll()
         }
 
-        console.log('Clicked:', this.elementToString(elem), this.pointer.relativeDownPos)
+        console.log('Clicked:', this.elementToString(elem), this.pointerCircuitPos())
     }
 
     onDoubleClicked = (ev: PointerEvent) => {

@@ -1,6 +1,6 @@
 import { Button, domElement } from './HTML.js';
 const arrowDown = ' ⋁';
-export class DropdownButton {
+export class DropdownMenu {
     constructor(name, items, parent) {
         this.DOMElement = domElement(parent, 'div', {
             display: 'inline-block'

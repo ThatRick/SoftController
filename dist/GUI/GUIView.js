@@ -23,8 +23,7 @@ export default class GUIView {
             dragTargetInitPos: undefined,
             pos: vec2(0),
             downPos: vec2(0),
-            upPos: vec2(0),
-            relativeDownPos: vec2(0)
+            relativeDownPos: vec2(0),
         };
         this.doubleClickPending = false;
         this.DOMElement = document.createElement('div');
@@ -139,7 +138,6 @@ export default class GUIView {
         this.DOMElement.onpointerup = ev => {
             ev.preventDefault();
             this.pointer.isDown = false;
-            this.pointer.upPos = vec2(ev.x, ev.y);
             this.pointer.eventTarget = ev.target;
             this.pointer.targetElem = this.getPointerTargetElem?.(ev);
             this.onPointerUp?.(ev);

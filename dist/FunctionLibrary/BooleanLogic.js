@@ -110,7 +110,7 @@ const RS = {
 };
 export const BooleanLogic = {
     id: 1,
-    name: 'Boolean Logic',
+    name: 'Logic',
     functions: [
         AND,
         OR,

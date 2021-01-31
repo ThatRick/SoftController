@@ -10,6 +10,7 @@ export class Menubar {
             color: 'white',
             fontFamily: 'system-ui',
             fontSize: Math.round(this.height * 0.6) + 'px',
+            padding: '2px',
             borderBottom: 'thin solid black',
             ...style
         };
@@ -17,6 +18,8 @@ export class Menubar {
         this.menuItems = menuItems;
     }
     addItem(item) {
+        item.DOMElement.style.display = 'inline-block';
+        item.DOMElement.style.height = '100%';
         this.DOMElement.appendChild(item.DOMElement);
     }
     addItems(items) {

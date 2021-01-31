@@ -127,7 +127,7 @@ const RS: IFunction =
 export const BooleanLogic: IFunctionLibrary =
 {
     id: 1,
-    name: 'Boolean Logic',
+    name: 'Logic',
     functions: [    //   opcode
         AND,        //      0
         OR,         //      1

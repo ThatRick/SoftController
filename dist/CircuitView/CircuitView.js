@@ -84,12 +84,23 @@ export default class CircuitView extends GUIView {
         this.selectedElementsInitPos = new Map();
         this.blocks = new Map();
         this.traces = new Map();
-        ////////////////////////////////
-        //      POINTER HANDLING
-        ////////////////////////////////
+        this.onPointerMove = (ev) => {
+            if (this.funcPendingPlacement && this.pointer.targetElem == this.blockArea) {
+                this.startBlockPlacement();
+            }
+            else if (this.blockInPlacement) {
+                this.blockInPlacement.setPos(this.pointerCircuitPos());
+            }
+        };
         this.onPointerDown = (ev) => {
             const elem = this.pointer.downTargetElem;
             const selected = Array.from(this.selectedElements.values())[0];
+            if (this.blockInPlacement) {
+                const pos = this.pointerCircuitPos().round();
+                this.blockInPlacement.setPos(pos);
+                this.blockInPlacement.DOMElement.style.pointerEvents = 'auto';
+                this.blockInPlacement = undefined;
+            }
             if (selected?.type == 'outputPin' && elem.type == 'inputPin' && !(elem.reference)) {
                 this.connect(selected, elem);
                 this.unselectAll();
@@ -115,7 +126,7 @@ export default class CircuitView extends GUIView {
             if (!elem?.isSelectable && !ev.shiftKey) {
                 this.unselectAll();
             }
-            console.log('Clicked:', this.elementToString(elem), this.pointer.relativeDownPos);
+            console.log('Clicked:', this.elementToString(elem), this.pointerCircuitPos());
         };
         this.onDoubleClicked = (ev) => {
             if (this.pointer.downTargetElem?.isSelectable)
@@ -207,6 +218,8 @@ export default class CircuitView extends GUIView {
         this.outputArea = new IOArea(this, 'outputArea');
         window.onkeydown = this.onKeyDown.bind(this);
         window.onkeyup = this.onKeyUp.bind(this);
+        const bounds = this.DOMElement.getBoundingClientRect();
+        this.viewOffset = vec2(bounds.x, bounds.y);
     }
     loadCircuit(circuit) {
         this.circuit = circuit;
@@ -242,6 +255,7 @@ export default class CircuitView extends GUIView {
     createFunctionBlockView(funcBlock, pos) {
         const block = new FunctionBlockView(this.blockArea.children, pos, funcBlock);
         this.blocks.set(funcBlock.offlineID, block);
+        return block;
     }
     deleteFunctionBlock(block) {
         this.traces.forEach(trace => trace.isConnectedTo(block) && this.disconnect(trace.inputPin));
@@ -314,6 +328,17 @@ export default class CircuitView extends GUIView {
                 this.deleteFunctionBlock(elem);
                 break;
         }
+    }
+    insertBlock(lib, opcode) {
+        this.funcPendingPlacement = this.circuit.addFunctionBlock(lib, opcode);
+        if (this.pointer.targetElem == this.blockArea) {
+        }
+    }
+    startBlockPlacement() {
+        logInfo('Start block placement');
+        this.blockInPlacement = this.createFunctionBlockView(this.funcPendingPlacement, this.pointerCircuitPos());
+        this.blockInPlacement.DOMElement.style.pointerEvents = 'none';
+        this.funcPendingPlacement = undefined;
     }
     /////////////////////////
     //      DRAGGING
@@ -425,6 +450,17 @@ export default class CircuitView extends GUIView {
     }
     unselectAll() {
         this.selectedElements.forEach(elem => this.unselectElement(elem));
+    }
+    ////////////////////////////////
+    //      POINTER HANDLING
+    ////////////////////////////////
+    pointerCircuitPos() {
+        const scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop);
+        console.log('scroll', scrollOffset);
+        return Vec2.sub(this.pointer.pos, this.viewOffset)
+            .add(scrollOffset)
+            .div(this.scale)
+            .sub(this.blockArea.absPos);
     }
     ////////////////////////////////
     //      KEYBOARD HANDLING

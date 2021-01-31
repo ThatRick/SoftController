@@ -77,7 +77,7 @@ export const defaultStyle: CircuitStyle =
     colorPinBinary1:        '#CC9',
     colorPinInteger:        '#88A',
     colorPinFloat:          '#8A8',
-    colorValueBg:           'rgba(0, 0, 0, 0.4)',
+    colorValueBg:           'rgba(32, 32, 32, 0.5)',
     colorCallIndex:         '#8AB',
     colorOfflineID:         '#AAA',
     colorOnlineID:          '#88F',

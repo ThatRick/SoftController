@@ -12,7 +12,7 @@ import { Menubar } from './Lib/HTMLMenubar.js'
 import { CircuitMenuBar } from './CircuitView/CircuitMenuBar.js';
 
 
-function createControlButtonBar(buttons: HTML.ButtonBase[]) {
+function createControlButtonBar(buttons: HTML.Button[]) {
     const nav = document.getElementById('mainMenubar')
     buttons.forEach(btn => nav.appendChild(btn.DOMElement))
 }
@@ -67,28 +67,28 @@ async function app()
     const circuit = await Circuit.getOnlineCircuit(cpu, circuitID)
     view.loadCircuit(circuit)
 
-    circuitMenubar.attachCircuit(circuit)
+    circuitMenubar.attachCircuit(view)
 
     mainMenubar.addItems([
         new HTML.Text('Controller'),
-        new HTML.Button('Run', async () => {
+        new HTML.ActionButton('Run', async () => {
             await cpu.startController(100)
         }),
-        new HTML.Button('Stop', async () => {
+        new HTML.ActionButton('Stop', async () => {
             await cpu.stopController()
         }),
-        new HTML.Button('Step', async () => {
+        new HTML.ActionButton('Step', async () => {
             await cpu.stepController(100)
         }),
     ])
 
     terminalMenubar.addItems([
         new HTML.Text('Terminal'),
-        new HTML.Button('System', async () => terminal.printSystemSector()),
-        new HTML.Button('Table', async () => terminal.printDatablockTable()),
-        new HTML.Button('Circuit', async () => terminal.printFunctionBlock(circuit.onlineID)),
-        new HTML.Button('Blocks', async () => circuit.blocks.forEach(async block => terminal.printFunctionBlock(block.onlineID))),
-        new HTML.Button('Clear', () => terminal.clear()),
+        new HTML.ActionButton('System', async () => terminal.printSystemSector()),
+        new HTML.ActionButton('Table', async () => terminal.printDatablockTable()),
+        new HTML.ActionButton('Circuit', async () => terminal.printFunctionBlock(circuit.onlineID)),
+        new HTML.ActionButton('Blocks', async () => circuit.blocks.forEach(async block => terminal.printFunctionBlock(block.onlineID))),
+        new HTML.ActionButton('Clear', () => terminal.clear()),
     ])
 }
 
@@ -97,7 +97,7 @@ async function app()
 //
 async function createTestCircuit(cpu: IControllerInterface) {
     // test
-    const funcCount = Array.from(instructions.libraries.values()).reduce((sum, lib) => sum + lib.functions.length, 0)
+    const funcCount = instructions.libraries.reduce((sum, lib) => sum + lib.functions.length, 0)
     const blockCount = funcCount + 10
     const circ = {
         inputs: [IODataType.BINARY, IODataType.INTEGER, IODataType.FLOAT],
@@ -110,18 +110,18 @@ async function createTestCircuit(cpu: IControllerInterface) {
     
     const funcs: number[] = [circID]
     
-    for (const [libID, lib] of instructions.libraries.entries()) {
+    for (const lib of instructions.libraries) {
         for (const [opcode, funcType] of lib.functions.entries()) {
-            console.log('Instruction:', libID, opcode, funcType)
+            console.log('Instruction:', lib.id, opcode, funcType)
             const inputCount = funcType.variableInputCount ? 2 + Math.round(Math.random() * 4): undefined
-            const funcID = await cpu.createFunctionBlock(libID, opcode, circID, undefined, inputCount);
+            const funcID = await cpu.createFunctionBlock(lib.id, opcode, circID, undefined, inputCount);
             funcs.push(funcID);
             const funcInfo = await cpu.getFunctionBlockHeader(funcID);
             const sourceID = funcs[funcs.length - 2];
             const sourceInfo = await cpu.getFunctionBlockHeader(sourceID);
             const inputNum = opcode % funcInfo.inputCount;
             const sourceIONum = (sourceID==circID) ? 1 : sourceInfo.inputCount;
-            const inverted = !(opcode % 2) && (libID == 1);
+            const inverted = !(opcode % 2) && (lib.id == 1);
             await cpu.connectFunctionBlockInput(funcID, inputNum, sourceID, sourceIONum, inverted);
             console.log('connect', funcID, inputNum, sourceID, sourceIONum)
 

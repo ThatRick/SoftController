@@ -74,7 +74,7 @@ const DIV = {
 };
 export const Arithmetic = {
     id: 2,
-    name: 'Arithmetic',
+    name: 'Math',
     functions: [
         ADD,
         SUB,

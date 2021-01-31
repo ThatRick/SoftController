@@ -40,13 +40,17 @@ class FunctionCollection
 {
     constructor(libraries: IFunctionLibrary[])
     {
-        libraries.forEach(lib => this.libraries.set(lib.id, lib))
+        libraries.forEach(lib => this.libraryMap.set(lib.id, lib))
     }
     
-    libraries = new Map<number, IFunctionLibrary>()
+    private libraryMap = new Map<number, IFunctionLibrary>()
+
+    get libraries() {
+        return Array.from(this.libraryMap.values())
+    }
     
     getFunction(libID: number, opcode: number) {
-        const lib = this.libraries.get(libID)
+        const lib = this.libraryMap.get(libID)
         if (!lib) {
             console.error('Invalid function library id', libID)
             return

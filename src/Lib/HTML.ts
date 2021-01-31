@@ -12,8 +12,6 @@ export function domElement<K extends keyof HTMLElementTagNameMap>(parentDOM: HTM
     return elem
 }
 
-type TableCellIterator = (cell: HTMLTableCellElement, row: number, col: number) => void
-
 export class Text {
     DOMElement: HTMLDivElement
     constructor (text: string, style?: Partial<CSSStyleDeclaration>, parent?: HTMLElement) {
@@ -28,7 +26,7 @@ export class Text {
     }
 }
 
-export abstract class ButtonBase
+export class Button
 {
     DOMElement: HTMLDivElement
     onClick?: (ev: MouseEvent) => void
@@ -36,27 +34,27 @@ export abstract class ButtonBase
     onUp?: (ev: PointerEvent) => void
 
     color = {
-        base:    '#447',
-        light:   '#66A',
+        base:    '#446',
+        light:   '#669',
         active:  '#77D'
     }
 
     backgroundColor = this.color.base
 
-    constructor(text: string, parent?: HTMLElement) {
+    constructor(text: string, parent?: HTMLElement, style?: Partial<CSSStyleDeclaration>) {
         this.DOMElement = domElement(null, 'div', {
             color: 'white',
-            margin: '2px',
             paddingLeft: '2px',
             paddingRight: '2px',
+            marginLeft: '1px',
+            marginRight: '1px',
             backgroundColor: this.backgroundColor,
             border: '1px solid ' + this.color.light,
-            //width: text.length * charWidth + 'px',
             borderRadius: '2px',
             textAlign: 'center',
-            display: 'inline-block',
             userSelect: 'none',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            ...style
         })
         this.DOMElement.textContent = text
 
@@ -77,7 +75,7 @@ export abstract class ButtonBase
     }
 }
 
-export class Button extends ButtonBase
+export class ActionButton extends Button
 {
     constructor(text: string, action: () => void, parent?: HTMLElement) {
         super(text, parent)
@@ -89,7 +87,7 @@ export class Button extends ButtonBase
     }
 }
 
-export class ToggleButton extends ButtonBase
+export class ToggleButton extends Button
 {
     state: boolean
     colors: []
@@ -105,6 +103,9 @@ export class ToggleButton extends ButtonBase
         }
     }
 }
+
+
+type TableCellIterator = (cell: HTMLTableCellElement, row: number, col: number) => void
 
 export class Table
 {

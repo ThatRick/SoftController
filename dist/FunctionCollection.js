@@ -2,11 +2,14 @@ import { BooleanLogic } from './FunctionLibrary/BooleanLogic.js';
 import { Arithmetic } from './FunctionLibrary/Arithmetic.js';
 class FunctionCollection {
     constructor(libraries) {
-        this.libraries = new Map();
-        libraries.forEach(lib => this.libraries.set(lib.id, lib));
+        this.libraryMap = new Map();
+        libraries.forEach(lib => this.libraryMap.set(lib.id, lib));
+    }
+    get libraries() {
+        return Array.from(this.libraryMap.values());
     }
     getFunction(libID, opcode) {
-        const lib = this.libraries.get(libID);
+        const lib = this.libraryMap.get(libID);
         if (!lib) {
             console.error('Invalid function library id', libID);
             return;

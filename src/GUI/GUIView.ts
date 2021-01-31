@@ -137,8 +137,7 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
     
         pos:                vec2(0),
         downPos:            vec2(0),
-        upPos:              vec2(0),
-        relativeDownPos:    vec2(0)
+        relativeDownPos:    vec2(0),
     }
 
     getPointerTargetElem(ev: PointerEvent) {
@@ -165,8 +164,8 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
             this.pointer.isDown = true
             this.pointer.downPos.set(ev.x, ev.y)
             const elem = ev.target as HTMLElement
-            const bounds = this.DOMElement.getBoundingClientRect();
 
+            const bounds = this.DOMElement.getBoundingClientRect();
             this.pointer.relativeDownPos.set(ev.x - bounds.x, ev.y - bounds.y)
     
             this.pointer.eventTarget = ev.target
@@ -213,7 +212,6 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
         this.DOMElement.onpointerup = ev => {
             ev.preventDefault()
             this.pointer.isDown = false
-            this.pointer.upPos = vec2(ev.x, ev.y)
     
             this.pointer.eventTarget = ev.target
             this.pointer.targetElem = this.getPointerTargetElem?.(ev)

@@ -16,6 +16,7 @@ export class Menubar
             color: 'white',
             fontFamily: 'system-ui',
             fontSize: Math.round(this.height * 0.6) + 'px',
+            padding: '2px',
             borderBottom: 'thin solid black',
             ...style
         } as Partial<CSSStyleDeclaration>
@@ -25,6 +26,8 @@ export class Menubar
     }
 
     addItem(item: IElement) {
+        item.DOMElement.style.display = 'inline-block'
+        item.DOMElement.style.height = '100%'
         this.DOMElement.appendChild(item.DOMElement)
     }
     addItems(items: IElement[]) {

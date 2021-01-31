@@ -18,7 +18,6 @@ export interface GUIPointerState<T extends IChildElementGUI>
 
     pos:                Vec2
     downPos:            Vec2
-    upPos:              Vec2
     relativeDownPos:    Vec2
 }
 

@@ -16,27 +16,27 @@ export class Text {
         parent?.appendChild(this.DOMElement);
     }
 }
-export class ButtonBase {
-    constructor(text, parent) {
+export class Button {
+    constructor(text, parent, style) {
         this.color = {
-            base: '#447',
-            light: '#66A',
+            base: '#446',
+            light: '#669',
             active: '#77D'
         };
         this.backgroundColor = this.color.base;
         this.DOMElement = domElement(null, 'div', {
             color: 'white',
-            margin: '2px',
             paddingLeft: '2px',
             paddingRight: '2px',
+            marginLeft: '1px',
+            marginRight: '1px',
             backgroundColor: this.backgroundColor,
             border: '1px solid ' + this.color.light,
-            //width: text.length * charWidth + 'px',
             borderRadius: '2px',
             textAlign: 'center',
-            display: 'inline-block',
             userSelect: 'none',
-            cursor: 'pointer'
+            cursor: 'pointer',
+            ...style
         });
         this.DOMElement.textContent = text;
         this.DOMElement.onpointerenter = ev => this.DOMElement.style.backgroundColor = this.color.light;
@@ -53,7 +53,7 @@ export class ButtonBase {
         }, 30);
     }
 }
-export class Button extends ButtonBase {
+export class ActionButton extends Button {
     constructor(text, action, parent) {
         super(text, parent);
         this.onClick = () => {
@@ -62,7 +62,7 @@ export class Button extends ButtonBase {
         };
     }
 }
-export class ToggleButton extends ButtonBase {
+export class ToggleButton extends Button {
     constructor(text, toggle, initState = false, parent) {
         super(text, parent);
         this.state = initState;
