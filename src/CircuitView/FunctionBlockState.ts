@@ -7,7 +7,7 @@ const debugLogging = true
 function logInfo(...args: any[]) { debugLogging && console.info('Function state:', ...args)}
 function logError(...args: any[]) { console.error('Function state:', ...args)}
 
-enum FunctionModificationType
+export enum FunctionModificationType
 {
     SetIOValue,
     SetIOFlags,

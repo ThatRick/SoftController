@@ -2,7 +2,7 @@ import { IOFlag, IODataType, getIODataType, setIODataType, IORef, ID, FunctionFl
 import { PinType } from './CircuitTypes.js'
 import { IControllerInterface, instructions, EventCode, ICircuitData, IFunctionBlockData, MessageResponse } from '../Controller/ControllerInterface.js'
 import { readArrayOfStructs } from '../Lib/TypedStructs.js'
-import { FunctionBlock, ValidatedEventHandler } from './FunctionBlockState.js'
+import { FunctionBlock, FunctionModificationType, ValidatedEventHandler } from './FunctionBlockState.js'
 
 const debugLogging = true
 function logInfo(...args: any[]) { debugLogging && console.info('State:', ...args)}
@@ -166,11 +166,11 @@ export class Circuit
     async sendModifications() {
         if (!this.cpu) { console.error('Upload changes: No online CPU connection'); return }
 
-        for (const block of this.blocks) {
-            await block?.sendModifications()
-        }
         for (const modification of this.modifications) {
             await this.sendModification(modification)
+        }
+        for (const block of this.blocks) {
+            await block?.sendModifications()
         }
         this.modifications = []
     }
@@ -197,6 +197,15 @@ export class Circuit
                     logInfo('cpu gave onlineID:', onlineID)
                     block.connectOnline(this.cpu, onlineID)
                     this.blocksByOnlineID.set(onlineID, block)
+                    // send io values
+                    for (const [ioNum, value] of block.funcData.ioValues.entries()) {
+                        await this.cpu.setFunctionBlockIOValue(onlineID, ioNum, value)
+                    }
+                    // send input refs
+                    // must append online modification of input ref to allow addition of possible new connection partner first
+                    for (const [ioNum, ref] of block.funcData.inputRefs.entries()) {
+                        ref ?? block.pushOnlineModification(FunctionModificationType.SetInputRef, ioNum)
+                    }
                     success = true
                 }
                 break
