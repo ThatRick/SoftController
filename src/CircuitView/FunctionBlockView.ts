@@ -20,7 +20,7 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
     }
 
     type: ElementType = 'block'
-    get id(): number { return this.state.offlineID }
+    get id(): number { return this.state.id }
     gui: CircuitView
 
     isDraggable = true
@@ -37,7 +37,7 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
     
     IONameTable: HTML.Table
     callIndexView: GUIChildElement
-    IDView: GUIChildElement
+    footerView: GUIChildElement
 
     get callIndex() { return this.state.parentCircuit?.getBlockCallIndex(this.id) }
 
@@ -47,7 +47,7 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
-            backgroundColor: (state.onlineID)
+            backgroundColor: (state.onlineDB)
                 ? circuitView.gui.style.colorBlockOnline
                 : circuitView.gui.style.colorBlock,
         }, true)
@@ -66,30 +66,37 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         this.createIONames()
         this.createPinViews()
         this.createCallIndexView()
-        this.createIDView()
+        this.createFooterView()
     }
 
     onStateUpdated() {
         this.callIndexView.DOMElement.textContent = this.callIndex.toString()
-        const text = (this.state.onlineID) ? 'DB '+this.state.onlineID : ''
-        this.IDView.DOMElement.textContent = text
-        this.DOMElement.style.backgroundColor = (this.state.onlineID)
+        const text = (this.state.onlineDB) ? 'DB '+this.state.onlineDB : ''
+        this.footerView.DOMElement.textContent = text
+        this.DOMElement.style.backgroundColor = (this.state.onlineDB)
             ? this.gui.style.colorBlockOnline
             : this.gui.style.colorBlock
     }
 
     createPinViews() {
+        for (let inputNum = 0; inputNum < this.state.funcData.inputCount; inputNum++) {
+            this.createInputPin(inputNum)
+        }
+        for (let outputNum = 0; outputNum < this.state.funcData.outputCount; outputNum++) {
+            this.createOutputPin(outputNum)
+        }
+    }
+
+    createInputPin(inputNum: number) {
         const state = this.state
-        for (let inputNum = 0; inputNum < state.funcData.inputCount; inputNum++) {
-            const ioNum = inputNum
-            const name = (state.func) ? state.func.inputs[inputNum]?.name : inputNum.toString()
-            this.inputPins[inputNum] = new FunctionBlockPinView(this.children, state, ioNum, vec2(-1, inputNum))
-        }
-        for (let outputNum = 0; outputNum < state.funcData.outputCount; outputNum++) {
-            const ioNum = state.funcData.inputCount + outputNum
-            const name = (state.func) ? state.func.outputs[outputNum]?.name : outputNum.toString()
-            this.outputPins[outputNum] = new FunctionBlockPinView(this.children, state, ioNum, vec2(this.size.x, outputNum))
-        }
+        const ioNum = inputNum
+        this.inputPins[inputNum] = new FunctionBlockPinView(this.children, state, ioNum, vec2(-1, inputNum))
+    }
+
+    createOutputPin(outputNum: number) {
+        const state = this.state
+        const ioNum = state.funcData.inputCount + outputNum
+        this.outputPins[outputNum] = new FunctionBlockPinView(this.children, state, ioNum, vec2(this.size.x, outputNum))
     }
 
     createIONames() {
@@ -149,22 +156,30 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         this.callIndexView.DOMElement.textContent = this.callIndex.toString()
     }
 
-    createIDView() {
+    createFooterView() {
         const size = vec2(this.size.x, 0.8)
         const pos = vec2(0, this.size.y)
-        this.IDView = new GUIChildElement(this.children, 'div', pos, size, {
+        this.footerView?.delete()
+        this.footerView = new GUIChildElement(this.children, 'div', pos, size, {
             color: this.gui.style.colorOfflineID,
             lineHeight: size.y * this.gui.scale.y + 'px',
             textAlign: 'center',
             overflow: 'visible'
         })
-        const text = (this.state.onlineID) ? 'DB '+this.state.onlineID : ''
-        this.IDView.DOMElement.textContent = text
+        const text = (this.state.onlineDB) ? 'DB '+this.state.onlineDB : ''
+        this.footerView.DOMElement.textContent = text
+    }
+
+    addInput() {
+        if (this.state.func?.variableInputCount?.max > this.inputPins.length || this.state.isCircuit) {
+            const inputNum = this.inputPins.length
+            this.state.setInputCount(inputNum)
+        }
     }
 
     setInfoVisibility(visibility: 'visible' | 'hidden') {
         this.callIndexView.DOMElement.style.visibility = visibility
-        this.IDView.DOMElement.style.visibility = visibility
+        this.footerView.DOMElement.style.visibility = visibility
     }
 
     onSelected() {
@@ -184,7 +199,7 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
     }
 
     onPointerLeave = () => {
-        this.DOMElement.style.backgroundColor = (this.state.onlineID)
+        this.DOMElement.style.backgroundColor = (this.state.onlineDB)
             ? this.gui.style.colorBlockOnline
             : this.gui.style.colorBlock
     }

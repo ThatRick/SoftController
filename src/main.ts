@@ -86,8 +86,8 @@ async function app()
         new HTML.Text('Terminal'),
         new HTML.ActionButton('System', async () => terminal.printSystemSector()),
         new HTML.ActionButton('Table', async () => terminal.printDatablockTable()),
-        new HTML.ActionButton('Circuit', async () => terminal.printFunctionBlock(circuit.onlineID)),
-        new HTML.ActionButton('Blocks', async () => circuit.blocks.forEach(async block => terminal.printFunctionBlock(block.onlineID))),
+        new HTML.ActionButton('Circuit', async () => terminal.printFunctionBlock(circuit.onlineDB)),
+        new HTML.ActionButton('Blocks', async () => circuit.blocks.forEach(async block => terminal.printFunctionBlock(block.onlineDB))),
         new HTML.ActionButton('Clear', () => terminal.clear()),
     ])
 }
@@ -112,7 +112,6 @@ async function createTestCircuit(cpu: IControllerInterface) {
     
     for (const lib of instructions.libraries) {
         for (const [opcode, funcType] of lib.functions.entries()) {
-            console.log('Instruction:', lib.id, opcode, funcType)
             const inputCount = funcType.variableInputCount ? 2 + Math.round(Math.random() * 4): undefined
             const funcID = await cpu.createFunctionBlock(lib.id, opcode, circID, undefined, inputCount);
             funcs.push(funcID);
@@ -123,8 +122,6 @@ async function createTestCircuit(cpu: IControllerInterface) {
             const sourceIONum = (sourceID==circID) ? 1 : sourceInfo.inputCount;
             const inverted = !(opcode % 2) && (lib.id == 1);
             await cpu.connectFunctionBlockInput(funcID, inputNum, sourceID, sourceIONum, inverted);
-            console.log('connect', funcID, inputNum, sourceID, sourceIONum)
-
         }
     }
     await cpu.setFunctionBlockIOValue(1, 0, 1);

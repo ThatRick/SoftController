@@ -10,20 +10,22 @@ class Ticker
  
     timer: number
     start(interval: number) {
+        if (this.timer) this.stop()
         this.timer = setInterval(() => {
-            cpu.tick(interval)
+            this.cpu.tick(interval)
         }, interval)
     }
     stop() {
         clearTimeout(this.timer)
+        this.timer = null
     }
     step(interval: number, numSteps = 1) {
         if (numSteps == 1) {
-            cpu.tick(interval)
+            this.cpu.tick(interval)
             return
         }
         this.timer = setInterval(() => {
-            cpu.tick(interval)
+            this.cpu.tick(interval)
             if (--numSteps == 0) this.stop();
         }, interval)
     }
@@ -160,7 +162,6 @@ onmessage = (e) =>
         case MessageCode.CreateFunctionBlock:
         {
             const par = msg.params as ICreateFunctionBlockParams
-            console.log('Worker: create func:', par)
             const id = cpu.createFunctionBlock(par.library, par.opcode, par.circuitID, par.callIndex, par.inputCount, par.outputCount, par.staticCount)
             if (id > 0) response = id
             break

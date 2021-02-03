@@ -11,6 +11,7 @@ const debugLogging = false
 function logInfo(...args: any[]) { debugLogging && console.info('Circuit View:', ...args)}
 function logError(...args: any[]) { console.error('Circuit View:', ...args)}
 
+
 export default class FunctionBlockPinView extends GUIChildElement implements CircuitElement
 {
     constructor(parent: IViewContainerGUI, funcState: FunctionBlock, ioNum: number, pos: Vec2, isInternalCircuitIO = false) {
@@ -23,7 +24,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         ? 'inputPin' : 'outputPin'
 
         this.isInternalCircuitIO = isInternalCircuitIO
-        this.create(this.gui)
+        this.create()
     }
     
     type: ElementType
@@ -55,11 +56,11 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     get dataType()  { return getIODataType(this.flags) }
     get flags() { return this.funcState.funcData.ioFlags[this.ioNum] }
     get value() { return this.funcState.funcData.ioValues[this.ioNum] }
-    get id()    { return this.funcState.offlineID * 1000 + this.ioNum }
+    get id()    { return this.funcState.id * 1000 + this.ioNum }
     get inverted() { return !!(this.flags & IOFlag.INVERTED) }
     
     get blockID() {
-        return this.funcState.offlineID
+        return this.funcState.id
     }
     
     get reference() {
@@ -69,7 +70,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         return ref
     }
     
-    private create(gui: CircuitView) {
+    private create() {
         const pinStyle = (this.inverted) ? this.invertedPinStyle : this.pinStyle
         this.pin = HTML.domElement(this.DOMElement, 'div', pinStyle)
         this.createValueField()
@@ -77,6 +78,13 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         this.funcState.onIOUpdated[this.ioNum] = this.updatePin.bind(this)
         this.funcState.onValidateValueModification[this.ioNum] = this.validateValueModification.bind(this)
         this.funcState.onValidateFlagsModification[this.ioNum] = this.validateFlagsModification.bind(this)
+    }
+
+    delete() {
+        super.delete()
+        this.funcState.onIOUpdated[this.ioNum] = undefined
+        this.funcState.onValidateValueModification[this.ioNum] = undefined
+        this.funcState.onValidateFlagsModification[this.ioNum] = undefined    
     }
 
     get pinStyle() {
@@ -144,14 +152,14 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     setValue(value: number) {
         this.funcState.setIOValue(this.ioNum, value)
         this.updatePin()
-        if (this.funcState.onlineID) this.pendingValueModification()
+        if (this.funcState.onlineDB) this.pendingValueModification()
     }
 
     setFlag(flag: number, enabled: boolean) {
         this.funcState.setIOFlag(this.ioNum, flag, enabled)
         Object.assign(this.pin.style, (this.inverted) ? this.invertedPinStyle : this.pinStyle)
         this.updatePin(false)
-        if (this.funcState.onlineID) this.pendingFlagsModification()
+        if (this.funcState.onlineDB) this.pendingFlagsModification()
     }
 
     formatValue(value: number) {

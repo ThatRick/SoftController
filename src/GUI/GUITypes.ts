@@ -51,6 +51,7 @@ export interface IElementGUI {
     update(force?: boolean): boolean
     rescale(scale: Vec2)
     restyle(style: IStyleGUI)
+    delete(): void
 }
 
 export interface IWindowGUI extends IElementGUI {

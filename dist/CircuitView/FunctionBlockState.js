@@ -1,8 +1,8 @@
 import { instructions } from "../Controller/ControllerInterface.js";
 const debugLogging = true;
-function logInfo(...args) { debugLogging && console.info('Function state:', ...args); }
-function logError(...args) { console.error('Function state:', ...args); }
-var FunctionModificationType;
+function logInfo(...args) { debugLogging && console.info('Function', ...args); }
+function logError(...args) { console.error('Function', ...args); }
+export var FunctionModificationType;
 (function (FunctionModificationType) {
     FunctionModificationType[FunctionModificationType["SetIOValue"] = 0] = "SetIOValue";
     FunctionModificationType[FunctionModificationType["SetIOFlags"] = 1] = "SetIOFlags";
@@ -15,9 +15,9 @@ var FunctionModificationType;
 //      Function Block
 ///////////////////////////////
 export class FunctionBlock {
-    constructor(funcData, offlineID, parentCircuit) {
+    constructor(funcData, id, parentCircuit) {
         this.funcData = funcData;
-        this.offlineID = offlineID;
+        this.id = id;
         this.onIOUpdated = [];
         this.onValidateValueModification = [];
         this.onValidateFlagsModification = [];
@@ -42,12 +42,12 @@ export class FunctionBlock {
     ////////////////////////////////////////////
     // Store modifications to online function
     pushOnlineModification(type, ioNum) {
-        logInfo('push modification', FunctionModificationType[type], this.offlineID, ioNum);
         const modification = { type, ioNum };
         if (this.parentCircuit?.immediateMode || this.circuit?.immediateMode) {
             this.sendModification(modification);
         }
         else if (!this.modifications.find(existing => (existing.type == type && existing.ioNum == ioNum))) {
+            logInfo(this.id, 'Push online modification queue:', FunctionModificationType[type], modification);
             this.modifications.push(modification);
         }
     }
@@ -55,7 +55,7 @@ export class FunctionBlock {
         const currentValues = this.funcData.ioValues;
         if (currentValues[ioNum] != value) {
             currentValues[ioNum] = value;
-            if (this.onlineID)
+            if (this.onlineDB)
                 this.pushOnlineModification(FunctionModificationType.SetIOValue, ioNum);
         }
     }
@@ -70,7 +70,7 @@ export class FunctionBlock {
         const currentFlags = this.funcData.ioFlags;
         if (currentFlags[ioNum] != flags) {
             currentFlags[ioNum] = flags;
-            if (this.onlineID)
+            if (this.onlineDB)
                 this.pushOnlineModification(FunctionModificationType.SetIOFlags, ioNum);
         }
     }
@@ -80,14 +80,14 @@ export class FunctionBlock {
             this.pushOnlineModification(FunctionModificationType.SetInputRef, ioNum);
     }
     deleteFunction() {
-        this.parentCircuit.deleteFunctionBlock(this.offlineID);
+        this.parentCircuit.deleteFunctionBlock(this.id);
     }
     changeInputCount() { }
     changeOutputCount() { }
     ///////////////////////
     // Read function block IO values from online CPU
     async updateOnlineValues() {
-        const ioValues = await this.cpu.getFunctionBlockIOValues(this.onlineID);
+        const ioValues = await this.cpu.getFunctionBlockIOValues(this.onlineDB);
         ioValues.forEach((onlineValue, ioNum) => {
             this.updateIOValue(ioNum, onlineValue);
         });
@@ -108,36 +108,36 @@ export class FunctionBlock {
             case FunctionModificationType.SetIOValue:
                 {
                     const value = this.funcData.ioValues[ioNum];
-                    success = await this.cpu.setFunctionBlockIOValue(this.onlineID, ioNum, value);
+                    success = await this.cpu.setFunctionBlockIOValue(this.onlineDB, ioNum, value);
                     this.onValidateValueModification[ioNum]?.(success);
                     break;
                 }
             case FunctionModificationType.SetIOFlags:
                 {
                     const flags = this.funcData.ioFlags[ioNum];
-                    success = await this.cpu.setFunctionBlockIOFlags(this.onlineID, ioNum, flags);
+                    success = await this.cpu.setFunctionBlockIOFlags(this.onlineDB, ioNum, flags);
                     this.onValidateFlagsModification[ioNum]?.(success);
                     break;
                 }
             case FunctionModificationType.SetInputRef:
                 {
                     const connection = this.funcData.inputRefs[ioNum];
-                    const sourceOnlineID = (connection) ? this.parentCircuit.getBlock(connection.id)?.onlineID : null;
+                    const sourceOnlineID = (connection) ? this.parentCircuit.getBlock(connection.id)?.onlineDB : null;
                     const sourceIONum = (connection) ? connection.ioNum : 0;
-                    success = await this.cpu.connectFunctionBlockInput(this.onlineID, ioNum, sourceOnlineID, sourceIONum)
+                    success = await this.cpu.connectFunctionBlockInput(this.onlineDB, ioNum, sourceOnlineID, sourceIONum)
                         .catch(e => error = e);
                     this.onValidateInputRefModification[ioNum]?.(success);
                     break;
                 }
         }
-        logInfo('Modification result:', { modification, success, id: this.offlineID, ioNum });
+        logInfo(this.id, 'Sent modification:', FunctionModificationType[modification.type], modification, success);
         return success;
     }
     // Connect to online controller
-    connectOnline(cpu, onlineID) {
-        cpu.setFunctionBlockFlag(onlineID, 1 /* MONITOR */, true);
+    connectOnline(cpu, onlineDB) {
+        cpu.setFunctionBlockFlag(onlineDB, 1 /* MONITOR */, true);
         this.cpu = cpu;
-        this.onlineID = onlineID;
+        this.onlineDB = onlineDB;
         this.onStateUpdated?.();
     }
     // Create new offline function block data
@@ -176,8 +176,8 @@ export class FunctionBlock {
         return data;
     }
     // Download online function block data
-    static async getOnlineData(cpu, id) {
-        const data = await cpu.getFunctionBlockData(id);
+    static async getOnlineData(cpu, db) {
+        const data = await cpu.getFunctionBlockData(db);
         return data;
     }
 }

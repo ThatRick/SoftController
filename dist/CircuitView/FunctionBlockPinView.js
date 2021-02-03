@@ -37,10 +37,10 @@ export default class FunctionBlockPinView extends GUIChildElement {
     get dataType() { return getIODataType(this.flags); }
     get flags() { return this.funcState.funcData.ioFlags[this.ioNum]; }
     get value() { return this.funcState.funcData.ioValues[this.ioNum]; }
-    get id() { return this.funcState.offlineID * 1000 + this.ioNum; }
+    get id() { return this.funcState.id * 1000 + this.ioNum; }
     get inverted() { return !!(this.flags & 8 /* INVERTED */); }
     get blockID() {
-        return this.funcState.offlineID;
+        return this.funcState.id;
     }
     get reference() {
         const ref = (this.isInternalCircuitIO)
@@ -114,14 +114,14 @@ export default class FunctionBlockPinView extends GUIChildElement {
     setValue(value) {
         this.funcState.setIOValue(this.ioNum, value);
         this.updatePin();
-        if (this.funcState.onlineID)
+        if (this.funcState.onlineDB)
             this.pendingValueModification();
     }
     setFlag(flag, enabled) {
         this.funcState.setIOFlag(this.ioNum, flag, enabled);
         Object.assign(this.pin.style, (this.inverted) ? this.invertedPinStyle : this.pinStyle);
         this.updatePin(false);
-        if (this.funcState.onlineID)
+        if (this.funcState.onlineDB)
             this.pendingFlagsModification();
     }
     formatValue(value) {

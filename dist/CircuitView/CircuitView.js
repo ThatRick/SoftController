@@ -57,7 +57,7 @@ class IOArea extends GUIChildElement {
             this.ioViews.push(new CircuitIOView(this.children, circuit, ioNum, vec2(0, ioNum + 2)));
         }
     }
-    get id() { return this.circuit.funcState.offlineID; }
+    get id() { return this.circuit.funcState.id; }
 }
 /////////////////////////////
 //    Circuit Block Area
@@ -81,7 +81,7 @@ export default class CircuitView extends GUIView {
         this.gridMap = new CircuitGrid();
         this.connectingTraceID = -1;
         this.selectedElements = new Set();
-        this.selectedElementsInitPos = new Map();
+        this.selectedElementsInitPos = new WeakMap();
         this.blocks = new Map();
         this.traces = new Map();
         this.onPointerMove = (ev) => {
@@ -126,7 +126,7 @@ export default class CircuitView extends GUIView {
             if (!elem?.isSelectable && !ev.shiftKey) {
                 this.unselectAll();
             }
-            console.log('Clicked:', this.elementToString(elem), this.pointerCircuitPos());
+            ev.altKey && console.log('Clicked:', this.elementToString(elem), this.pointerCircuitPos());
         };
         this.onDoubleClicked = (ev) => {
             if (this.pointer.downTargetElem?.isSelectable)
@@ -254,7 +254,7 @@ export default class CircuitView extends GUIView {
     }
     createFunctionBlockView(funcBlock, pos) {
         const block = new FunctionBlockView(this.blockArea.children, pos, funcBlock);
-        this.blocks.set(funcBlock.offlineID, block);
+        this.blocks.set(funcBlock.id, block);
         return block;
     }
     deleteFunctionBlock(block) {
@@ -266,7 +266,7 @@ export default class CircuitView extends GUIView {
     connect(outputPin, inputPin, inverted = false) {
         logInfo('connect', outputPin.id, inputPin.id);
         if (inputPin.funcState.isCircuit) {
-            this.circuit.setOutputRef(inputPin.ioNum, outputPin.funcState.offlineID, outputPin.ioNum);
+            this.circuit.setOutputRef(inputPin.ioNum, outputPin.funcState.id, outputPin.ioNum);
         }
         else {
             inputPin.funcState.setInputRef(inputPin.ioNum, outputPin.blockID, outputPin.ioNum);

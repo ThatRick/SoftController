@@ -86,7 +86,7 @@ class IOArea extends GUIChildElement implements CircuitElement
     circuit: Circuit
     type: ElementType
     ioViews: CircuitIOView[] = []
-    get id(): number { return this.circuit.funcState.offlineID }
+    get id(): number { return this.circuit.funcState.id }
     gui: CircuitView
 }
 
@@ -156,7 +156,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
     blockInPlacement: FunctionBlockView
 
     selectedElements = new Set<CircuitElement>()
-    selectedElementsInitPos = new Map<CircuitElement, Vec2>()
+    selectedElementsInitPos = new WeakMap<CircuitElement, Vec2>()
     
     selectionBox: HTMLDivElement
     selectionBoxInitPos: Vec2
@@ -204,7 +204,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     createFunctionBlockView(funcBlock: FunctionBlock, pos: Vec2, ) {
         const block = new FunctionBlockView(this.blockArea.children, pos, funcBlock)
-        this.blocks.set(funcBlock.offlineID, block)
+        this.blocks.set(funcBlock.id, block)
         return block
     }
 
@@ -219,7 +219,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         logInfo('connect', outputPin.id, inputPin.id)
         
         if (inputPin.funcState.isCircuit) {
-            this.circuit.setOutputRef(inputPin.ioNum, outputPin.funcState.offlineID, outputPin.ioNum)
+            this.circuit.setOutputRef(inputPin.ioNum, outputPin.funcState.id, outputPin.ioNum)
         }
         else {
             inputPin.funcState.setInputRef(inputPin.ioNum, outputPin.blockID, outputPin.ioNum)
@@ -484,7 +484,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
             this.unselectAll()
         }
 
-        console.log('Clicked:', this.elementToString(elem), this.pointerCircuitPos())
+        ev.altKey && console.log('Clicked:', this.elementToString(elem), this.pointerCircuitPos())
     }
 
     onDoubleClicked = (ev: PointerEvent) => {

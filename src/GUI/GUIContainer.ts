@@ -34,6 +34,10 @@ export default class GUIContainer<T extends IChildElementGUI> implements IViewCo
         this.gui.unregisterElement(elem)
     }
 
+    delete() {
+        this.elements.forEach(elem => elem.delete())
+    }
+
     update(force = false) {
         this.elements.forEach(elem => elem.update(force))
         return false

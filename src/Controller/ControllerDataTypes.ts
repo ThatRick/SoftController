@@ -1,6 +1,7 @@
 import {DataType, StructDataTypes, sizeOfStruct, sizeOfType, readStruct, writeStruct, StructDataType} from '../Lib/TypedStructs.js'
 
 export type ID = number
+export type DB = number
 export type REF = number
 
 type bytesize = number

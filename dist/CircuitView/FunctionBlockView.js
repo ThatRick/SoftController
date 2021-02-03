@@ -8,7 +8,7 @@ export default class FunctionBlockView extends GUIChildElement {
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
-            backgroundColor: (state.onlineID)
+            backgroundColor: (state.onlineDB)
                 ? circuitView.gui.style.colorBlockOnline
                 : circuitView.gui.style.colorBlock,
         }, true);
@@ -22,7 +22,7 @@ export default class FunctionBlockView extends GUIChildElement {
             this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
         };
         this.onPointerLeave = () => {
-            this.DOMElement.style.backgroundColor = (this.state.onlineID)
+            this.DOMElement.style.backgroundColor = (this.state.onlineDB)
                 ? this.gui.style.colorBlockOnline
                 : this.gui.style.colorBlock;
         };
@@ -41,7 +41,7 @@ export default class FunctionBlockView extends GUIChildElement {
         const h = Math.max(state.funcData.inputCount, state.funcData.outputCount);
         return vec2(w, h);
     }
-    get id() { return this.state.offlineID; }
+    get id() { return this.state.id; }
     get callIndex() { return this.state.parentCircuit?.getBlockCallIndex(this.id); }
     build(gui) {
         this.createIONames();
@@ -51,9 +51,9 @@ export default class FunctionBlockView extends GUIChildElement {
     }
     onStateUpdated() {
         this.callIndexView.DOMElement.textContent = this.callIndex.toString();
-        const text = (this.state.onlineID) ? 'DB ' + this.state.onlineID : '';
+        const text = (this.state.onlineDB) ? 'DB ' + this.state.onlineDB : '';
         this.IDView.DOMElement.textContent = text;
-        this.DOMElement.style.backgroundColor = (this.state.onlineID)
+        this.DOMElement.style.backgroundColor = (this.state.onlineDB)
             ? this.gui.style.colorBlockOnline
             : this.gui.style.colorBlock;
     }
@@ -132,7 +132,7 @@ export default class FunctionBlockView extends GUIChildElement {
             textAlign: 'center',
             overflow: 'visible'
         });
-        const text = (this.state.onlineID) ? 'DB ' + this.state.onlineID : '';
+        const text = (this.state.onlineDB) ? 'DB ' + this.state.onlineDB : '';
         this.IDView.DOMElement.textContent = text;
     }
     setInfoVisibility(visibility) {

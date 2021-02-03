@@ -15,7 +15,7 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
     gui = this
     children: GUIContainer<Element>
 
-    eventTargetMap = new Map<EventTarget, Element>()
+    eventTargetMap = new WeakMap<EventTarget, Element>()
     updateRequests = new Set<Updateable>()
 
     pos = vec2(0, 0)
@@ -92,6 +92,12 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
         requestAnimationFrame(this.update.bind(this))
 
         return false
+    }
+
+    delete() {
+        this.children?.delete()
+        this.parentDOM.removeChild(this.DOMElement)
+        requestAnimationFrame(null)
     }
 
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤

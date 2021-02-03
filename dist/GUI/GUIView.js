@@ -5,7 +5,7 @@ export default class GUIView {
     constructor(parentDOM, size, scale, style, css) {
         this.parentDOM = parentDOM;
         this.gui = this;
-        this.eventTargetMap = new Map();
+        this.eventTargetMap = new WeakMap();
         this.updateRequests = new Set();
         this.pos = vec2(0, 0);
         this.absPos = vec2(0, 0);

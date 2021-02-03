@@ -1,11 +1,11 @@
-import { FunctionFlag, ID } from "../Controller/ControllerDataTypes.js"
+import { FunctionFlag, ID, DB } from "../Controller/ControllerDataTypes.js"
 import { instructions, IControllerInterface, IFunctionBlockData } from "../Controller/ControllerInterface.js"
 import { IFunction } from "../FunctionCollection.js"
 import { Circuit } from "./CircuitState.js"
 
 const debugLogging = true
-function logInfo(...args: any[]) { debugLogging && console.info('Function state:', ...args)}
-function logError(...args: any[]) { console.error('Function state:', ...args)}
+function logInfo(...args: any[]) { debugLogging && console.info('Function', ...args)}
+function logError(...args: any[]) { console.error('Function', ...args)}
 
 export enum FunctionModificationType
 {
@@ -13,8 +13,8 @@ export enum FunctionModificationType
     SetIOFlags,
     SetIOFlag,
     SetInputRef,
-    ChangeInputCount,
-    ChangeOutputCount
+    SetInputCount,
+    SetOutputCount
 }
 
 interface FunctionModification
@@ -34,7 +34,7 @@ export type ValidatedEventHandler = (success: boolean) => void
 
 export class FunctionBlock
 {
-    constructor(readonly funcData: IFunctionBlockData, readonly offlineID: ID, parentCircuit?: Circuit)
+    constructor(readonly funcData: IFunctionBlockData, readonly id: ID, parentCircuit?: Circuit)
     {
         this.isCircuit = (funcData.library == 0)
         this.func = (this.isCircuit) ? null : instructions.getFunction(funcData.library, funcData.opcode)
@@ -48,7 +48,7 @@ export class FunctionBlock
     parentCircuit:  Circuit
         
     cpu:            IControllerInterface
-    onlineID?:      ID
+    onlineDB?:      DB
 
     onIOUpdated:    ChangeEventHandler[] = []
     onStateUpdated: ChangeEventHandler
@@ -77,13 +77,13 @@ export class FunctionBlock
     
     // Store modifications to online function
     pushOnlineModification(type: FunctionModificationType, ioNum?: number) {
-        logInfo('push modification', FunctionModificationType[type], this.offlineID, ioNum)
         const modification = { type, ioNum }
-
+        
         if (this.parentCircuit?.immediateMode || this.circuit?.immediateMode) {
             this.sendModification(modification)
         }
         else if (!this.modifications.find(existing => (existing.type == type && existing.ioNum == ioNum))) {
+            logInfo(this.id, 'Push online modification queue:', FunctionModificationType[type], modification)
             this.modifications.push(modification)
         }
     }
@@ -92,7 +92,7 @@ export class FunctionBlock
         const currentValues = this.funcData.ioValues
         if (currentValues[ioNum] != value) {
             currentValues[ioNum] = value
-            if (this.onlineID) this.pushOnlineModification(FunctionModificationType.SetIOValue, ioNum)
+            if (this.onlineDB) this.pushOnlineModification(FunctionModificationType.SetIOValue, ioNum)
         }
     }
     setIOFlag(ioNum: number, flag: number, setEnabled: boolean) {
@@ -106,25 +106,44 @@ export class FunctionBlock
         const currentFlags = this.funcData.ioFlags
         if (currentFlags[ioNum] != flags) {
             currentFlags[ioNum] = flags
-            if (this.onlineID) this.pushOnlineModification(FunctionModificationType.SetIOFlags, ioNum)
+            if (this.onlineDB) this.pushOnlineModification(FunctionModificationType.SetIOFlags, ioNum)
         }
     }
-    setInputRef(ioNum: number, sourceBlockID: ID, sourceIONum: number) {
+    setInputRef(ioNum: number, sourceBlockID: DB, sourceIONum: number) {
         this.funcData.inputRefs[ioNum] = (sourceBlockID != null) ? { id: sourceBlockID, ioNum: sourceIONum } : null
         
         if (this.cpu) this.pushOnlineModification(FunctionModificationType.SetInputRef, ioNum)
     }
-    deleteFunction() {
-        this.parentCircuit.deleteFunctionBlock(this.offlineID)
-    }
-    changeInputCount() {}
-    changeOutputCount() {}
 
+    setInputCount(inputCount: number) {
+        const func = this.func
+        if (this.isCircuit || (func.variableInputCount && inputCount <= func.variableInputCount.max && inputCount >= func.variableInputCount.min)) {
+            const change = inputCount - this.funcData.inputCount
+            const currentLastInputIndex = this.funcData.inputCount
+            if (change > 0) {
+                const values = new Array(change).fill(this.funcData.ioValues[currentLastInputIndex])
+                const flags = new Array(change).fill(this.funcData.ioFlags[currentLastInputIndex])
+                this.funcData.ioValues.splice(currentLastInputIndex, 0, ...values)
+                this.funcData.ioFlags.splice(currentLastInputIndex, 0, ...flags)
+            }
+            else if (change < 0) {
+                this.funcData.ioValues.splice(currentLastInputIndex, Math.abs(change))
+            }
+            this.funcData.inputCount = inputCount
+        }
+        // Must change all output references after input count change
+        if (this.cpu) this.pushOnlineModification(FunctionModificationType.SetInputCount)
+    }
+    setOutputCount(count: number) {}
+
+    deleteFunction() {
+        this.parentCircuit.deleteFunctionBlock(this.id)
+    }
     ///////////////////////
 
     // Read function block IO values from online CPU
     async updateOnlineValues() {
-        const ioValues = await this.cpu.getFunctionBlockIOValues(this.onlineID)
+        const ioValues = await this.cpu.getFunctionBlockIOValues(this.onlineDB)
         ioValues.forEach((onlineValue, ioNum) => {
             this.updateIOValue(ioNum, onlineValue)
         })
@@ -149,39 +168,39 @@ export class FunctionBlock
             case FunctionModificationType.SetIOValue:
             {
                 const value = this.funcData.ioValues[ioNum]
-                success = await this.cpu.setFunctionBlockIOValue(this.onlineID, ioNum, value)
+                success = await this.cpu.setFunctionBlockIOValue(this.onlineDB, ioNum, value)
                 this.onValidateValueModification[ioNum]?.(success)
                 break
             }
             case FunctionModificationType.SetIOFlags:
             {
                 const flags = this.funcData.ioFlags[ioNum]
-                success = await this.cpu.setFunctionBlockIOFlags(this.onlineID, ioNum, flags)
+                success = await this.cpu.setFunctionBlockIOFlags(this.onlineDB, ioNum, flags)
                 this.onValidateFlagsModification[ioNum]?.(success)
                 break
             }
             case FunctionModificationType.SetInputRef:
             {
                 const connection = this.funcData.inputRefs[ioNum]
-                const sourceOnlineID = (connection) ? this.parentCircuit.getBlock(connection.id)?.onlineID : null
+                const sourceOnlineID = (connection) ? this.parentCircuit.getBlock(connection.id)?.onlineDB : null
                 const sourceIONum = (connection) ? connection.ioNum : 0
                                 
                 success = await this.cpu.connectFunctionBlockInput(
-                    this.onlineID, ioNum, sourceOnlineID, sourceIONum)
+                    this.onlineDB, ioNum, sourceOnlineID, sourceIONum)
                     .catch(e => error = e)
                 this.onValidateInputRefModification[ioNum]?.(success)
                 break
             }
         }
-        logInfo('Modification result:', { modification, success, id: this.offlineID, ioNum })
+        logInfo(this.id, 'Sent modification:', FunctionModificationType[modification.type], modification, success)
         return success
     }
 
     // Connect to online controller
-    connectOnline(cpu: IControllerInterface, onlineID: ID) {
-        cpu.setFunctionBlockFlag(onlineID, FunctionFlag.MONITOR, true)
+    connectOnline(cpu: IControllerInterface, onlineDB: DB) {
+        cpu.setFunctionBlockFlag(onlineDB, FunctionFlag.MONITOR, true)
         this.cpu = cpu
-        this.onlineID = onlineID
+        this.onlineDB = onlineDB
         this.onStateUpdated?.()
     }
 
@@ -195,12 +214,6 @@ export class FunctionBlock
 
         const outputCount = (customOutputCount && func.variableOutputCount &&
             customOutputCount <= func.variableInputCount.max && customOutputCount >= func.variableOutputCount.min) ? customOutputCount : func.outputs.length
-
-        function stretchArray<T>(arr: Array<T>, length: number) {
-            while (arr.length < length) arr.push(arr[arr.length - 1])
-            while (arr.length > length) arr.pop()
-            return arr
-        }
             
         const inputValues = stretchArray(func.inputs.map(input => input.initValue), inputCount)
         const inputFlags = stretchArray(func.inputs.map(input => input.flags), inputCount)
@@ -224,8 +237,14 @@ export class FunctionBlock
     }
 
     // Download online function block data
-    static async getOnlineData(cpu: IControllerInterface, id: ID) {
-        const data = await cpu.getFunctionBlockData(id)
+    static async getOnlineData(cpu: IControllerInterface, db: DB) {
+        const data = await cpu.getFunctionBlockData(db)
         return data
     }
+}
+
+function stretchArray<T>(arr: Array<T>, length: number) {
+    while (arr.length < length) arr.push(arr[arr.length - 1])
+    while (arr.length > length) arr.pop()
+    return arr
 }
