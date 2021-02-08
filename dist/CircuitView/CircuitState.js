@@ -34,7 +34,7 @@ export class Circuit {
         cpu.onEventReceived = this.receiveEvent.bind(this);
     }
     receiveEvent(event) {
-        logInfo('Event received:', event);
+        // logInfo('Event received:', event)
         switch (event.code) {
             case 0 /* MonitoringValues */:
                 {
@@ -64,8 +64,8 @@ export class Circuit {
         return this.immediateMode;
     }
     // Store circuit modifications
-    pushOnlineModification(type, blockID, ioNum, blockOnlineID) {
-        const modification = { type, blockID, ioNum, blockOnlineID };
+    pushOnlineModification(type, blockID, ioNum, onlineDB) {
+        const modification = { type, blockID, ioNum, blockOnlineID: onlineDB };
         if (type == CircuitModificationType.DeleteFunction) {
             this.modifications = this.modifications.filter(modif => (modif.blockID != blockID));
         }
@@ -90,8 +90,11 @@ export class Circuit {
     }
     deleteFunctionBlock(id) {
         const block = this.blocks[id];
-        if (this.onlineDB)
+        if (this.onlineDB && block.onlineDB)
             this.pushOnlineModification(CircuitModificationType.DeleteFunction, id, undefined, block.onlineDB);
+        if (this.onlineDB && !block.onlineDB) {
+            this.modifications = this.modifications.filter(modif => (modif.blockID != id));
+        }
         this.blocksByOnlineDB.delete(block.onlineDB);
         delete this.blocks[id];
         this.circuitData.callIDList = this.circuitData.callIDList.filter(callID => callID != id);

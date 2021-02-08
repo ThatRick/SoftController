@@ -76,6 +76,11 @@ export default class GUIView {
         requestAnimationFrame(this.update.bind(this));
         return false;
     }
+    delete() {
+        this.children?.delete();
+        this.parentDOM.removeChild(this.DOMElement);
+        requestAnimationFrame(null);
+    }
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     //     Element handling
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤

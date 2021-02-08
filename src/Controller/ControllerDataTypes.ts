@@ -1,4 +1,4 @@
-import {DataType, StructDataTypes, sizeOfStruct, sizeOfType, readStruct, writeStruct, StructDataType} from '../Lib/TypedStructs.js'
+import {DataType, StructType, defineStruct } from '../Lib/TypedStructs.js'
 
 export type ID = number
 export type DB = number
@@ -22,35 +22,18 @@ export interface IORef {
 }
 
 // DATA BLOCK HEADER
-export type IDatablockHeader =
-{
-    byteLength: bytesize
-    type:       DatablockType
-    flags:      number
-    parentID:   number
-}
-export const DatablockHeaderStruct: StructDataTypes<IDatablockHeader> =
+export const DatablockHeaderStruct = defineStruct(
 {
     byteLength: DataType.uint32,
     type:       DataType.uint8,
     flags:      DataType.uint8,
     parentID:   DataType.uint16,
-}
-export const datablockHeaderByteLength = sizeOfStruct(DatablockHeaderStruct);
+})
+export type IDatablockHeader = StructType<typeof DatablockHeaderStruct>
 
 
 // FUNCTION DATA HEADER
-export type IFunctionHeader =
-{
-    library:        number,
-    opcode:         number,
-    inputCount:     number,
-    outputCount:    number,
-    staticCount:    number,
-    functionFlags:  number,
-}
-
-export const FunctionHeaderStruct: StructDataTypes<IFunctionHeader> =
+export const FunctionHeaderStruct = defineStruct(
 {
     library:        DataType.uint8,
     opcode:         DataType.uint8,
@@ -58,47 +41,33 @@ export const FunctionHeaderStruct: StructDataTypes<IFunctionHeader> =
     outputCount:    DataType.uint8,
     staticCount:    DataType.uint16,
     functionFlags:  DataType.uint16,
-}
-export const functionHeaderByteLength = sizeOfStruct(FunctionHeaderStruct);
+})
+export type IFunctionHeader = StructType<typeof FunctionHeaderStruct>
 
 
 // TASK DATA
-export type ITask =
-{
-    targetRef:      number              // Reference of callable circuit or function 
-    interval:       number              // time interval between calls (ms)
-    offset:         number              // time offset to spread cpu load between tasks with same interval (ms)
-    timeAccu:       number              // time accumulator (ms)
-    cpuTime:        number              // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt
-    cpuTimeInt:     number              // counts whole number of cpu milliseconds
-    runCount:       number              // counts number of calls
-}
-export const TaskStruct: StructDataTypes<ITask> =
+export const TaskStruct = defineStruct(
 {
     targetRef:      DataType.uint32,    // Reference of callable circuit or function 
-    interval:       DataType.float,     // time interval between calls (ms)
-    offset:         DataType.float,     // time offset to spread cpu load between tasks with same interval (ms)
-    timeAccu:       DataType.float,     // time accumulator
-    cpuTime:        DataType.float,     // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt
-    cpuTimeInt:     DataType.uint32,    // counts whole number of cpu milliseconds
+    interval_ms:    DataType.float,     // time interval between calls (ms)
+    offset_ms:      DataType.float,     // time offset to spread cpu load between tasks with same interval (ms)
+    timeAccu_ms:    DataType.float,     // time accumulator
+    cpuTime_ms:     DataType.float,     // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt
+    cpuTimeInt_ms:  DataType.uint32,    // counts whole number of cpu milliseconds
     runCount:       DataType.uint32     // counts number of calls
-}
-export const taskStructByteLength = sizeOfStruct(TaskStruct)
+})
+export type ITask = StructType<typeof TaskStruct>
+
 
 // MONITOR VALUES DATA
-export type IMonitorValueChange =
-{
-    id:         number     
-    ioNum:      number  
-    value:      number  
-}
-export const MonitorValueChangeStruct: StructDataTypes<IMonitorValueChange> =
+export const MonitorValueChangeStruct = defineStruct(
 {
     id:     DataType.uint16,
     ioNum:  DataType.uint16,
     value:  DataType.float
-}
-export const monitorValueChangeStructByteLength = sizeOfStruct(MonitorValueChangeStruct)
+})
+export type IMonitorValueChange = StructType<typeof MonitorValueChangeStruct>
+
 
 // FUNCTION PARAMETERS
 export interface IFunctionCallParams

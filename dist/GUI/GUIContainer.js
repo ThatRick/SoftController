@@ -21,6 +21,9 @@ export default class GUIContainer {
         elem.parentContainer = undefined;
         this.gui.unregisterElement(elem);
     }
+    delete() {
+        this.elements.forEach(elem => elem.delete());
+    }
     update(force = false) {
         this.elements.forEach(elem => elem.update(force));
         return false;

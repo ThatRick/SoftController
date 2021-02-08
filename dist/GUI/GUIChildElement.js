@@ -83,5 +83,6 @@ export class GUIChildElement {
     }
     delete() {
         this.parentContainer.removeChildElement(this);
+        this.children?.delete();
     }
 }

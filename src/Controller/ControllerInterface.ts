@@ -1,5 +1,5 @@
 import { instructions } from '../FunctionCollection.js'
-import {alignBytes, BYTES_PER_REF, functionHeaderByteLength, ID, IDatablockHeader, IFunctionHeader, IORef, ITask, REF} from './ControllerDataTypes.js'
+import {alignBytes, BYTES_PER_REF, FunctionHeaderStruct, ID, IDatablockHeader, IFunctionHeader, IORef, ITask, REF} from './ControllerDataTypes.js'
 
 export interface IFunctionBlockData extends IFunctionHeader
 {
@@ -217,7 +217,7 @@ export { instructions }
 
 export function calcFunctionSize(inputCount, outputCount, staticCount): number {
     const ioCount = inputCount + outputCount
-    let byteLength = functionHeaderByteLength                  // Function header
+    let byteLength = FunctionHeaderStruct.STRUCT_BYTE_SIZE     // Function header
     byteLength += alignBytes(ioCount)                          // IO flags
     byteLength += inputCount * BYTES_PER_REF                   // Input references
     byteLength += (ioCount + staticCount) * BYTES_PER_REF      // IO and static values

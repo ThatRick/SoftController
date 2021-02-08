@@ -1,6 +1,5 @@
-import { IOFlag, IODataType, getIODataType, setIODataType, IORef, ID, DB, FunctionFlag, MonitorValueChangeStruct } from '../Controller/ControllerDataTypes.js'
-import { PinType } from './CircuitTypes.js'
-import { IControllerInterface, instructions, EventCode, ICircuitData, IFunctionBlockData, MessageResponse } from '../Controller/ControllerInterface.js'
+import { ID, DB, MonitorValueChangeStruct } from '../Controller/ControllerDataTypes.js'
+import { IControllerInterface, EventCode, ICircuitData, IFunctionBlockData, MessageResponse } from '../Controller/ControllerInterface.js'
 import { readArrayOfStructs } from '../Lib/TypedStructs.js'
 import { FunctionBlock, FunctionModificationType, ValidatedEventHandler } from './FunctionBlockState.js'
 
@@ -56,7 +55,7 @@ export class Circuit
     }
 
     receiveEvent(event: MessageResponse) {
-        logInfo('Event received:', event)
+        // logInfo('Event received:', event)
         switch (event.code)
         {
             case EventCode.MonitoringValues:
@@ -98,8 +97,8 @@ export class Circuit
     onOnlineModificationDone?: (modification: CircuitModification, successful: boolean) => void
 
     // Store circuit modifications
-    pushOnlineModification(type: CircuitModificationType, blockID: ID, ioNum?: number, blockOnlineID?: ID) {
-        const modification = { type, blockID, ioNum, blockOnlineID}
+    pushOnlineModification(type: CircuitModificationType, blockID: ID, ioNum?: number, onlineDB?: DB) {
+        const modification = { type, blockID, ioNum, blockOnlineID: onlineDB}
         
         if (type == CircuitModificationType.DeleteFunction) {
             this.modifications = this.modifications.filter(modif => (modif.blockID != blockID))
@@ -129,7 +128,10 @@ export class Circuit
     deleteFunctionBlock(id: ID) {
         const block = this.blocks[id]
         
-        if (this.onlineDB) this.pushOnlineModification(CircuitModificationType.DeleteFunction, id, undefined, block.onlineDB)
+        if (this.onlineDB && block.onlineDB) this.pushOnlineModification(CircuitModificationType.DeleteFunction, id, undefined, block.onlineDB)
+        if (this.onlineDB && !block.onlineDB) {
+            this.modifications = this.modifications.filter(modif => (modif.blockID != id))
+        }
 
         this.blocksByOnlineDB.delete(block.onlineDB)
         delete this.blocks[id] 
@@ -293,7 +295,7 @@ export class Circuit
 
     // Create new empty circuit
     static createNew() {
-        const funcData: IFunctionBlockData = {
+        const funcData = {
             library: 0,
             opcode: 0,
             inputCount: 0,
@@ -304,7 +306,7 @@ export class Circuit
             ioFlags: [],
             inputRefs: []
         }
-        const circuitData: ICircuitData = {
+        const circuitData = {
             callIDList: [],
             outputRefs: []
         }

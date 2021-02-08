@@ -25,7 +25,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.type = (!isInternalCircuitIO && this.pinType == 'inputPin' || isInternalCircuitIO && this.pinType == 'outputPin')
             ? 'inputPin' : 'outputPin';
         this.isInternalCircuitIO = isInternalCircuitIO;
-        this.create(this.gui);
+        this.create();
     }
     get traceColor() {
         const col = (this.inverted)
@@ -48,7 +48,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
             : this.funcState.funcData.inputRefs[this.ioNum];
         return ref;
     }
-    create(gui) {
+    create() {
         const pinStyle = (this.inverted) ? this.invertedPinStyle : this.pinStyle;
         this.pin = HTML.domElement(this.DOMElement, 'div', pinStyle);
         this.createValueField();
@@ -56,6 +56,12 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.funcState.onIOUpdated[this.ioNum] = this.updatePin.bind(this);
         this.funcState.onValidateValueModification[this.ioNum] = this.validateValueModification.bind(this);
         this.funcState.onValidateFlagsModification[this.ioNum] = this.validateFlagsModification.bind(this);
+    }
+    delete() {
+        super.delete();
+        this.funcState.onIOUpdated[this.ioNum] = undefined;
+        this.funcState.onValidateValueModification[this.ioNum] = undefined;
+        this.funcState.onValidateFlagsModification[this.ioNum] = undefined;
     }
     get pinStyle() {
         const size = vec2(0.5, this.gui.style.traceWidth);

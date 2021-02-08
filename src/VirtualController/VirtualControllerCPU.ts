@@ -1,9 +1,9 @@
 
-import {readStruct, readStructElement, setStructElement, sizeOfStruct, writeStruct} from '../Lib/TypedStructs.js'
-import {ID, IORef, IOFlag, IODataType, getIODataType, setIODataType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF, FunctionFlag, MonitorValueChangeStruct, monitorValueChangeStructByteLength} from '../Controller/ControllerDataTypes.js'
-import {IFunctionHeader, FunctionHeaderStruct, functionHeaderByteLength, IFunctionCallParams} from '../Controller/ControllerDataTypes.js'
-import {IDatablockHeader, DatablockHeaderStruct, datablockHeaderByteLength} from '../Controller/ControllerDataTypes.js'
-import {ITask, TaskStruct, taskStructByteLength} from '../Controller/ControllerDataTypes.js'
+import {readStruct, readStructElement, writeStructElement, writeStruct} from '../Lib/TypedStructs.js'
+import {ID, IORef, IOFlag, IODataType, getIODataType, DatablockType, BYTES_PER_VALUE, alignBytes, BYTES_PER_REF, FunctionFlag, MonitorValueChangeStruct} from '../Controller/ControllerDataTypes.js'
+import {IFunctionHeader, FunctionHeaderStruct, IFunctionCallParams} from '../Controller/ControllerDataTypes.js'
+import {IDatablockHeader, DatablockHeaderStruct} from '../Controller/ControllerDataTypes.js'
+import {ITask, TaskStruct} from '../Controller/ControllerDataTypes.js'
 import { instructions, calcCircuitSize, calcFunctionSize, EventCode } from '../Controller/ControllerInterface.js'
 
 
@@ -154,40 +154,39 @@ export default class VirtualController
  **************/
 
     // Process controller tasks
-    tick(dt: number)
+    tick(dt_ms: number)
     {
-        logInfo('tick')
         for (const taskRef of this.taskList) {
             if (taskRef == 0) break;
             // read task data
             const task = this.getTask(taskRef);
             // add delta time to accumulator
-            task.timeAccu += dt;
+            task.timeAccu_ms += dt_ms;
             // Run task when time accumulator is greater or equal to task interval
-            if (task.timeAccu >= task.interval) {
-                task.timeAccu -= task.interval;
+            if (task.timeAccu_ms >= task.interval_ms) {
+                task.timeAccu_ms -= task.interval_ms;
                 logInfo('run task')
                 // Start monitoring IO value changes
                 this.monitoringStart()
                 
                 const taskStartTime = performance.now();
                 // run target function / circuit
-                this.runFunction(task.targetRef, task.interval);
+                this.runFunction(task.targetRef, task.interval_ms / 1000);
                 const elapsedTime = performance.now() - taskStartTime;
                 
                 // Send monitored IO value changes
                 this.monitoringComplete()
                 
                 // save performance data
-                task.cpuTime += elapsedTime;
-                if (task.cpuTime > 1) {
-                    const overflow = Math.trunc(task.cpuTime)
-                    task.cpuTime -= overflow;
-                    task.cpuTimeInt += overflow;
+                task.cpuTime_ms += elapsedTime;
+                if (task.cpuTime_ms > 1) {
+                    const overflow = Math.trunc(task.cpuTime_ms)
+                    task.cpuTime_ms -= overflow;
+                    task.cpuTimeInt_ms += overflow;
                 }
                 task.runCount++
             }
-            const taskByteOffset = taskRef + datablockHeaderByteLength;
+            const taskByteOffset = taskRef + DatablockHeaderStruct.STRUCT_BYTE_SIZE;
             writeStruct(this.mem, taskByteOffset, TaskStruct, task);
         }
     }
@@ -196,7 +195,7 @@ export default class VirtualController
  *    TASK PROCEDURES    *
  *************************/
 
-    createTask(callTargetID: ID, interval: number, offset = 0, index?: number) {
+    createTask(callTargetID: ID, interval_ms: number, offset_ms = 0, index?: number) {
         // check last 
         const vacantIndex = this.taskList.findIndex(value => (value == 0));
         if (vacantIndex == -1) {
@@ -206,15 +205,15 @@ export default class VirtualController
 
         const targetRef = this.datablockTable[callTargetID];
         const task: ITask = {
-            targetRef,              // Reference of callable circuit or function 
-            interval,               // time interval between calls (ms)
-            offset,                 // time offset to spread cpu load between tasks with same interval (ms)
-            timeAccu:   offset,     // time accumulator (ms)
-            cpuTime:    0,          // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt            
-            cpuTimeInt: 0,          // counts whole number of cpu milliseconds
-            runCount:   0,          // counts number of calls
+            targetRef,                  // Reference of callable circuit or function 
+            interval_ms,                // time interval between calls (ms)
+            offset_ms,                  // time offset to spread cpu load between tasks with same interval (ms)
+            timeAccu_ms:    offset_ms,  // time accumulator (ms)
+            cpuTime_ms:     0,          // counts cpu milliseconds. Whole numbers are subracted and added to cpuTimeInt            
+            cpuTimeInt_ms:  0,          // counts whole number of cpu milliseconds
+            runCount:       0,          // counts number of calls
         }
-        const buffer = new ArrayBuffer(taskStructByteLength);
+        const buffer = new ArrayBuffer(TaskStruct.STRUCT_BYTE_SIZE);
         writeStruct(buffer, 0, TaskStruct, task);
 
         const taskID = this.addDatablock(buffer, DatablockType.TASK);
@@ -242,17 +241,16 @@ export default class VirtualController
         return this.getTask(taskRef);
     }
     getTask(taskRef: number): ITask {
-        const taskByteOffset = taskRef + datablockHeaderByteLength;
-        return readStruct<ITask>(this.mem, taskByteOffset, TaskStruct);        
+        const taskByteOffset = taskRef + DatablockHeaderStruct.STRUCT_BYTE_SIZE;
+        return readStruct(this.mem, taskByteOffset, TaskStruct);        
     }
     setTaskCallTarget(taskID: ID, callTargetID: ID) {
         const ref = this.datablockTable[taskID]
         if (!ref) return false
-        const startOffset = ref + datablockHeaderByteLength;
+        const startOffset = ref + DatablockHeaderStruct.STRUCT_BYTE_SIZE;
         writeStruct(this.mem, startOffset, TaskStruct, {
             targetRef: this.datablockTable[callTargetID]
         });
-        // updateStructElement(this.mem, startOffset, TaskStruct, 'targetRef', this.datablockTable[targetID]);
         return true
     }
     getTaskCount() {
@@ -270,7 +268,7 @@ export default class VirtualController
     
     monitoringEnabled = false
     monitoringInterval = 100
-    monitoringBuffer = new ArrayBuffer(monitorValueChangeStructByteLength * MAX_MONITORED_IO_CHANGES)
+    monitoringBuffer = new ArrayBuffer(MonitorValueChangeStruct.STRUCT_BYTE_SIZE * MAX_MONITORED_IO_CHANGES)
 
     monitoringDataIndex = 0
     onControllerEvent: (id: EventCode, data: any) => void
@@ -284,12 +282,12 @@ export default class VirtualController
             return
         }
         logInfo('Monitoring value changed:', id, ioNum, value)
-        let offset = monitorValueChangeStructByteLength * this.monitoringDataIndex++
+        let offset = MonitorValueChangeStruct.STRUCT_BYTE_SIZE * this.monitoringDataIndex++
         writeStruct(this.monitoringBuffer, offset, MonitorValueChangeStruct, { id, ioNum, value })
     }
     monitoringComplete() {
         if (this.monitoringDataIndex) {
-            const reportData = this.monitoringBuffer.slice(0, monitorValueChangeStructByteLength * this.monitoringDataIndex)
+            const reportData = this.monitoringBuffer.slice(0, MonitorValueChangeStruct.STRUCT_BYTE_SIZE * this.monitoringDataIndex)
             this.onControllerEvent?.(EventCode.MonitoringValues, reportData)
         }
     }
@@ -506,13 +504,12 @@ export default class VirtualController
     setFunctionFlag(id: ID, flag: number, enabled: boolean) {
         const ref = this.datablockTable[id]
         if (!ref) return false
-        const funcHeaderOffset = ref + datablockHeaderByteLength;
+        const funcHeaderOffset = ref + DatablockHeaderStruct.STRUCT_BYTE_SIZE;
         const currentFlags = readStructElement(this.mem, funcHeaderOffset, FunctionHeaderStruct, 'functionFlags')
         const flags = (enabled)
             ? currentFlags | flag
             : currentFlags & ~flag
-        setStructElement(this.mem, funcHeaderOffset, FunctionHeaderStruct, 'functionFlags', flags)
-        const afterFlags = readStructElement(this.mem, funcHeaderOffset, FunctionHeaderStruct, 'functionFlags')
+        writeStructElement(this.mem, funcHeaderOffset, FunctionHeaderStruct, 'functionFlags', flags)
         return true
     }
 
@@ -560,7 +557,7 @@ export default class VirtualController
         const buffer = new ArrayBuffer(byteLength)
         writeStruct(buffer, 0, FunctionHeaderStruct, funcHeader)           // Write function header
         
-        const flagsOffset = functionHeaderByteLength;
+        const flagsOffset = FunctionHeaderStruct.STRUCT_BYTE_SIZE;
         const inputRefsOffset = alignBytes(flagsOffset + inputCount + outputCount);
         const ioValuesOffset = inputRefsOffset + inputCount * BYTES_PER_REF;
 
@@ -621,7 +618,7 @@ export default class VirtualController
     }
     // Optimized version! Any struct change will break this
     readFunctionHeader(datablockRef: number): IFunctionHeader {
-        const byteOffset = datablockRef + datablockHeaderByteLength;
+        const byteOffset = datablockRef + DatablockHeaderStruct.STRUCT_BYTE_SIZE;
         return {
             library:        this.bytes[byteOffset + 0],
             opcode:         this.bytes[byteOffset + 1],
@@ -642,7 +639,7 @@ export default class VirtualController
     {
         header = header || this.readFunctionHeader(datablockRef);
 
-        const flags = datablockRef + datablockHeaderByteLength + functionHeaderByteLength;
+        const flags = datablockRef + DatablockHeaderStruct.STRUCT_BYTE_SIZE + FunctionHeaderStruct.STRUCT_BYTE_SIZE;
         const inputRefs = alignBytes(flags + header.inputCount + header.outputCount) / BYTES_PER_VALUE;
         const inputs = inputRefs + header.inputCount;
         const outputs = inputs + header.inputCount;
@@ -726,7 +723,7 @@ export default class VirtualController
         });
     }
 
-    runFunction(blockRef: number, dt: number) {
+    runFunction(blockRef: number, dt_s: number) {
         const blockHeader = this.getDatablockHeader(blockRef);
         const funcHeader = this.readFunctionHeader(blockRef);
         const pointers = this.functionDataMap(blockRef, funcHeader);
@@ -762,7 +759,7 @@ export default class VirtualController
                 input:          pointers.inputs,
                 output:         pointers.outputs,
                 static:         pointers.statics,
-                dt
+                dt: dt_s
             }
             /*
             // Test alternative call method
@@ -784,7 +781,7 @@ export default class VirtualController
             {
                 const callRef = this.ints[funcCalls + i];
                 if (!callRef) break
-                this.runFunction(callRef, dt);
+                this.runFunction(callRef, dt_s);
             }
             
             const outputFlags = pointers.flags + funcHeader.inputCount;
@@ -849,7 +846,7 @@ export default class VirtualController
 
     allocateDatablock(dataByteLength: number) {
         const candidates: {id: number, excessMem: number}[] = []
-        const allocationByteLength = alignBytes(datablockHeaderByteLength + dataByteLength);
+        const allocationByteLength = alignBytes(DatablockHeaderStruct.STRUCT_BYTE_SIZE + dataByteLength);
         for (let id = 0; id < this.datablockTable.length; id++) {
             const datablockRef = this.datablockTable[id];
             if (datablockRef == 0) break;
@@ -932,7 +929,7 @@ export default class VirtualController
             byteLength = (nextBlockRef - startByteOffset) + nextBlockHeader.byteLength;
         }
         else {
-            if (byteLength <= datablockHeaderByteLength) return;
+            if (byteLength <= DatablockHeaderStruct.STRUCT_BYTE_SIZE) return;
             id = this.getNewDatablockID();
             if (id == -1) return;
         }
@@ -955,7 +952,7 @@ export default class VirtualController
         return this.getDatablockHeader(datablockRef);
     }
     getDatablockHeader(datablockRef: number): IDatablockHeader {
-        return readStruct(this.mem, datablockRef, DatablockHeaderStruct) as unknown as IDatablockHeader;
+        return readStruct(this.mem, datablockRef, DatablockHeaderStruct);
     }
 
     getNewDatablockID() {

@@ -2,7 +2,7 @@
 import { IFunctionCallParams } from './Controller/ControllerDataTypes.js';
 import { BooleanLogic } from './FunctionLibrary/BooleanLogic.js'
 import { Arithmetic } from './FunctionLibrary/Arithmetic.js'
-
+import { Filters } from './FunctionLibrary/Filters.js'
 
 // FUNCTION
 interface IOInfo
@@ -70,5 +70,6 @@ class FunctionCollection
 
 export const instructions = new FunctionCollection([
     BooleanLogic,
-    Arithmetic
+    Arithmetic,
+    Filters
 ])

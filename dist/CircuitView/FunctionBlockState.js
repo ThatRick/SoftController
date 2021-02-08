@@ -8,8 +8,8 @@ export var FunctionModificationType;
     FunctionModificationType[FunctionModificationType["SetIOFlags"] = 1] = "SetIOFlags";
     FunctionModificationType[FunctionModificationType["SetIOFlag"] = 2] = "SetIOFlag";
     FunctionModificationType[FunctionModificationType["SetInputRef"] = 3] = "SetInputRef";
-    FunctionModificationType[FunctionModificationType["ChangeInputCount"] = 4] = "ChangeInputCount";
-    FunctionModificationType[FunctionModificationType["ChangeOutputCount"] = 5] = "ChangeOutputCount";
+    FunctionModificationType[FunctionModificationType["SetInputCount"] = 4] = "SetInputCount";
+    FunctionModificationType[FunctionModificationType["SetOutputCount"] = 5] = "SetOutputCount";
 })(FunctionModificationType || (FunctionModificationType = {}));
 ///////////////////////////////
 //      Function Block
@@ -79,11 +79,30 @@ export class FunctionBlock {
         if (this.cpu)
             this.pushOnlineModification(FunctionModificationType.SetInputRef, ioNum);
     }
+    setInputCount(inputCount) {
+        const func = this.func;
+        if (this.isCircuit || (func.variableInputCount && inputCount <= func.variableInputCount.max && inputCount >= func.variableInputCount.min)) {
+            const change = inputCount - this.funcData.inputCount;
+            const currentLastInputIndex = this.funcData.inputCount;
+            if (change > 0) {
+                const values = new Array(change).fill(this.funcData.ioValues[currentLastInputIndex]);
+                const flags = new Array(change).fill(this.funcData.ioFlags[currentLastInputIndex]);
+                this.funcData.ioValues.splice(currentLastInputIndex, 0, ...values);
+                this.funcData.ioFlags.splice(currentLastInputIndex, 0, ...flags);
+            }
+            else if (change < 0) {
+                this.funcData.ioValues.splice(currentLastInputIndex, Math.abs(change));
+            }
+            this.funcData.inputCount = inputCount;
+        }
+        // Must change all output references after input count change
+        if (this.cpu)
+            this.pushOnlineModification(FunctionModificationType.SetInputCount);
+    }
+    setOutputCount(count) { }
     deleteFunction() {
         this.parentCircuit.deleteFunctionBlock(this.id);
     }
-    changeInputCount() { }
-    changeOutputCount() { }
     ///////////////////////
     // Read function block IO values from online CPU
     async updateOnlineValues() {
@@ -151,13 +170,6 @@ export class FunctionBlock {
             customInputCount <= func.variableInputCount.max && customInputCount >= func.variableInputCount.min) ? customInputCount : func.inputs.length;
         const outputCount = (customOutputCount && func.variableOutputCount &&
             customOutputCount <= func.variableInputCount.max && customOutputCount >= func.variableOutputCount.min) ? customOutputCount : func.outputs.length;
-        function stretchArray(arr, length) {
-            while (arr.length < length)
-                arr.push(arr[arr.length - 1]);
-            while (arr.length > length)
-                arr.pop();
-            return arr;
-        }
         const inputValues = stretchArray(func.inputs.map(input => input.initValue), inputCount);
         const inputFlags = stretchArray(func.inputs.map(input => input.flags), inputCount);
         const outputValues = stretchArray(func.outputs.map(output => output.initValue), outputCount);
@@ -180,4 +192,11 @@ export class FunctionBlock {
         const data = await cpu.getFunctionBlockData(db);
         return data;
     }
+}
+function stretchArray(arr, length) {
+    while (arr.length < length)
+        arr.push(arr[arr.length - 1]);
+    while (arr.length > length)
+        arr.pop();
+    return arr;
 }

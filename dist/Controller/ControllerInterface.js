@@ -1,5 +1,5 @@
 import { instructions } from '../FunctionCollection.js';
-import { alignBytes, BYTES_PER_REF, functionHeaderByteLength } from './ControllerDataTypes.js';
+import { alignBytes, BYTES_PER_REF, FunctionHeaderStruct } from './ControllerDataTypes.js';
 export const MessageCodeNames = [
     'Undefined',
     'CreateController',
@@ -38,7 +38,7 @@ export const EventCodeNames = [
 export { instructions };
 export function calcFunctionSize(inputCount, outputCount, staticCount) {
     const ioCount = inputCount + outputCount;
-    let byteLength = functionHeaderByteLength; // Function header
+    let byteLength = FunctionHeaderStruct.STRUCT_BYTE_SIZE; // Function header
     byteLength += alignBytes(ioCount); // IO flags
     byteLength += inputCount * BYTES_PER_REF; // Input references
     byteLength += (ioCount + staticCount) * BYTES_PER_REF; // IO and static values

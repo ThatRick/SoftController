@@ -1,5 +1,6 @@
 import { BooleanLogic } from './FunctionLibrary/BooleanLogic.js';
 import { Arithmetic } from './FunctionLibrary/Arithmetic.js';
+import { Filters } from './FunctionLibrary/Filters.js';
 class FunctionCollection {
     constructor(libraries) {
         this.libraryMap = new Map();
@@ -27,5 +28,6 @@ class FunctionCollection {
 }
 export const instructions = new FunctionCollection([
     BooleanLogic,
-    Arithmetic
+    Arithmetic,
+    Filters
 ]);

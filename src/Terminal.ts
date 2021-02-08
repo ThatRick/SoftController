@@ -240,7 +240,7 @@ ${header.byteLength.toString().padStart(6)} bytes  [${startAddr} - ${endAddr}]  
             addLine(`      ${name.padEnd(nameLength)}  ${await func(value)}`);
         }
 
-        const totalCPUtime = task.cpuTimeInt + task.cpuTime;
+        const totalCPUtime = task.cpuTimeInt_ms + task.cpuTime_ms;
         const avgCPUtime = totalCPUtime / task.runCount;
         
         addLine('');

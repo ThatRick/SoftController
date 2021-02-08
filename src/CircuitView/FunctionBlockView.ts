@@ -7,6 +7,11 @@ import * as HTML from '../Lib/HTML.js'
 import FunctionBlockPinView from './FunctionBlockPinView.js'
 import { CircuitElement, ElementType } from './CircuitTypes.js'
 
+const enum BlockDisplayType {
+    Minimal,
+    Name
+}
+
 export default class FunctionBlockView extends GUIChildElement implements CircuitElement
 {
     static isMinimal(state: FunctionBlock) {
