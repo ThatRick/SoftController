@@ -5,6 +5,9 @@
 		},
 		{
 			"path": "../Dropbox/dev/HeltecTest/ts"
+		},
+		{
+			"path": "../dev-local/react"
 		}
 	],
 	"settings": {}
