@@ -9,6 +9,7 @@ import * as HTML from './lib/HTML.js';
 import { ControllerTerminal } from './Terminal.js';
 import { Menubar } from './Lib/HTMLMenubar.js';
 import { CircuitMenuBar } from './CircuitView/CircuitMenuBar.js';
+import * as FB from './State/FunctionLib.js';
 function createControlButtonBar(buttons) {
     const nav = document.getElementById('mainMenubar');
     buttons.forEach(btn => nav.appendChild(btn.DOMElement));
@@ -28,6 +29,16 @@ const errorLogger = error => console.error(error);
 //  PROGRAM ENTRY POINT
 //
 window.onload = () => app().catch(rejected => console.error(rejected));
+function testzone(terminal) {
+    const sel = new FB.Select();
+    sel.inputs[0].setValue(69);
+    sel.inputs[1].setValue(420);
+    sel.update(1);
+    terminal.print(sel.toString());
+    sel.inputs[2].setValue(1);
+    sel.update(1);
+    terminal.print(sel.toString());
+}
 async function app() {
     const mainMenubar = new Menubar(document.getElementById('mainMenubar'));
     const circuitMenubar = new CircuitMenuBar(document.getElementById('guiMenubar'));
@@ -38,6 +49,7 @@ async function app() {
     const memSize = 64 * 1024;
     await cpu.createController(memSize, 256, 16);
     const terminal = new ControllerTerminal(document.getElementById('terminal'), cpu);
+    testzone(terminal);
     const circuitID = await createTestCircuit(cpu);
     const taskId = await cpu.createTask(circuitID, 100, 10);
     terminal.printSystemSector();

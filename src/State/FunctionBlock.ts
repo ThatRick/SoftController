@@ -1,200 +1,58 @@
-import { IODataType } from '../Controller/ControllerDataTypes.js'
-
-type Subscriber<T> = (event: T) => void
-
-
-///////////////////////////////
-//          IO Pin
-///////////////////////////////
-
-interface IOPinDefinition
-{
-    value: number,
-    dataType: IODataType
-    name?: string,
-}
-
-enum IOPinEventType {
-    Value,
-    Name,
-    Datatype,
-    Source,
-    Inverted,
-    Removed
-}
-
-interface IOPinEvent {
-    type:   IOPinEventType
-    target: IOPinInterface
-}
-
-export interface IOPinInterface
-{
-    readonly type: 'input' | 'output'
-    readonly value: number
-    readonly name: string
-    readonly datatype: IODataType
-    readonly ioNum: number
-    readonly block: FunctionBlockInterface
-    readonly source?: { value: number }
-    readonly inverted?: boolean
-
-    setValue(n: number): void
-    setName(name: string): void
-    setDatatype(type: IODataType): void
-    setSource(source: { value: number })
-    setInverted(inverted: boolean)
-
-    subscribe(obj: Subscriber<IOPinEvent>)
-    unsubscribe(obj: Subscriber<IOPinEvent>)
-
-    remove(): void
-}
-
-export class IOPin implements IOPinInterface
-{
-    readonly type: 'input' | 'output'
-    get value() { return this._value }
-    get name() { return this._name }
-    get datatype() { return this._datatype }
-    get block() { return this._block }
-    get ioNum() { return this.getIONum(this) }
-    get source() { return this._source }
-    get inverted() { return this._inverted }
-
-    setValue(value: number) {
-        if (this._value != value) {
-            this._value = value
-            this.emitEvent(IOPinEventType.Value)
-        }
-    }
-    setName(name: string) {
-        if (this._name != name) {
-            this._name = name
-            this.emitEvent(IOPinEventType.Name)
-        }
-    }
-    setDatatype(datatype: IODataType) {
-        if (this._datatype != datatype) {
-            this._datatype = datatype
-            this.emitEvent(IOPinEventType.Datatype)
-        }
-    }
-    setSource(source: { value: number }) {
-        if (this._source != source) {
-            this._source = source
-            this.emitEvent(IOPinEventType.Source)
-        }
-    }
-    setInverted(inverted: boolean) {
-        if (this._inverted != inverted) {
-            this._inverted = inverted
-            this.emitEvent(IOPinEventType.Inverted)
-        }
-    }
-
-    subscribe(fn: Subscriber<IOPinEvent>) {
-        this.subscribers.add(fn)
-    }
-    unsubscribe(fn: Subscriber<IOPinEvent>) {
-        this.subscribers.delete(fn)
-    }
-
-    remove() {
-        this.emitEvent(IOPinEventType.Removed)
-        this.subscribers.clear()
-        this._source = null
-    }
-    
-    //////////////////////////////////////////////
-
-    constructor (
-        type: 'input' | 'output',
-        value: number,
-        name: string,
-        datatype: IODataType,
-        block: FunctionBlockInterface,
-        getIONum: (io: IOPinInterface) => number,
-    ) {
-        this.type = type
-        this._value = value
-        this._name = name
-        this._datatype = datatype
-        this._block = block
-        this.getIONum = getIONum
-    }
-
-    //////////////////////////////////////////////
-
-    private emitEvent(type: IOPinEventType) {
-        const event = { type, target: this }
-        this.subscribers.forEach(fn => fn(event))
-    }
-    private _value: number
-    private _name: string
-    private _datatype: IODataType
-    private getIONum: (io: IOPinInterface) => number
-    private _block: FunctionBlockInterface
-    private _source: { value: number }
-    private _inverted: boolean
-
-    private subscribers = new Set<Subscriber<IOPinEvent>>()
-}
+import { ICircuit } from "./Circuit.js"
+import { Subscriber } from "./CommonTypes.js"
+import { IOPin, IOPinDefinition, IOPinInterface } from "./IOPin.js"
 
 
 ///////////////////////////////
 //      Function Block
 ///////////////////////////////
 
-interface FunctionBlockDefinitionOLD
-{
-    name: string
-    inputs: IOPinDefinition[]
-    outputs: IOPinDefinition[]
-}
 
-
-interface FunctionBlockDefinition
+export interface FunctionBlockDefinition
 {
     name:    string
-    inputs:  {[name: string]: IOPinDefinition }
-    outputs: {[name: string]: IOPinDefinition }
-    variableInputs?: VariableIODefinition
-    variableOutputs?: VariableIODefinition
+    inputs:  { [name: string]: IOPinDefinition }
+    outputs: { [name: string]: IOPinDefinition }
+    symbol?: string
+    description?: string
+    variableInputs?: VariableIOCountDefinition
+    variableOutputs?: VariableIOCountDefinition
+    statics?: { [name: string]: number }
 }
 
-interface VariableIODefinition {
+interface VariableIOCountDefinition {
     min: number,
     max: number,
-    step: number
+    initial: number,
+    structSize?: number
 }
 
-enum BlockEventType {
+export enum BlockEventType {
     Name,
     InputCount,
     OutputCount,
     Removed
 }
 
-interface BlockEvent {
+export interface BlockEvent {
     type:   BlockEventType
     target: FunctionBlockInterface
 }
 
 export interface FunctionBlockInterface
 {
-    readonly type: 'function' | 'circuit'
+    readonly type: 'FUNCTION' | 'CIRCUIT'
     readonly name: string
     readonly symbol?: string
     readonly description: string
     readonly inputs: IOPinInterface[]
     readonly outputs: IOPinInterface[]
     readonly parentCircuit?: ICircuit
-    readonly variableInputs?: VariableIODefinition
-    readonly variableOutputs?: VariableIODefinition
+    readonly variableInputs?: VariableIOCountDefinition
+    readonly variableOutputs?: VariableIOCountDefinition
 
     setName(name: string): void
-    setInputCount(n: number): void
+    setVariableInputCount(n: number): void
     setOutputCount(n: number): void
     update(dt: number): void
 
@@ -204,22 +62,18 @@ export interface FunctionBlockInterface
     remove(): void
 }
 
-type IOValues<T> = {
-    [K in keyof T]: number
-}
-
 
 export abstract class FunctionBlock implements FunctionBlockInterface
 {
-    readonly    type: 'function'
-    get         name()                  { return this._name }
-    get         symbol()                { return this._symbol }
-    get         description()           { return this._description }
-    readonly    inputs:                 IOPinInterface[]
-    readonly    outputs:                IOPinInterface[]
-    get         parentCircuit()         { return this._parentCircuit }
-    readonly    variableInputs?:        VariableIODefinition
-    readonly    variableOutputs?:       VariableIODefinition
+    readonly    type = 'FUNCTION'
+    get         name()             { return this._name }
+    get         symbol()           { return this._symbol }
+    get         description()      { return this._description }
+    readonly    inputs:            IOPinInterface[]
+    readonly    outputs:           IOPinInterface[]
+    get         parentCircuit()    { return this._parentCircuit }
+    readonly    variableInputs?:   VariableIOCountDefinition
+    readonly    variableOutputs?:  VariableIOCountDefinition
 
     setName(name: string) {
         if (this._name != name) {
@@ -227,15 +81,56 @@ export abstract class FunctionBlock implements FunctionBlockInterface
             this.emitEvent(BlockEventType.Name)
         }
     }
-    setInputCount(n: number) { }
+    setVariableInputCount(n: number) {
+        if (!this.variableInputs) return
+        const { min, max, initial, structSize=1 } = this.variableInputs
+        if (n < min) n = min
+        if (n > max) n = max
+        const staticInputsCount = Object.keys(this.def.inputs).length - initial * structSize
+        const currentVariableInputsCount = (this.inputs.length - staticInputsCount) / structSize
+        console.assert(currentVariableInputsCount % 1 == 0)
+        const addition = n - currentVariableInputsCount
+        if (addition == 0) return
+        // Remove inputs
+        if (addition < 0) {     
+            const newLength = staticInputsCount + n * structSize
+            while (this.inputs.length > newLength) {
+                const input = this.inputs.pop()
+                input.remove()
+            }
+        }
+        // Add inputs
+        if (addition > 0) {    
+            const initialInputs = Object.values(this.def.inputs).map(input => {
+                const name = input.name ? splitToStringAndNumber(input.name || '')[0] : ''
+                return { name, value: input.value, dataType: input.dataType }
+            })
+            const initialStruct = initialInputs.slice(staticInputsCount, staticInputsCount + structSize)
+            const currentLastIndex = this.inputs.length - structSize
+            const numberingStart = splitToStringAndNumber(this.inputs[currentLastIndex].name)[1] + 1
+            for (let i = 0; i < addition; i++) {
+                const numbering = numberingStart + i
+                const newInputs = initialStruct.map(({name, value, dataType}) => {
+                    return new IOPin('input', value, name+numbering, dataType, this, this.getIONum )
+                })
+                this.inputs.push(...newInputs)
+            }
+        }
+        this.emitEvent(BlockEventType.InputCount)
+    }
+
     setOutputCount(n: number) { }
 
     update(dt: number) {
         this.updateInputs()
         const inputs = this.inputs.map(input => input.value)
-        let outputs = this.outputs.map(outputs => outputs.value)
-        outputs = this.run(inputs, outputs, dt)
-        outputs.forEach((value, i) => this.outputs[i].setValue(value))
+        const outputs = this.outputs.map(outputs => outputs.value)
+        let ret = this.run(inputs, outputs, dt)
+        if (typeof ret == 'object') {
+            outputs.forEach((value, i) => this.outputs[i].setValue(value))
+        } else {
+            this.outputs[0].setValue(ret)
+        }
     }
 
     subscribe(obj: Subscriber<BlockEvent>) {
@@ -252,46 +147,78 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.subscribers.clear()
     }
 
+    toString() {
+        let text = '';
+        const addLine = (line: string) => text += (line + '\n');
+
+        addLine('Type: ' + this.type)
+        addLine('Name: ' + this.name)
+        addLine('Symbol: ' + this.symbol)
+        addLine('Description: ' + this.description)
+        addLine('Inputs:')
+        this.inputs.forEach(input => addLine('  ' + input.toString()))
+        addLine('')
+        addLine('Outputs:')
+        this.outputs.forEach(output => addLine('  ' + output.toString()))
+        addLine('')
+        addLine('Parent circuit: ' + this.parentCircuit)
+        this.variableInputs && addLine('Variable inputs: ' + this.variableInputs.min + ' - ' + this.variableInputs.max)
+        this.variableOutputs && addLine('Variable outputs: ' + this.variableOutputs.min + ' - ' + this.variableOutputs.max)
+
+        return text
+    }
+
     //////////////  CONSTRUCTOR /////////////////
     
     constructor(def: FunctionBlockDefinition) {
+        this.def = def
         this.inputs = Object.entries(def.inputs).map(([name, input]) => {
             return new IOPin('input', input.value, name, input.dataType, this, this.getIONum )
         })
         this.outputs = Object.entries(def.outputs).map(([name, output]) => {
             return new IOPin('output', output.value, name, output.dataType, this, this.getIONum )
         })
+        this._name = this.def.name
+        this._symbol = this.def.symbol
+        this._description = this.def.description
+        this.variableInputs = def.variableInputs
+        this.variableOutputs = def.variableOutputs
+        this.statics = def.statics
     }
 
-    ////////////////  PRIVATE ///////////////////
+    ///////////////  PROTECTED  //////////////////
 
-    private _name: string
-    private _symbol: string
-    private _description: string
+    protected abstract run: (inputs: number[], outputs: number[], dt: number) => number | number[]
 
-    private _parentCircuit?: ICircuit
+    protected statics: {}
 
-    private subscribers = new Set<Subscriber<BlockEvent>>()
+    protected def: FunctionBlockDefinition
+
+    protected _name: string
+    protected _symbol: string
+    protected _description: string
+
+    protected _parentCircuit?: ICircuit
+
+    protected subscribers = new Set<Subscriber<BlockEvent>>()
     
-    private emitEvent(type: BlockEventType) {
+    protected emitEvent(type: BlockEventType) {
         const event = { type, target: this }
         this.subscribers.forEach(fn => fn(event))
     }
     
-    protected abstract run: (inputs: number[], outputs: number[], dt: number) => number[]
-    
-    private updateInputs() {
+    protected updateInputs() {
         this.inputs.forEach(input => {
             if (input.source) {
                 let newValue = input.source.value
                 if (input.inverted) newValue = (newValue) ? 0 : 1
-                else if (input.datatype == IODataType.INTEGER) newValue = Math.trunc(newValue)
+                else if (input.datatype == 'INTEGER') newValue = Math.trunc(newValue)
                 input.setValue(newValue)
             }
         })
     }
 
-    private getIONum = (io: IOPinInterface) => {
+    protected getIONum = (io: IOPinInterface) => {
         if (io.type == 'input') return this.inputs.findIndex(input => input == io)
         else return this.outputs.findIndex(output => output == io) + this.inputs.length
     }
@@ -299,14 +226,15 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 }
 
 ///////////////////////////////
-//          Circuit
+//     MISC Functions
 ///////////////////////////////
 
-enum CircuitEvent {
-    BlockAdded,
-    BlockRemoved
-}
-export interface ICircuit extends FunctionBlockInterface
-{
-    blocks: FunctionBlockInterface[]
+const splitToStringAndNumber = (text: string): [s: string, n: number] => {
+    const matched = text.match(/(\d+)$/)
+    if (!matched) return [text, 0]
+    const value = parseInt(matched[0], 10)
+    if (isNaN(value)) return [text, 0]
+    const strEnd = text.length - matched.length
+    const str = text.substring(0, strEnd)
+    return [str, value]
 }

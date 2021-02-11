@@ -1,10 +1,6 @@
-
-import { FunctionBlock, FunctionBlockDefinition } from "./FunctionBlock.js"
-
-function createFunctionCollection <T extends {[name: string]: FunctionBlockDefinition }>(def: T) { return def }
-
-export const FunctionDefinitions = createFunctionCollection(
-{
+import { FunctionBlock } from "./FunctionBlock.js";
+function createFunctionCollection(def) { return def; }
+export const FunctionDefinitions = createFunctionCollection({
     AND: {
         name: 'AND',
         symbol: '&',
@@ -20,7 +16,6 @@ export const FunctionDefinitions = createFunctionCollection(
             min: 2, max: 32, initial: 2
         }
     },
-
     OR: {
         name: 'OR',
         symbol: '≥1',
@@ -36,7 +31,6 @@ export const FunctionDefinitions = createFunctionCollection(
             min: 2, max: 32, initial: 2
         }
     },
-
     RS: {
         name: 'RS',
         description: 'Set-Reset flip-flop with dominant reset',
@@ -48,7 +42,6 @@ export const FunctionDefinitions = createFunctionCollection(
             out: { value: 0, dataType: 'BINARY' },
         }
     },
-
     RisingEdge: {
         name: 'Rising edge',
         symbol: '_|‾',
@@ -63,7 +56,6 @@ export const FunctionDefinitions = createFunctionCollection(
             prev: 0
         }
     },
-
     Select: {
         name: 'Select',
         symbol: 'SEL',
@@ -77,53 +69,43 @@ export const FunctionDefinitions = createFunctionCollection(
             out: { value: 0, dataType: 'FLOAT' }
         }
     }
-})
-
-class AND extends FunctionBlock
-{
-    constructor() { super(FunctionDefinitions.AND) }
-    protected run = (inputs: number[]) => inputs.reduce((output, input) => output *= input, 1) ? 1 : 0
-}
-class OR extends FunctionBlock
-{
-    constructor() { super(FunctionDefinitions.OR) }
-    protected run = (inputs: number[]) => inputs.reduce((output, input) => output += input, 0) ? 1 : 0
-}
-
-class RS extends FunctionBlock
-{
+});
+class AND extends FunctionBlock {
     constructor() {
-        super(FunctionDefinitions.RS)
-    }
-    protected run = ([R, S], [out]) => {
-        S && (out = 1)
-        R && (out = 0)
-        return out
+        super(FunctionDefinitions.AND);
+        this.run = (inputs) => inputs.reduce((output, input) => output *= input, 1) ? 1 : 0;
     }
 }
-
-class RisingEdge extends FunctionBlock
-{
-    constructor() { super(FunctionDefinitions.RisingEdge) }
-    protected statics: typeof FunctionDefinitions.RisingEdge.statics
-
-    protected run = ([input]) => {
-        const out = (!this.statics.prev && input) ? 1 : 0
-        this.statics.prev = input
-        return out
+class OR extends FunctionBlock {
+    constructor() {
+        super(FunctionDefinitions.OR);
+        this.run = (inputs) => inputs.reduce((output, input) => output += input, 0) ? 1 : 0;
     }
 }
-
-class Select extends FunctionBlock
-{
-    constructor() { super(FunctionDefinitions.Select) }
-    protected run = ([in0, in1, sel]) => sel ? in1 : in0
+class RS extends FunctionBlock {
+    constructor() {
+        super(FunctionDefinitions.RS);
+        this.run = ([R, S], [out]) => {
+            S && (out = 1);
+            R && (out = 0);
+            return out;
+        };
+    }
 }
-
-export {
-    AND,
-    OR,
-    RS,
-    RisingEdge,
-    Select
+class RisingEdge extends FunctionBlock {
+    constructor() {
+        super(FunctionDefinitions.RisingEdge);
+        this.run = ([input]) => {
+            const out = (!this.statics.prev && input) ? 1 : 0;
+            this.statics.prev = input;
+            return out;
+        };
+    }
 }
+class Select extends FunctionBlock {
+    constructor() {
+        super(FunctionDefinitions.Select);
+        this.run = ([in0, in1, sel]) => sel ? in1 : in0;
+    }
+}
+export { AND, OR, RS, RisingEdge, Select };
