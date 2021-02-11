@@ -84,6 +84,7 @@ class AND extends FunctionBlock
     constructor() { super(FunctionDefinitions.AND) }
     protected run = (inputs: number[]) => inputs.reduce((output, input) => output *= input, 1) ? 1 : 0
 }
+
 class OR extends FunctionBlock
 {
     constructor() { super(FunctionDefinitions.OR) }
