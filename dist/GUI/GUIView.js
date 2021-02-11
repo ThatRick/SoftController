@@ -1,5 +1,7 @@
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
+import { GUIChildElement } from './GUIChildElement.js';
+import * as HTML from './../Lib/HTML.js';
 const DOUBLE_CLICK_INTERVAL = 400;
 export default class GUIView {
     constructor(parentDOM, size, scale, style, css) {
@@ -22,9 +24,11 @@ export default class GUIView {
             dragOffset: undefined,
             dragTargetInitPos: undefined,
             pos: vec2(0),
+            relativePos: vec2(0),
             downPos: vec2(0),
             relativeDownPos: vec2(0),
         };
+        this.pointerMoved = false;
         this.doubleClickPending = false;
         this.DOMElement = document.createElement('div');
         parentDOM.appendChild(this.DOMElement);
@@ -38,8 +42,19 @@ export default class GUIView {
         this.rescale(scale);
         this.restyle(style);
         this.children = new GUIContainer(this);
+        const bounds = this.DOMElement.getBoundingClientRect();
+        this.offset = vec2(bounds.x, bounds.y);
         this.setupPointerHandlers();
         this.setup?.();
+        this.markers = {
+            pos: new GUIChildElement(this.children, 'div', vec2(2, 2), vec2(1, 1 * (this.scale.x / this.scale.y)), {
+                borderRadius: this.scale.x / 2 + 'px', backgroundColor: 'red'
+            }),
+            rel: new GUIChildElement(this.children, 'div', vec2(5, 5), vec2(1, 1 * (this.scale.x / this.scale.y)), {
+                borderRadius: this.scale.x / 2 + 'px', backgroundColor: 'blue'
+            }),
+            coords: new HTML.Text('coordinates: 123, 123', { left: '100px', top: '2px', color: 'white', position: 'relative' }, this.DOMElement)
+        };
         requestAnimationFrame(this.update.bind(this));
     }
     set size(v) {
@@ -67,6 +82,12 @@ export default class GUIView {
     }
     get style() { return this._style; }
     update() {
+        if (this.pointerMoved) {
+            this.pointerMoved = false;
+            this.markers.pos.setPos(Vec2.div(this.pointer.pos, this.scale));
+            this.markers.rel.setPos(Vec2.div(this.pointer.relativePos, this.scale));
+            this.markers.coords.setText('coords: ' + this.pointer.pos.toString() + ', ' + this.pointer.relativePos.toString());
+        }
         this.updateRequests.forEach(elem => {
             const keep = elem.update();
             if (!keep)
@@ -102,7 +123,6 @@ export default class GUIView {
             ev.preventDefault();
             this.pointer.isDown = true;
             this.pointer.downPos.set(ev.x, ev.y);
-            const elem = ev.target;
             const bounds = this.DOMElement.getBoundingClientRect();
             this.pointer.relativeDownPos.set(ev.x - bounds.x, ev.y - bounds.y);
             this.pointer.eventTarget = ev.target;
@@ -113,8 +133,10 @@ export default class GUIView {
         };
         // Pointer move
         this.DOMElement.onpointermove = ev => {
-            ev.preventDefault();
-            this.pointer.pos.set(ev.x, ev.y);
+            //ev.preventDefault()
+            this.pointer.pos.set(ev.x, ev.y).round();
+            this.pointer.relativePos.set(ev.offsetX, ev.offsetY).round();
+            this.pointerMoved = true;
             // Only find target GUI Element if Event Target has changed
             if (ev.target != this.pointer.eventTarget) {
                 this.pointer.eventTarget = ev.target;

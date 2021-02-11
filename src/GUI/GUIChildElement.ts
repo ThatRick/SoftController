@@ -80,7 +80,7 @@ export class GUIChildElement implements IChildElementGUI{
     protected _sizeScaled: Vec2
     protected _sizeHasChanged = false
 
-    set size(s: Vec2) {
+    setSize(s: Vec2) {
         if (this._size.equal(s)) return
         this._size.set(s)
         this._sizeHasChanged = true

@@ -44,7 +44,7 @@ export class GUIChildElement {
         const bounds = this.DOMElement.getBoundingClientRect();
         return vec2(pos.x - bounds.x, pos.y - bounds.y);
     }
-    set size(s) {
+    setSize(s) {
         if (this._size.equal(s))
             return;
         this._size.set(s);

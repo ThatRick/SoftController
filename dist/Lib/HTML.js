@@ -12,9 +12,10 @@ export class Text {
             paddingRight: '2px',
             ...style
         });
-        this.DOMElement.textContent = text;
+        this.setText(text);
         parent?.appendChild(this.DOMElement);
     }
+    setText(text) { this.DOMElement.textContent = text; }
 }
 export class Button {
     constructor(text, parent, style) {

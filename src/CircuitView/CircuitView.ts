@@ -13,6 +13,7 @@ import GUIContainer from '../GUI/GUIContainer.js'
 import { CircuitTrace, ICircuitTraceLayer } from './CircuitTrace.js'
 import CircuitIOView from './CircuitIOView.js'
 import { FunctionBlock } from './FunctionBlockState.js'
+import { IElementGUI } from '../GUI/GUITypes.js'
 
 const enum DraggingMode {
     NONE,
@@ -106,8 +107,6 @@ class BlockArea extends GUIChildElement implements CircuitElement
     type: 'blockArea'
     id: ID
     gui: CircuitView
-
-    viewOffset: Vec2
 }
 
 
@@ -136,8 +135,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         window.onkeydown = this.onKeyDown.bind(this)
         window.onkeyup = this.onKeyUp.bind(this)
 
-        const bounds = this.DOMElement.getBoundingClientRect();
-        this.viewOffset = vec2(bounds.x, bounds.y)
     }
 
     circuit: Circuit
@@ -163,8 +160,6 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     blocks = new Map<ID, FunctionBlockView>()
     traces = new Map<ID, CircuitTrace>()
-
-    viewOffset: Vec2
 
     loadCircuit(circuit: Circuit) {
         this.circuit = circuit
@@ -429,7 +424,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
 
     pointerCircuitPos() {
         const scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop)
-        return Vec2.sub(this.pointer.pos, this.viewOffset)
+        return Vec2.sub(this.pointer.pos, this.offset)
             .add(scrollOffset)
             .div(this.scale)
             .sub(this.blockArea.absPos)

@@ -218,8 +218,6 @@ export default class CircuitView extends GUIView {
         this.outputArea = new IOArea(this, 'outputArea');
         window.onkeydown = this.onKeyDown.bind(this);
         window.onkeyup = this.onKeyUp.bind(this);
-        const bounds = this.DOMElement.getBoundingClientRect();
-        this.viewOffset = vec2(bounds.x, bounds.y);
     }
     loadCircuit(circuit) {
         this.circuit = circuit;
@@ -456,7 +454,7 @@ export default class CircuitView extends GUIView {
     ////////////////////////////////
     pointerCircuitPos() {
         const scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop);
-        return Vec2.sub(this.pointer.pos, this.viewOffset)
+        return Vec2.sub(this.pointer.pos, this.offset)
             .add(scrollOffset)
             .div(this.scale)
             .sub(this.blockArea.absPos);

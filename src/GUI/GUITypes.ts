@@ -17,6 +17,7 @@ export interface GUIPointerState<T extends IChildElementGUI>
     dragTargetInitPos:  Vec2
 
     pos:                Vec2
+    relativePos:        Vec2
     downPos:            Vec2
     relativeDownPos:    Vec2
 }

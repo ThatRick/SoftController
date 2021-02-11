@@ -1,6 +1,8 @@
-import { IViewContainerGUI, IChildElementGUI, GUIPointerState, IElementGUI, IWindowGUI, IStyleGUI } from './GUITypes.js'
+import { IChildElementGUI, GUIPointerState, IElementGUI, IWindowGUI, IStyleGUI } from './GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
+import { GUIChildElement } from './GUIChildElement.js'
+import * as HTML from './../Lib/HTML.js'
 
 interface Updateable {
     update(force?: boolean): boolean
@@ -75,13 +77,39 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
 
         this.children = new GUIContainer(this)
 
+        const bounds = this.DOMElement.getBoundingClientRect();
+        this.offset = vec2(bounds.x, bounds.y)
+
         this.setupPointerHandlers()
         this.setup?.()
                 
+        this.markers = {
+            pos: new GUIChildElement(this.children, 'div', vec2(2,2), vec2(1, 1 * (this.scale.x / this.scale.y)), {
+                borderRadius: this.scale.x / 2 + 'px', backgroundColor: 'red'
+            }),
+            rel: new GUIChildElement(this.children, 'div', vec2(5,5), vec2(1, 1 * (this.scale.x / this.scale.y)), {
+                borderRadius: this.scale.x / 2 + 'px', backgroundColor: 'blue'
+            }),
+            coords: new HTML.Text('coordinates: 123, 123', { left: '100px', top: '2px', color: 'white', position: 'relative' }, this.DOMElement)
+        }
+
         requestAnimationFrame(this.update.bind(this))
     }
 
+    markers: {
+        pos: GUIChildElement
+        rel: GUIChildElement
+        coords: HTML.Text
+    }
+
     update() {
+        if (this.pointerMoved) {
+            this.pointerMoved = false
+            this.markers.pos.setPos(Vec2.div(this.pointer.pos, this.scale))
+            this.markers.rel.setPos(Vec2.div(this.pointer.relativePos, this.scale))
+            this.markers.coords.setText('coords: ' + this.pointer.pos.toString() + ', ' + this.pointer.relativePos.toString())
+        }
+
         this.updateRequests.forEach(elem => {
             const keep = elem.update()
             if (!keep) this.updateRequests.delete(elem)
@@ -142,9 +170,12 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
         dragTargetInitPos:  undefined,
     
         pos:                vec2(0),
+        relativePos:        vec2(0),
         downPos:            vec2(0),
         relativeDownPos:    vec2(0),
     }
+    pointerMoved = false
+    offset: Vec2
 
     getPointerTargetElem(ev: PointerEvent) {
         return this.eventTargetMap.get(ev.target)
@@ -169,7 +200,6 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
             ev.preventDefault()
             this.pointer.isDown = true
             this.pointer.downPos.set(ev.x, ev.y)
-            const elem = ev.target as HTMLElement
 
             const bounds = this.DOMElement.getBoundingClientRect();
             this.pointer.relativeDownPos.set(ev.x - bounds.x, ev.y - bounds.y)
@@ -185,8 +215,11 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
     
         // Pointer move
         this.DOMElement.onpointermove = ev => {
-            ev.preventDefault()
-            this.pointer.pos.set(ev.x, ev.y)
+            //ev.preventDefault()
+            this.pointer.pos.set(ev.x, ev.y).round()
+            this.pointer.relativePos.set(ev.offsetX, ev.offsetY).round()
+
+            this.pointerMoved = true
             
             // Only find target GUI Element if Event Target has changed
             if (ev.target != this.pointer.eventTarget) {
