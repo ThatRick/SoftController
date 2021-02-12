@@ -4,7 +4,7 @@ export class CircuitTrace {
         this.outputPin = outputPin;
         this.inputPin = inputPin;
         this.id = inputPin.id;
-        const pending = (!!inputPin.funcState.parentCircuit.onlineDB);
+        const pending = (!!inputPin.funcState.onlineDB);
         const color = pending ? this.inputPin.gui.style.colorPending : inputPin.traceColor;
         layer.addTrace(this.id, outputPin.absPos, inputPin.absPos, color);
         if (pending) {
