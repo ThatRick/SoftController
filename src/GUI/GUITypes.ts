@@ -13,13 +13,15 @@ export interface GUIPointerState<T extends IChildElementGUI>
     downTargetElem:     T
     
     dragHyst:           number
-    dragOffset:         Vec2
+    screenDragOffset:   Vec2
     dragTargetInitPos:  Vec2
+    
+    screenPos:          Vec2
+    screenLocalPos:     Vec2
+    screenDownPos:      Vec2
 
-    pos:                Vec2
-    relativePos:        Vec2
-    downPos:            Vec2
-    relativeDownPos:    Vec2
+    scaledPos:          Vec2
+    scaledDragOffset:   Vec2
 }
 
 export type EventHandlerFn = (ev: PointerEvent, pointer?: GUIPointerState<IChildElementGUI>) => void
@@ -58,6 +60,7 @@ export interface IElementGUI {
 export interface IWindowGUI extends IElementGUI {
     scale: Vec2
     style: IStyleGUI
+    pointer: GUIPointerState<IChildElementGUI>
 
     registerElement(elem: IChildElementGUI)
     unregisterElement(elem: IChildElementGUI)

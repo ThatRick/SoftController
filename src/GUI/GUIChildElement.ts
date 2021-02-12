@@ -70,9 +70,11 @@ export class GUIChildElement implements IChildElementGUI{
     }
 
     // Translate Absolute position to relative position
-    relativePixelPos(pos: Vec2) {
-        const bounds = this.DOMElement.getBoundingClientRect();
-        return vec2(pos.x - bounds.x, pos.y - bounds.y)
+    pointerPos() {
+        return Vec2.sub(this.gui.pointer.scaledPos, this.absPos)
+    }
+    pointerScreenPos() {
+        return Vec2.sub(this.gui.pointer.screenPos, Vec2.mul(this.absPos, this.gui.scale))
     }
 
     // Size

@@ -84,19 +84,22 @@ export default class CircuitView extends GUIView {
         this.selectedElementsInitPos = new WeakMap();
         this.blocks = new Map();
         this.traces = new Map();
+        ////////////////////////////////
+        //      POINTER HANDLING
+        ////////////////////////////////
         this.onPointerMove = (ev) => {
             if (this.funcPendingPlacement && this.pointer.targetElem == this.blockArea) {
                 this.startBlockPlacement();
             }
             else if (this.blockInPlacement) {
-                this.blockInPlacement.setPos(this.pointerCircuitPos());
+                this.blockInPlacement.setPos(this.blockArea.pointerPos());
             }
         };
         this.onPointerDown = (ev) => {
             const elem = this.pointer.downTargetElem;
             const selected = Array.from(this.selectedElements.values())[0];
             if (this.blockInPlacement) {
-                const pos = this.pointerCircuitPos().round();
+                const pos = this.blockArea.pointerPos().round();
                 this.blockInPlacement.setPos(pos);
                 this.blockInPlacement.DOMElement.style.pointerEvents = 'auto';
                 this.blockInPlacement = undefined;
@@ -126,7 +129,7 @@ export default class CircuitView extends GUIView {
             if (!elem?.isSelectable && !ev.shiftKey) {
                 this.unselectAll();
             }
-            ev.altKey && console.log('Clicked:', this.elementToString(elem), this.pointerCircuitPos());
+            ev.altKey && console.log('Clicked:', this.elementToString(elem), this.blockArea.pointerPos());
         };
         this.onDoubleClicked = (ev) => {
             if (this.pointer.downTargetElem?.isSelectable)
@@ -142,13 +145,13 @@ export default class CircuitView extends GUIView {
             // Start selection box
             else if (this.pointer.downTargetElem == this.blockArea && ev.buttons == 1 /* LEFT */) {
                 this.draggingMode = 3 /* SELECTION_BOX */;
-                this.selectionBoxInitPos = this.blockArea.relativePixelPos(this.pointer.downPos);
+                this.selectionBoxInitPos = this.blockArea.pointerScreenPos();
                 this.selectionBox = HTML.domElement(this.blockArea.DOMElement, 'div', {
                     position: 'absolute',
                     backgroundColor: 'rgba(128,128,255,0.2)',
                     border: 'thin solid #88F',
                     pointerEvents: 'none',
-                    ...getPositiveRectAttributes(this.selectionBoxInitPos, this.pointer.dragOffset)
+                    ...getPositiveRectAttributes(this.selectionBoxInitPos, this.pointer.screenDragOffset)
                 });
                 console.log('selection start:', this.selectionBoxInitPos);
             }
@@ -165,18 +168,17 @@ export default class CircuitView extends GUIView {
         this.onDragging = (ev) => {
             switch (this.draggingMode) {
                 case 1 /* SCROLL_VIEW */:
-                    this.parentDOM.scrollLeft = this.scrollStartPos.x - this.pointer.dragOffset.x;
-                    this.parentDOM.scrollTop = this.scrollStartPos.y - this.pointer.dragOffset.y;
+                    this.parentDOM.scrollLeft = this.scrollStartPos.x - this.pointer.screenDragOffset.x;
+                    this.parentDOM.scrollTop = this.scrollStartPos.y - this.pointer.screenDragOffset.y;
                     break;
                 case 3 /* SELECTION_BOX */:
-                    Object.assign(this.selectionBox.style, getPositiveRectAttributes(this.selectionBoxInitPos, this.pointer.dragOffset));
+                    Object.assign(this.selectionBox.style, getPositiveRectAttributes(this.selectionBoxInitPos, this.pointer.screenDragOffset));
                     break;
                 case 2 /* DRAG_ELEMENT */:
-                    const offset = Vec2.div(this.pointer.dragOffset, this.scale);
                     this.selectedElements.forEach(elem => {
                         const initPos = this.selectedElementsInitPos.get(elem);
-                        const currentPos = Vec2.add(initPos, offset);
-                        this.draggingElement(elem, initPos, offset, currentPos);
+                        const offset = this.pointer.scaledDragOffset;
+                        this.draggingElement(elem, initPos, offset, Vec2.add(initPos, offset));
                         elem.onDragging?.(ev, this.pointer);
                     });
                     break;
@@ -192,7 +194,7 @@ export default class CircuitView extends GUIView {
                         this.unselectAll();
                     this.blocks.forEach(block => {
                         const pos = Vec2.div(this.selectionBoxInitPos, this.scale);
-                        const size = Vec2.div(this.pointer.dragOffset, this.scale);
+                        const size = Vec2.div(this.pointer.screenDragOffset, this.scale);
                         if (isElementInsideRect(block, pos, size)) {
                             this.selectElement(block);
                         }
@@ -200,8 +202,8 @@ export default class CircuitView extends GUIView {
                     this.blockArea.DOMElement.removeChild(this.selectionBox);
                     break;
                 case 2 /* DRAG_ELEMENT */:
-                    const offset = Vec2.div(this.pointer.dragOffset, this.scale);
                     this.selectedElements.forEach(elem => {
+                        const offset = this.pointer.scaledDragOffset;
                         const initPos = this.selectedElementsInitPos.get(elem);
                         const currentPos = Vec2.add(initPos, offset);
                         this.dragElementEnded(elem, initPos, offset, currentPos);
@@ -334,13 +336,13 @@ export default class CircuitView extends GUIView {
     }
     startBlockPlacement() {
         logInfo('Start block placement');
-        this.blockInPlacement = this.createFunctionBlockView(this.funcPendingPlacement, this.pointerCircuitPos());
+        this.blockInPlacement = this.createFunctionBlockView(this.funcPendingPlacement, this.blockArea.pointerPos());
         this.blockInPlacement.DOMElement.style.pointerEvents = 'none';
         this.funcPendingPlacement = undefined;
     }
-    /////////////////////////
-    //      DRAGGING
-    /////////////////////////
+    ////////////////////////////
+    //      DRAG ELEMENT
+    ////////////////////////////
     dragElementStarted(elem) {
         switch (elem.type) {
             case 'circuitInput':
@@ -355,7 +357,7 @@ export default class CircuitView extends GUIView {
                 break;
         }
     }
-    draggingElement(elem, startPos, offset, currentPos) {
+    draggingElement(elem, initPos, offset, currentPos) {
         switch (elem.type) {
             case 'circuitInput':
             case 'circuitOutput':
@@ -365,18 +367,18 @@ export default class CircuitView extends GUIView {
                 break;
             }
             case 'inputPin': {
-                const absPos = Vec2.div(this.pointer.relativeDownPos, this.scale).add(offset).sub(vec2(0.5));
+                const absPos = this.pointer.scaledPos.sub(vec2(0.5));
                 this.traceLayer.updateTrace(this.connectingTraceID, absPos, elem.absPos);
                 break;
             }
             case 'outputPin': {
-                const absPos = Vec2.div(this.pointer.relativeDownPos, this.scale).add(offset).sub(vec2(0.5));
+                const absPos = this.pointer.scaledPos.sub(vec2(0.5));
                 this.traceLayer.updateTrace(this.connectingTraceID, elem.absPos, absPos);
                 break;
             }
         }
     }
-    dragElementEnded(elem, startPos, offset, currentPos) {
+    dragElementEnded(elem, initPos, offset, currentPos) {
         switch (elem.type) {
             case 'circuitInput':
             case 'circuitOutput':
@@ -448,16 +450,6 @@ export default class CircuitView extends GUIView {
     }
     unselectAll() {
         this.selectedElements.forEach(elem => this.unselectElement(elem));
-    }
-    ////////////////////////////////
-    //      POINTER HANDLING
-    ////////////////////////////////
-    pointerCircuitPos() {
-        const scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop);
-        return Vec2.sub(this.pointer.pos, this.offset)
-            .add(scrollOffset)
-            .div(this.scale)
-            .sub(this.blockArea.absPos);
     }
     ////////////////////////////////
     //      KEYBOARD HANDLING

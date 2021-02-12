@@ -21,14 +21,14 @@ export default class GUIView {
             targetElem: undefined,
             downTargetElem: undefined,
             dragHyst: 2,
-            dragOffset: undefined,
-            dragTargetInitPos: undefined,
-            pos: vec2(0),
-            relativePos: vec2(0),
-            downPos: vec2(0),
-            relativeDownPos: vec2(0),
+            screenDragOffset: vec2(0),
+            scaledDragOffset: vec2(0),
+            dragTargetInitPos: vec2(0),
+            screenPos: vec2(0),
+            scaledPos: vec2(0),
+            screenLocalPos: vec2(0),
+            screenDownPos: vec2(0),
         };
-        this.pointerMoved = false;
         this.doubleClickPending = false;
         this.DOMElement = document.createElement('div');
         parentDOM.appendChild(this.DOMElement);
@@ -43,15 +43,13 @@ export default class GUIView {
         this.restyle(style);
         this.children = new GUIContainer(this);
         const bounds = this.DOMElement.getBoundingClientRect();
-        this.offset = vec2(bounds.x, bounds.y);
+        this.viewOffset = vec2(bounds.x, bounds.y);
+        this.scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop);
         this.setupPointerHandlers();
         this.setup?.();
         this.markers = {
             pos: new GUIChildElement(this.children, 'div', vec2(2, 2), vec2(1, 1 * (this.scale.x / this.scale.y)), {
                 borderRadius: this.scale.x / 2 + 'px', backgroundColor: 'red'
-            }),
-            rel: new GUIChildElement(this.children, 'div', vec2(5, 5), vec2(1, 1 * (this.scale.x / this.scale.y)), {
-                borderRadius: this.scale.x / 2 + 'px', backgroundColor: 'blue'
             }),
             coords: new HTML.Text('coordinates: 123, 123', { left: '100px', top: '2px', color: 'white', position: 'relative' }, this.DOMElement)
         };
@@ -82,11 +80,9 @@ export default class GUIView {
     }
     get style() { return this._style; }
     update() {
-        if (this.pointerMoved) {
-            this.pointerMoved = false;
-            this.markers.pos.setPos(Vec2.div(this.pointer.pos, this.scale));
-            this.markers.rel.setPos(Vec2.div(this.pointer.relativePos, this.scale));
-            this.markers.coords.setText('coords: ' + this.pointer.pos.toString() + ', ' + this.pointer.relativePos.toString());
+        if (this.latestMovementEvent) {
+            this.updatePointerPosition(this.latestMovementEvent);
+            this.latestMovementEvent = null;
         }
         this.updateRequests.forEach(elem => {
             const keep = elem.update();
@@ -114,6 +110,41 @@ export default class GUIView {
     requestElementUpdate(elem) {
         this.updateRequests.add(elem);
     }
+    updatePointerPosition(ev) {
+        this.scrollOffset = vec2(this.parentDOM.scrollLeft, this.parentDOM.scrollTop);
+        const x = (ev.x - this.viewOffset.x + this.scrollOffset.x);
+        const y = (ev.y - this.viewOffset.y + this.scrollOffset.y);
+        this.pointer.screenPos.set(x, y).round();
+        this.pointer.scaledPos.set(x, y).div(this.scale);
+        this.pointer.screenLocalPos.set(ev.offsetX, ev.offsetY).round();
+        // Only find target GUI Element if Event Target has changed
+        if (ev.target != this.pointer.eventTarget) {
+            this.pointer.eventTarget = ev.target;
+            this.pointer.targetElem?.onPointerLeave?.(ev, this.pointer);
+            this.pointer.targetElem = this.getPointerTargetElem?.(ev);
+            this.pointer.targetElem?.onPointerEnter?.(ev, this.pointer);
+        }
+        this.pointer.targetElem?.onPointerMove?.(ev, this.pointer);
+        this.onPointerMove?.(ev);
+        // Check if user is dragging
+        if (this.pointer.isDown) {
+            this.pointer.screenDragOffset.set(this.pointer.screenPos).sub(this.pointer.screenDownPos);
+            this.pointer.scaledDragOffset.set(this.pointer.screenDragOffset).div(this.scale);
+            const pointerIsDragging = this.pointer.isDragging || this.pointer.screenDragOffset.len() > this.pointer.dragHyst;
+            // Drag started
+            if (pointerIsDragging && !this.pointer.isDragging) {
+                this.pointer.isDragging = true;
+                this.onDragStarted?.(ev);
+            }
+            // Dragging
+            if (this.pointer.isDragging) {
+                this.onDragging?.(ev);
+            }
+        }
+        // Debug marker
+        this.markers.pos.setPos(Vec2.sub(this.pointer.scaledPos, vec2(0.5)));
+        this.markers.coords.setText('coords: ' + Vec2.round(this.pointer.scaledPos).toString());
+    }
     getPointerTargetElem(ev) {
         return this.eventTargetMap.get(ev.target);
     }
@@ -122,9 +153,7 @@ export default class GUIView {
         this.DOMElement.onpointerdown = ev => {
             ev.preventDefault();
             this.pointer.isDown = true;
-            this.pointer.downPos.set(ev.x, ev.y);
-            const bounds = this.DOMElement.getBoundingClientRect();
-            this.pointer.relativeDownPos.set(ev.x - bounds.x, ev.y - bounds.y);
+            this.pointer.screenDownPos.set(this.pointer.screenPos);
             this.pointer.eventTarget = ev.target;
             this.pointer.targetElem = this.getPointerTargetElem?.(ev);
             this.pointer.downTargetElem = this.pointer.targetElem;
@@ -133,33 +162,7 @@ export default class GUIView {
         };
         // Pointer move
         this.DOMElement.onpointermove = ev => {
-            //ev.preventDefault()
-            this.pointer.pos.set(ev.x, ev.y).round();
-            this.pointer.relativePos.set(ev.offsetX, ev.offsetY).round();
-            this.pointerMoved = true;
-            // Only find target GUI Element if Event Target has changed
-            if (ev.target != this.pointer.eventTarget) {
-                this.pointer.eventTarget = ev.target;
-                this.pointer.targetElem?.onPointerLeave?.(ev, this.pointer);
-                this.pointer.targetElem = this.getPointerTargetElem?.(ev);
-                this.pointer.targetElem?.onPointerEnter?.(ev, this.pointer);
-            }
-            this.pointer.targetElem?.onPointerMove?.(ev, this.pointer);
-            this.onPointerMove?.(ev);
-            // Check if user is dragging
-            if (this.pointer.isDown) {
-                this.pointer.dragOffset = Vec2.sub(this.pointer.pos, this.pointer.downPos);
-                const pointerIsDragging = this.pointer.isDragging || this.pointer.dragOffset.len() > this.pointer.dragHyst;
-                // Drag started
-                if (pointerIsDragging && !this.pointer.isDragging) {
-                    this.pointer.isDragging = true;
-                    this.onDragStarted?.(ev);
-                }
-                // Dragging
-                if (this.pointer.isDragging) {
-                    this.onDragging?.(ev);
-                }
-            }
+            this.latestMovementEvent = ev;
         };
         // Pointer up
         this.DOMElement.onpointerup = ev => {

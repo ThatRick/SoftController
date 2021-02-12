@@ -1,4 +1,3 @@
-import { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 import { Vec2 } from './GUITypes.js';
 export class GUIChildElement {
@@ -40,9 +39,11 @@ export class GUIChildElement {
         return absPos;
     }
     // Translate Absolute position to relative position
-    relativePixelPos(pos) {
-        const bounds = this.DOMElement.getBoundingClientRect();
-        return vec2(pos.x - bounds.x, pos.y - bounds.y);
+    pointerPos() {
+        return Vec2.sub(this.gui.pointer.scaledPos, this.absPos);
+    }
+    pointerScreenPos() {
+        return Vec2.sub(this.gui.pointer.screenPos, Vec2.mul(this.absPos, this.gui.scale));
     }
     setSize(s) {
         if (this._size.equal(s))
