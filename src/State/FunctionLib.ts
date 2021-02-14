@@ -93,9 +93,7 @@ class OR extends FunctionBlock
 
 class RS extends FunctionBlock
 {
-    constructor() {
-        super(FunctionDefinitions.RS)
-    }
+    constructor() { super(FunctionDefinitions.RS) }
     protected run = ([R, S], [out]) => {
         S && (out = 1)
         R && (out = 0)
@@ -109,7 +107,7 @@ class RisingEdge extends FunctionBlock
     protected statics: typeof FunctionDefinitions.RisingEdge.statics
 
     protected run = ([input]) => {
-        const out = (!this.statics.prev && input) ? 1 : 0
+        const out = ( !this.statics.prev && input) ? 1 : 0
         this.statics.prev = input
         return out
     }
