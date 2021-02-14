@@ -1,5 +1,6 @@
 import Circuit, { CircuitDefinition, CircuitInterface } from "./Circuit.js"
 import { Subscriber } from "./CommonTypes.js"
+import { FunctionTypeName } from "./FunctionLib.js"
 import { IOPin, IOPinDefinition, IOPinInstanceDefinition, IOPinInterface } from "./IOPin.js"
 
 
@@ -21,17 +22,17 @@ export interface FunctionTypeDefinition
     circuit?:           CircuitDefinition
 }
 
-export interface FunctionBlockDefinition
+export interface FunctionInstanceDefinition
 {
-    typeName:       string
-    inputs:         IOPinInstanceDefinition
-    outputs:        IOPinInstanceDefinition
+    typeName:       FunctionTypeName
+    inputs?:        IOPinInstanceDefinition[]
+    outputs?:       IOPinInstanceDefinition[]
 }
 
 interface VariableIOCountDefinition {
     min:            number
     max:            number
-    initial:        number
+    initialCount:   number
     structSize?:    number
 }
 
@@ -58,6 +59,7 @@ export interface FunctionBlockInterface
     readonly parentCircuit?:    FunctionBlockInterface
     readonly variableInputs?:   VariableIOCountDefinition
     readonly variableOutputs?:  VariableIOCountDefinition
+    readonly typeDef:           FunctionTypeDefinition
 
     setVariableInputCount(n: number): void
     setVariableOutputCount(n: number): void
@@ -81,13 +83,14 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     get         parentCircuit()    { return this._parentCircuit }
     readonly    variableInputs?:   VariableIOCountDefinition
     readonly    variableOutputs?:  VariableIOCountDefinition
+    readonly    typeDef:           FunctionTypeDefinition
 
     setVariableInputCount(n: number) {
         if (!this.variableInputs) return
-        const { min, max, initial, structSize=1 } = this.variableInputs
+        const { min, max, initialCount: initial, structSize=1 } = this.variableInputs
         if (n < min) n = min
         if (n > max) n = max
-        const staticInputsCount = Object.keys(this.def.inputs).length - initial * structSize
+        const staticInputsCount = Object.keys(this.typeDef.inputs).length - initial * structSize
         const currentVariableInputsCount = (this.inputs.length - staticInputsCount) / structSize
         console.assert(currentVariableInputsCount % 1 == 0)
         const addition = n - currentVariableInputsCount
@@ -102,7 +105,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         }
         // Add inputs
         if (addition > 0) {    
-            const initialInputs = Object.values(this.def.inputs).map(input => {
+            const initialInputs = Object.values(this.typeDef.inputs).map(input => {
                 const name = input.name ? splitToStringAndNumber(input.name || '')[0] : ''
                 return { name, value: input.value, dataType: input.dataType }
             })
@@ -170,23 +173,23 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     //////////////  CONSTRUCTOR /////////////////
     
-    constructor(def: FunctionTypeDefinition)
+    constructor(typeDef: FunctionTypeDefinition)
     {
-        this.def = def
-        this.inputs = Object.entries(def.inputs).map(([name, input]) => {
+        this.typeDef = typeDef
+        this.inputs = Object.entries(typeDef.inputs).map(([name, input]) => {
             return new IOPin('input', input.value, name, input.dataType, this, this.getIONum )
         })
-        this.outputs = Object.entries(def.outputs).map(([name, output]) => {
+        this.outputs = Object.entries(typeDef.outputs).map(([name, output]) => {
             return new IOPin('output', output.value, name, output.dataType, this, this.getIONum )
         })
-        this._typeName = this.def.name
-        this._symbol = this.def.symbol
-        this._description = this.def.description
-        this.variableInputs = def.variableInputs
-        this.variableOutputs = def.variableOutputs
-        this.statics = def.statics
-        if (def.circuit) {
-            this.circuit = new Circuit(def.circuit)
+        this._typeName = this.typeDef.name
+        this._symbol = this.typeDef.symbol
+        this._description = this.typeDef.description
+        this.variableInputs = typeDef.variableInputs
+        this.variableOutputs = typeDef.variableOutputs
+        this.statics = typeDef.statics
+        if (typeDef.circuit) {
+            this.circuit = new Circuit(typeDef.circuit)
         }
     }
 
@@ -195,8 +198,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     protected abstract run: (inputs: number[], outputs: number[], dt: number) => number | number[]
 
     protected statics: {}
-
-    protected def: FunctionTypeDefinition
 
     protected _typeName: string
     protected _symbol: string

@@ -1,10 +1,31 @@
 
-import { FunctionBlock, FunctionTypeDefinition } from "./FunctionBlock.js"
+import { FunctionBlock, FunctionInstanceDefinition, FunctionTypeDefinition } from "./FunctionBlock.js"
 
 function createFunctionCollection <T extends {[name: string]: FunctionTypeDefinition }>(def: T) { return def }
 
 export const FunctionDefinitions = createFunctionCollection(
 {
+    CIRCUIT: {
+        name: 'CIRCUIT',
+        description: 'Circuit',
+        inputs: {
+            0: { value: 0, dataType: 'FLOAT'},
+            1: { value: 0, dataType: 'FLOAT'},
+            2: { value: 0, dataType: 'FLOAT'},
+            3: { value: 0, dataType: 'FLOAT'}
+        },
+        outputs: {
+            0: { value: 0, dataType: 'FLOAT'},
+            1: { value: 0, dataType: 'FLOAT'},
+        },
+        variableInputs : {
+            min: 0, max: 32, initialCount: 4
+        },
+        variableOutputs : {
+            min: 0, max: 32, initialCount: 2
+        }
+    },
+    
     AND: {
         name: 'AND',
         symbol: '&',
@@ -17,7 +38,7 @@ export const FunctionDefinitions = createFunctionCollection(
             out: { value: 1, dataType: 'BINARY' },
         },
         variableInputs: {
-            min: 2, max: 32, initial: 2
+            min: 2, max: 32, initialCount: 2
         }
     },
 
@@ -33,7 +54,7 @@ export const FunctionDefinitions = createFunctionCollection(
             out: { value: 0, dataType: 'BINARY' },
         },
         variableInputs: {
-            min: 2, max: 32, initial: 2
+            min: 2, max: 32, initialCount: 2
         }
     },
 
@@ -133,8 +154,18 @@ export type FunctionTypeName = keyof typeof functionLib
 
 export const functionTypeNames = Object.keys(functionLib)
 
-export function getFunctionBlock(typeName: string) {
-    const ctor = functionLib[typeName]
+export function getFunctionBlock(instance: FunctionInstanceDefinition) {
+    const ctor = functionLib[instance.typeName]
     const block = new ctor()
+    if (instance.inputs) {
+        const { initialCount, structSize } = block.typeDef.variableInputs
+        const variableTotalCount = initialCount * structSize
+        const variableDiff = (instance.inputs.length - variableTotalCount) / structSize
+        console.assert(variableDiff % 1 == 0, 'variable input count does not fit variable input struct size multiplier')
+        const variableCount = initialCount + variableDiff
+        block.setVariableInputCount(variableCount)
+
+        instance.inputs.forEach((input, i) => block.inputs[i].setValue(input.value))
+    }
     return block
 }

@@ -1,4 +1,4 @@
-import { FunctionBlock, FunctionBlockInterface, FunctionBlockDefinition } from "./FunctionBlock.js";
+import { FunctionBlock, FunctionBlockInterface, FunctionInstanceDefinition } from "./FunctionBlock.js";
 import { IOPinInterface } from './IOPin.js';
 import { FunctionTypeName, getFunctionBlock } from './FunctionLib.js'
 import { Subscriber } from "./CommonTypes.js";
@@ -23,13 +23,13 @@ interface CircuitEvent {
 
 export interface CircuitDefinition
 {
-    blocks: FunctionBlockDefinition[]
+    blocks: FunctionInstanceDefinition[]
 }
 
 export interface CircuitInterface
 {
     readonly blocks: FunctionBlockInterface[]
-    addBlock(blockType: string)
+    addBlock(blockDef: FunctionInstanceDefinition)
     removeBlock(block: FunctionBlockInterface)
     connect(inputPin: IOPinInterface, outputPin: IOPinInterface, inverted?: boolean)
     disconnect(inputPin: IOPinInterface)
@@ -43,8 +43,8 @@ export interface CircuitInterface
 export default class Circuit implements CircuitInterface
 {
     get blocks() { return Array.from(this._blocks.values()) }
-    addBlock(type: FunctionTypeName) {
-        const block = getFunctionBlock(type)
+    addBlock(def: FunctionInstanceDefinition) {
+        const block = getFunctionBlock(def)
         this._blocks.add(block)
     }
     removeBlock(block: FunctionBlockInterface) {}
@@ -65,7 +65,7 @@ export default class Circuit implements CircuitInterface
     constructor(def: CircuitDefinition)
     {
         def.blocks.forEach(funcDef => {
-            const block = getFunctionBlock(funcDef.typeName)
+            const block = getFunctionBlock(funcDef)
             this._blocks.add(block)
         })
     }
