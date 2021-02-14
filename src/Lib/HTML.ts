@@ -1,4 +1,4 @@
-import { Menubar } from './HTMLMenubar.js'
+import Vec2 from './Vector2.js'
 
 export interface IElement
 {
@@ -143,6 +143,23 @@ export class Table
     iterateCells(iterator: TableCellIterator) {
         this.cells.forEach((row, y) => row.forEach((cell, x) => iterator(cell, y, x)))
     }
+}
 
-    
+export function backgroundGridStyle(scale: Vec2, lineColor: string) {
+    return {
+        backgroundImage: `linear-gradient(to right, ${lineColor} 1px, transparent 1px), linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)`,
+        backgroundSize: `${scale.x}px ${scale.y}px`
+    } as Partial<CSSStyleDeclaration>
+}
+export function backgroundLinesStyle(scale: Vec2, lineColor: string) {
+    return {
+        backgroundImage: `linear-gradient(to bottom, ${lineColor} 1px, transparent 1px)`,
+        backgroundSize: `${scale.x}px ${scale.y}px`
+    } as Partial<CSSStyleDeclaration>
+}
+export function backgroundDotStyle(scale: Vec2, lineColor: string) {
+    return {
+        backgroundImage: `radial-gradient(circle, ${lineColor} 1px, transparent 1px)`,
+        backgroundSize: `${scale.x}px ${scale.y}px`
+    } as Partial<CSSStyleDeclaration>
 }

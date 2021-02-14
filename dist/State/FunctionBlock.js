@@ -1,3 +1,4 @@
+import Circuit from "./Circuit.js";
 import { IOPin } from "./IOPin.js";
 export var BlockEventType;
 (function (BlockEventType) {
@@ -9,7 +10,6 @@ export var BlockEventType;
 export class FunctionBlock {
     //////////////  CONSTRUCTOR /////////////////
     constructor(def) {
-        this.type = 'FUNCTION';
         this.subscribers = new Set();
         this.getIONum = (io) => {
             if (io.type == 'input')
@@ -30,6 +30,10 @@ export class FunctionBlock {
         this.variableInputs = def.variableInputs;
         this.variableOutputs = def.variableOutputs;
         this.statics = def.statics;
+        this.type = def.circuit ? 'CIRCUIT' : 'FUNCTION';
+        if (this.type == 'CIRCUIT') {
+            this.circuit = new Circuit(def.circuit);
+        }
     }
     get name() { return this._name; }
     get symbol() { return this._symbol; }
@@ -82,7 +86,7 @@ export class FunctionBlock {
         }
         this.emitEvent(BlockEventType.InputCount);
     }
-    setOutputCount(n) { }
+    setVariableOutputCount(n) { }
     update(dt) {
         this.updateInputs();
         const inputs = this.inputs.map(input => input.value);
@@ -103,7 +107,7 @@ export class FunctionBlock {
     }
     remove() {
         this.inputs.forEach(input => input.remove());
-        this.outputs.forEach(input => input.remove());
+        this.outputs.forEach(output => output.remove());
         this.emitEvent(BlockEventType.Removed);
         this.subscribers.clear();
     }
@@ -120,7 +124,7 @@ export class FunctionBlock {
         addLine('Outputs:');
         this.outputs.forEach(output => addLine('  ' + output.toString()));
         addLine('');
-        addLine('Parent circuit: ' + this.parentCircuit);
+        this.parentCircuit && addLine('Parent circuit: ' + this.parentCircuit);
         this.variableInputs && addLine('Variable inputs: ' + this.variableInputs.min + ' - ' + this.variableInputs.max);
         this.variableOutputs && addLine('Variable outputs: ' + this.variableOutputs.min + ' - ' + this.variableOutputs.max);
         return text;

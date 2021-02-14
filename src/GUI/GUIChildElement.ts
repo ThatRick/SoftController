@@ -1,6 +1,6 @@
 import { vec2 } from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
-import { IChildElementGUI, IViewContainerGUI, IWindowGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
+import { IChildElementGUI, IViewContainerGUI, IRootViewGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
 
 export class GUIChildElement implements IChildElementGUI{
     DOMElement: HTMLElement
@@ -12,7 +12,7 @@ export class GUIChildElement implements IChildElementGUI{
     isSelectable?: boolean
     isMultiSelectable?: boolean
 
-    gui: IWindowGUI
+    gui: IRootViewGUI
 
     ////////////////////////////
     //      Constructor
@@ -70,7 +70,7 @@ export class GUIChildElement implements IChildElementGUI{
     }
 
     // Translate Absolute position to relative position
-    pointerPos() {
+    pointerScaledPos() {
         return Vec2.sub(this.gui.pointer.scaledPos, this.absPos)
     }
     pointerScreenPos() {

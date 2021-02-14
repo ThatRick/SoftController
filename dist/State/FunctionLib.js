@@ -108,4 +108,16 @@ class Select extends FunctionBlock {
         this.run = ([in0, in1, sel]) => sel ? in1 : in0;
     }
 }
-export { AND, OR, RS, RisingEdge, Select };
+const functionLib = {
+    AND: AND,
+    OR: OR,
+    RS: RS,
+    RisingEdge: RisingEdge,
+    Select: Select
+};
+export const functionNames = Object.keys(functionLib);
+export function getFunctionBlock(name) {
+    const ctor = functionLib[name];
+    const block = new ctor();
+    return block;
+}

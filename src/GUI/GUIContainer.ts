@@ -1,11 +1,11 @@
-import {IElementGUI, IChildElementGUI, IViewContainerGUI, IWindowGUI, Vec2, IStyleGUI} from './GUITypes.js'
+import {IElementGUI, IChildElementGUI, IViewContainerGUI, IRootViewGUI, Vec2, IStyleGUI} from './GUITypes.js'
 
 export default class GUIContainer<T extends IChildElementGUI> implements IViewContainerGUI
 {
     DOMElement: HTMLElement
     elements = new Set<T>()
 
-    gui: IWindowGUI
+    gui: IRootViewGUI
 
     constructor(private parent: IElementGUI)
     {

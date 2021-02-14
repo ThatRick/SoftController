@@ -7,20 +7,17 @@ export interface GUIPointerState<T extends IChildElementGUI>
 {
     isDown:             boolean
     isDragging:         boolean
-
+    
     eventTarget:        EventTarget
     targetElem:         T
     downTargetElem:     T
-    
-    dragHyst:           number
-    screenDragOffset:   Vec2
-    dragTargetInitPos:  Vec2
-    
-    screenPos:          Vec2
-    screenLocalPos:     Vec2
-    screenDownPos:      Vec2
 
+    screenPos:          Vec2
+    screenDownPos:      Vec2
+    screenDragOffset:   Vec2
+    
     scaledPos:          Vec2
+    scaledDownPos:      Vec2
     scaledDragOffset:   Vec2
 }
 
@@ -46,7 +43,7 @@ export interface IStyleGUI {
 
 export interface IElementGUI {
     DOMElement: HTMLElement
-    gui: IWindowGUI
+    gui: IRootViewGUI
     pos: Vec2
     absPos: Vec2
     size?: Vec2
@@ -57,7 +54,7 @@ export interface IElementGUI {
     delete(): void
 }
 
-export interface IWindowGUI extends IElementGUI {
+export interface IRootViewGUI extends IElementGUI {
     scale: Vec2
     style: IStyleGUI
     pointer: GUIPointerState<IChildElementGUI>

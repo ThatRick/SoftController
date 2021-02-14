@@ -42,7 +42,7 @@ export default class FunctionBlockPinView extends GUIChildElement {
     get blockID() {
         return this.funcState.id;
     }
-    get reference() {
+    get source() {
         const ref = (this.isInternalCircuitIO)
             ? this.funcState.circuit?.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
             : this.funcState.funcData.inputRefs[this.ioNum];
@@ -208,10 +208,10 @@ export default class FunctionBlockPinView extends GUIChildElement {
         };
     }
     togglePin() {
-        if (this.dataType == 2 /* BINARY */ && !this.reference) {
+        if (this.dataType == 2 /* BINARY */ && !this.source) {
             this.setValue((this.value) ? 0 : 1);
         }
-        else if (this.dataType == 2 /* BINARY */ && this.reference) {
+        else if (this.dataType == 2 /* BINARY */ && this.source) {
             this.setFlag(8 /* INVERTED */, !this.inverted);
         }
         else {

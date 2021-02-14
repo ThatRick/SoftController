@@ -1,6 +1,6 @@
-import { ICircuit } from "./Circuit.js"
+import Circuit, { CircuitDefinition, CircuitInterface } from "./Circuit.js"
 import { Subscriber } from "./CommonTypes.js"
-import { IOPin, IOPinDefinition, IOPinInterface } from "./IOPin.js"
+import { IOPin, IOPinDefinition, IOPinInstanceDefinition, IOPinInterface } from "./IOPin.js"
 
 
 ///////////////////////////////
@@ -8,23 +8,31 @@ import { IOPin, IOPinDefinition, IOPinInterface } from "./IOPin.js"
 ///////////////////////////////
 
 
+export interface FunctionTypeDefinition
+{
+    name:               string
+    inputs:             { [name: string]: IOPinDefinition }
+    outputs:            { [name: string]: IOPinDefinition }
+    symbol?:            string
+    description?:       string
+    variableInputs?:    VariableIOCountDefinition
+    variableOutputs?:   VariableIOCountDefinition
+    statics?:           { [name: string]: number }
+    circuit?:           CircuitDefinition
+}
+
 export interface FunctionBlockDefinition
 {
-    name:    string
-    inputs:  { [name: string]: IOPinDefinition }
-    outputs: { [name: string]: IOPinDefinition }
-    symbol?: string
-    description?: string
-    variableInputs?: VariableIOCountDefinition
-    variableOutputs?: VariableIOCountDefinition
-    statics?: { [name: string]: number }
+    typeName:       string
+    inputs:         IOPinInstanceDefinition
+    outputs:        IOPinInstanceDefinition
 }
 
 interface VariableIOCountDefinition {
-    min: number,
-    max: number,
-    initial: number,
-    structSize?: number
+    min:            number
+    max:            number
+    initial:        number
+    structSize?:    number
 }
 
 export enum BlockEventType {
@@ -41,19 +49,18 @@ export interface BlockEvent {
 
 export interface FunctionBlockInterface
 {
-    readonly type: 'FUNCTION' | 'CIRCUIT'
-    readonly name: string
-    readonly symbol?: string
-    readonly description: string
-    readonly inputs: IOPinInterface[]
-    readonly outputs: IOPinInterface[]
-    readonly parentCircuit?: ICircuit
-    readonly variableInputs?: VariableIOCountDefinition
-    readonly variableOutputs?: VariableIOCountDefinition
+    readonly typeName:          string
+    readonly symbol?:           string
+    readonly description:       string
+    readonly inputs:            IOPinInterface[]
+    readonly outputs:           IOPinInterface[]
+    readonly circuit?:          CircuitInterface
+    readonly parentCircuit?:    FunctionBlockInterface
+    readonly variableInputs?:   VariableIOCountDefinition
+    readonly variableOutputs?:  VariableIOCountDefinition
 
-    setName(name: string): void
     setVariableInputCount(n: number): void
-    setOutputCount(n: number): void
+    setVariableOutputCount(n: number): void
     update(dt: number): void
 
     subscribe(obj: Subscriber<BlockEvent>): void
@@ -65,22 +72,16 @@ export interface FunctionBlockInterface
 
 export abstract class FunctionBlock implements FunctionBlockInterface
 {
-    readonly    type = 'FUNCTION'
-    get         name()             { return this._name }
+    get         typeName()         { return this._typeName }
     get         symbol()           { return this._symbol }
     get         description()      { return this._description }
     readonly    inputs:            IOPinInterface[]
     readonly    outputs:           IOPinInterface[]
+    readonly    circuit?:          CircuitInterface
     get         parentCircuit()    { return this._parentCircuit }
     readonly    variableInputs?:   VariableIOCountDefinition
     readonly    variableOutputs?:  VariableIOCountDefinition
 
-    setName(name: string) {
-        if (this._name != name) {
-            this._name = name
-            this.emitEvent(BlockEventType.Name)
-        }
-    }
     setVariableInputCount(n: number) {
         if (!this.variableInputs) return
         const { min, max, initial, structSize=1 } = this.variableInputs
@@ -119,7 +120,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.emitEvent(BlockEventType.InputCount)
     }
 
-    setOutputCount(n: number) { }
+    setVariableOutputCount(n: number) { /* todo */ }
 
     update(dt: number) {
         this.updateInputs()
@@ -142,7 +143,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     remove() {
         this.inputs.forEach(input => input.remove())
-        this.outputs.forEach(input => input.remove())
+        this.outputs.forEach(output => output.remove())
         this.emitEvent(BlockEventType.Removed)
         this.subscribers.clear()
     }
@@ -151,8 +152,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         let text = '';
         const addLine = (line: string) => text += (line + '\n');
 
-        addLine('Type: ' + this.type)
-        addLine('Name: ' + this.name)
+        addLine('Name: ' + this.typeName)
         addLine('Symbol: ' + this.symbol)
         addLine('Description: ' + this.description)
         addLine('Inputs:')
@@ -161,7 +161,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         addLine('Outputs:')
         this.outputs.forEach(output => addLine('  ' + output.toString()))
         addLine('')
-        addLine('Parent circuit: ' + this.parentCircuit)
+        this.parentCircuit && addLine('Parent circuit: ' + this.parentCircuit)
         this.variableInputs && addLine('Variable inputs: ' + this.variableInputs.min + ' - ' + this.variableInputs.max)
         this.variableOutputs && addLine('Variable outputs: ' + this.variableOutputs.min + ' - ' + this.variableOutputs.max)
 
@@ -170,7 +170,8 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     //////////////  CONSTRUCTOR /////////////////
     
-    constructor(def: FunctionBlockDefinition) {
+    constructor(def: FunctionTypeDefinition)
+    {
         this.def = def
         this.inputs = Object.entries(def.inputs).map(([name, input]) => {
             return new IOPin('input', input.value, name, input.dataType, this, this.getIONum )
@@ -178,12 +179,15 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.outputs = Object.entries(def.outputs).map(([name, output]) => {
             return new IOPin('output', output.value, name, output.dataType, this, this.getIONum )
         })
-        this._name = this.def.name
+        this._typeName = this.def.name
         this._symbol = this.def.symbol
         this._description = this.def.description
         this.variableInputs = def.variableInputs
         this.variableOutputs = def.variableOutputs
         this.statics = def.statics
+        if (def.circuit) {
+            this.circuit = new Circuit(def.circuit)
+        }
     }
 
     ///////////////  PROTECTED  //////////////////
@@ -192,13 +196,13 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     protected statics: {}
 
-    protected def: FunctionBlockDefinition
+    protected def: FunctionTypeDefinition
 
-    protected _name: string
+    protected _typeName: string
     protected _symbol: string
     protected _description: string
 
-    protected _parentCircuit?: ICircuit
+    protected _parentCircuit?: FunctionBlockInterface
 
     protected subscribers = new Set<Subscriber<BlockEvent>>()
     

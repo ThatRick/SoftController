@@ -1,5 +1,5 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
-import { IViewContainerGUI, IWindowGUI } from '../GUI/GUITypes.js'
+import { IViewContainerGUI, IRootViewGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock } from './FunctionBlockState.js'
 import * as HTML from '../Lib/HTML.js'
@@ -63,7 +63,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
         return this.funcState.id
     }
     
-    get reference() {
+    get source() {
         const ref = (this.isInternalCircuitIO)
             ? this.funcState.circuit?.circuitData.outputRefs[this.ioNum - this.funcState.funcData.inputCount]
             : this.funcState.funcData.inputRefs[this.ioNum]
@@ -241,10 +241,10 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
 
     togglePin() {
-        if (this.dataType == IODataType.BINARY && !this.reference) {
+        if (this.dataType == IODataType.BINARY && !this.source) {
             this.setValue((this.value) ? 0 : 1)
         }
-        else if (this.dataType == IODataType.BINARY && this.reference) {
+        else if (this.dataType == IODataType.BINARY && this.source) {
             this.setFlag(IOFlag.INVERTED, !this.inverted)
         }
         else {

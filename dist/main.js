@@ -9,7 +9,7 @@ import * as HTML from './lib/HTML.js';
 import { ControllerTerminal } from './Terminal.js';
 import { Menubar } from './Lib/HTMLMenubar.js';
 import { CircuitMenuBar } from './CircuitView/CircuitMenuBar.js';
-import * as FB from './State/FunctionLib.js';
+import { getFunctionBlock } from './State/FunctionLib.js';
 function createControlButtonBar(buttons) {
     const nav = document.getElementById('mainMenubar');
     buttons.forEach(btn => nav.appendChild(btn.DOMElement));
@@ -30,7 +30,7 @@ const errorLogger = error => console.error(error);
 //
 window.onload = () => app().catch(rejected => console.error(rejected));
 function testzone(terminal) {
-    const sel = new FB.Select();
+    const sel = getFunctionBlock('Select');
     sel.inputs[0].setValue(69);
     sel.inputs[1].setValue(420);
     sel.update(1);

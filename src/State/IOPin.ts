@@ -6,12 +6,22 @@ import { FunctionBlockInterface } from "./FunctionBlock.js"
 //          IO Pin
 ///////////////////////////////
 
+export interface IOPinSource
+{
+    keksijotain: unknown
+}
 
 export interface IOPinDefinition
 {
-    value: number,
-    dataType: IODataType
-    name?: string,
+    value:      number
+    dataType:   IODataType
+    name?:      string
+}
+
+export interface IOPinInstanceDefinition
+{
+    value:      number
+    source?:    IOPinSource
 }
 
 export enum IOPinEventType

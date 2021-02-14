@@ -39,7 +39,7 @@ export class GUIChildElement {
         return absPos;
     }
     // Translate Absolute position to relative position
-    pointerPos() {
+    pointerScaledPos() {
         return Vec2.sub(this.gui.pointer.scaledPos, this.absPos);
     }
     pointerScreenPos() {

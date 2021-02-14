@@ -1,7 +1,7 @@
 
-import { FunctionBlock, FunctionBlockDefinition } from "./FunctionBlock.js"
+import { FunctionBlock, FunctionTypeDefinition } from "./FunctionBlock.js"
 
-function createFunctionCollection <T extends {[name: string]: FunctionBlockDefinition }>(def: T) { return def }
+function createFunctionCollection <T extends {[name: string]: FunctionTypeDefinition }>(def: T) { return def }
 
 export const FunctionDefinitions = createFunctionCollection(
 {
@@ -121,10 +121,22 @@ class Select extends FunctionBlock
     protected run = ([in0, in1, sel]) => sel ? in1 : in0
 }
 
-export {
+
+export const functionLib =
+{
     AND,
     OR,
     RS,
     RisingEdge,
     Select
+}
+
+export type FunctionTypeName = keyof typeof functionLib
+
+export const functionTypeNames = Object.keys(functionLib)
+
+export function getFunctionBlock(typeName: string) {
+    const ctor = functionLib[typeName]
+    const block = new ctor()
+    return block
 }
