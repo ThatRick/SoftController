@@ -3,23 +3,26 @@ import GUIView from '../GUI/GUIView.js'
 import Circuit from '../State/Circuit.js'
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import * as HTML from '../Lib/HTML.js'
-import { IStyleGUI } from '../GUI/GUITypes.js'
 
-interface DefaultStyle extends IStyleGUI {
+const defaultStyle =
+{
     colors: {
-        primary:    string
-        secondary:  string
-        light:      string
-        dark:       string
-        highlight:  string
-        selection:  string
-        background: string
-    }
+        primary:    '#999',
+        secondary:  '#77D',
+        light:      '#DDD',
+        dark:       '#666',
+        highlight:  '#DDF',
+        selection:  '#FFF',
+        background: '#446'
+    },
+    fontSize: 0.8
 }
 
-export default class CircuitView extends GUIView<GUIChildElement, DefaultStyle>
+type Style = typeof defaultStyle
+
+export default class CircuitView extends GUIView<GUIChildElement, Style>
 {
-    constructor(parent: HTMLElement, size: Vec2, scale: Vec2, style: Readonly<DefaultStyle>)
+    constructor(parent: HTMLElement, size: Vec2, scale: Vec2, style: Readonly<Style> = defaultStyle)
     {
         super(parent, size, scale, style, {
             backgroundColor: style.colors.background,

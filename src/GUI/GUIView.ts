@@ -5,6 +5,8 @@ import { GUIChildElement } from './GUIChildElement.js'
 import * as HTML from './../Lib/HTML.js'
 import GUIPointer from './GUIPointer.js'
 
+
+
 interface Updateable {
     update(force?: boolean): boolean
 }
@@ -76,10 +78,9 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
         this.restyle(style)
 
         this.children = new GUIContainer(this)
+        this.pointer = new GUIPointer(this)
 
         this.setup?.()
-
-        this.pointer = new GUIPointer(this)
 
         requestAnimationFrame(this.update.bind(this))
     }

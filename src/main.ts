@@ -39,7 +39,7 @@ const errorLogger = error => console.error(error)
 window.onload = () => app().catch(rejected => console.error(rejected))
 
 function testzone(terminal: ControllerTerminal) {
-    const sel = getFunctionBlock('Select')
+    const sel = getFunctionBlock({typeName: 'Select'})
     sel.inputs[0].setValue(69)
     sel.inputs[1].setValue(420)
     sel.update(1)

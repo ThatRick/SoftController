@@ -8,6 +8,7 @@ export default class FunctionBlockView extends GUIChildElement {
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
+            borderRadius: '3px',
             backgroundColor: (state.onlineDB)
                 ? circuitView.gui.style.colorBlockOnline
                 : circuitView.gui.style.colorBlock,
@@ -152,10 +153,12 @@ export default class FunctionBlockView extends GUIChildElement {
         this.footerView.DOMElement.style.visibility = visibility;
     }
     onSelected() {
-        this.DOMElement.style.outline = this.gui.style.blockOutlineSelected;
+        //this.DOMElement.style.outline = this.gui.style.blockOutlineSelected
+        this.DOMElement.style.boxShadow = '0px 0px 0px 1px #fff inset';
     }
     onUnselected() {
-        this.DOMElement.style.outline = this.gui.style.blockOutlineUnselected;
+        // this.DOMElement.style.outline = this.gui.style.blockOutlineUnselected
+        this.DOMElement.style.boxShadow = 'none';
     }
     toFront() {
         this.parentContainer.DOMElement.appendChild(this.DOMElement);

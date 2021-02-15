@@ -9,7 +9,7 @@ export var BlockEventType;
 })(BlockEventType || (BlockEventType = {}));
 export class FunctionBlock {
     //////////////  CONSTRUCTOR /////////////////
-    constructor(def) {
+    constructor(typeDef) {
         this.subscribers = new Set();
         this.getIONum = (io) => {
             if (io.type == 'input')
@@ -17,43 +17,36 @@ export class FunctionBlock {
             else
                 return this.outputs.findIndex(output => output == io) + this.inputs.length;
         };
-        this.def = def;
-        this.inputs = Object.entries(def.inputs).map(([name, input]) => {
+        this.typeDef = typeDef;
+        this.inputs = Object.entries(typeDef.inputs).map(([name, input]) => {
             return new IOPin('input', input.value, name, input.dataType, this, this.getIONum);
         });
-        this.outputs = Object.entries(def.outputs).map(([name, output]) => {
+        this.outputs = Object.entries(typeDef.outputs).map(([name, output]) => {
             return new IOPin('output', output.value, name, output.dataType, this, this.getIONum);
         });
-        this._name = this.def.name;
-        this._symbol = this.def.symbol;
-        this._description = this.def.description;
-        this.variableInputs = def.variableInputs;
-        this.variableOutputs = def.variableOutputs;
-        this.statics = def.statics;
-        this.type = def.circuit ? 'CIRCUIT' : 'FUNCTION';
-        if (this.type == 'CIRCUIT') {
-            this.circuit = new Circuit(def.circuit);
+        this._typeName = this.typeDef.name;
+        this._symbol = this.typeDef.symbol;
+        this._description = this.typeDef.description;
+        this.variableInputs = typeDef.variableInputs;
+        this.variableOutputs = typeDef.variableOutputs;
+        this.statics = typeDef.statics;
+        if (typeDef.circuit) {
+            this.circuit = new Circuit(typeDef.circuit);
         }
     }
-    get name() { return this._name; }
+    get typeName() { return this._typeName; }
     get symbol() { return this._symbol; }
     get description() { return this._description; }
     get parentCircuit() { return this._parentCircuit; }
-    setName(name) {
-        if (this._name != name) {
-            this._name = name;
-            this.emitEvent(BlockEventType.Name);
-        }
-    }
     setVariableInputCount(n) {
         if (!this.variableInputs)
             return;
-        const { min, max, initial, structSize = 1 } = this.variableInputs;
+        const { min, max, initialCount: initial, structSize = 1 } = this.variableInputs;
         if (n < min)
             n = min;
         if (n > max)
             n = max;
-        const staticInputsCount = Object.keys(this.def.inputs).length - initial * structSize;
+        const staticInputsCount = Object.keys(this.typeDef.inputs).length - initial * structSize;
         const currentVariableInputsCount = (this.inputs.length - staticInputsCount) / structSize;
         console.assert(currentVariableInputsCount % 1 == 0);
         const addition = n - currentVariableInputsCount;
@@ -69,7 +62,7 @@ export class FunctionBlock {
         }
         // Add inputs
         if (addition > 0) {
-            const initialInputs = Object.values(this.def.inputs).map(input => {
+            const initialInputs = Object.values(this.typeDef.inputs).map(input => {
                 const name = input.name ? splitToStringAndNumber(input.name || '')[0] : '';
                 return { name, value: input.value, dataType: input.dataType };
             });
@@ -114,8 +107,7 @@ export class FunctionBlock {
     toString() {
         let text = '';
         const addLine = (line) => text += (line + '\n');
-        addLine('Type: ' + this.type);
-        addLine('Name: ' + this.name);
+        addLine('Name: ' + this.typeName);
         addLine('Symbol: ' + this.symbol);
         addLine('Description: ' + this.description);
         addLine('Inputs:');

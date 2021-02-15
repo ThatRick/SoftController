@@ -65,7 +65,7 @@ export interface FunctionBlockInterface
     setVariableOutputCount(n: number): void
     update(dt: number): void
 
-    subscribe(obj: Subscriber<BlockEvent>): void
+    subscribe(obj: Subscriber<BlockEvent>, eventTypes?: BlockEventType[]): void
     unsubscribe(obj: Subscriber<BlockEvent>): void
 
     remove(): void

@@ -16,9 +16,8 @@ export class Text {
     DOMElement: HTMLDivElement
     constructor (text: string, style?: Partial<CSSStyleDeclaration>, parent?: HTMLElement) {
         this.DOMElement = domElement(null, 'div', {
-            display: 'inline-block',
             paddingLeft: '2px',
-            paddingRight: '2px',
+            paddingRight: '4px',
             ...style
         })
         this.setText(text)

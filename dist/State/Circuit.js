@@ -14,10 +14,14 @@ export default class Circuit {
     constructor(def) {
         this._blocks = new Set();
         this.subscribers = new Set();
+        def.blocks.forEach(funcDef => {
+            const block = getFunctionBlock(funcDef);
+            this._blocks.add(block);
+        });
     }
     get blocks() { return Array.from(this._blocks.values()); }
-    addBlock(type) {
-        const block = getFunctionBlock(type);
+    addBlock(def) {
+        const block = getFunctionBlock(def);
         this._blocks.add(block);
     }
     removeBlock(block) { }

@@ -20,47 +20,7 @@ export interface CircuitElement extends GUIChildElement
     onUnselected?(): void
 }
 
-export interface CircuitStyle
-{
-    colorBackground:        string
-    colorGridLine:          string
-    colorPanel:             string
-    colorPanelLines:        string
-    colorBlock:             string
-    colorBlockOnline:       string
-    colorBlockHover:        string
-    colorSelected:          string
-    
-    blockOutlineUnselected: string
-    blockOutlineSelected:   string
-
-    colorPinHover:          string
-    colorPinBinary0:        string
-    colorPinBinary1:        string
-    colorPinInteger:        string
-    colorPinFloat:          string
-    colorValueBg:           string
-    colorCallIndex:         string
-    colorOfflineID:         string
-    colorOnlineID:          string
-    
-    filterDefault:          string
-    filterActive:           string
-
-    colorPending:           string
-    borderPending:          string
-    borderError:            string
-    
-    fontSize:               number
-    traceWidth:             number
-    IOAreaWidth:            number
-    
-    valueFieldHeight:       number
-    valueFieldyOffset:      number
-    valueFieldxOffset:      number
-}
-
-export const defaultStyle: CircuitStyle =
+export const defaultStyle =
 {
     colorBackground:        '#202020',
     colorGridLine:          '#252525',
@@ -99,3 +59,5 @@ export const defaultStyle: CircuitStyle =
     valueFieldyOffset:     -0.3,
     valueFieldxOffset:      0.4
 }
+
+export type CircuitStyle = typeof defaultStyle
