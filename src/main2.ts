@@ -1,7 +1,7 @@
 import * as HTML from './lib/HTML.js'
 import { ControllerTerminal } from './Terminal.js';
 import { Menubar } from './Lib/HTMLMenubar.js'
-import { CircuitMenuBar } from './CircuitView/CircuitMenuBar.js';
+import { BlockEventType } from './State/FunctionBlock.js'
 
 import { getFunctionBlock } from './State/FunctionLib.js'
 import CircuitView from './View/CircuitView.js'
@@ -13,14 +13,32 @@ import Vec2, { vec2 } from './Lib/Vector2.js';
 window.onload = () => app().catch(rejected => console.error(rejected))
 
 function testzone(terminal: ControllerTerminal) {
-    const sel = getFunctionBlock({typeName: 'Select'})
-    sel.inputs[0].setValue(69)
-    sel.inputs[1].setValue(420)
-    sel.update(1)
-    terminal.print(sel.toString())
-    sel.inputs[2].setValue(1)
-    sel.update(1)
-    terminal.print(sel.toString())
+    const and = getFunctionBlock({typeName: 'AND'})
+    and.events.subscribe(ev => {
+        switch(ev.type)
+        {
+            case BlockEventType.InputCount:
+                console.log('Function block input count changed')
+                break
+            case BlockEventType.Test:
+                console.log('Got test event')
+                break
+        }
+    }, [BlockEventType.Test])
+
+    and.inputs[0].setValue(0)
+    and.update(1)
+    terminal.print(and.toString())
+    
+    and.inputs[0].setValue(1)
+    and.update(1)
+    terminal.print(and.toString())
+    
+    and.setVariableInputCount(3)
+    and.update(1)
+    terminal.print(and.toString())
+    and.events.emit(BlockEventType.Test)
+
 }
 
 async function app()

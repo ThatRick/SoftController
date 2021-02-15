@@ -1,3 +1,4 @@
+import { EventEmitter } from "../Lib/Events.js";
 export var IOPinEventType;
 (function (IOPinEventType) {
     IOPinEventType[IOPinEventType["Value"] = 0] = "Value";
@@ -10,7 +11,7 @@ export var IOPinEventType;
 export class IOPin {
     //////////////////////////////////////////////
     constructor(type, value, name, datatype, block, getIONum) {
-        this.subscribers = new Set();
+        this.events = new EventEmitter();
         this.type = type;
         this._value = value;
         this._name = name;
@@ -28,42 +29,36 @@ export class IOPin {
     setValue(value) {
         if (this._value != value) {
             this._value = value;
-            this.emitEvent(IOPinEventType.Value);
+            this.events.emit(IOPinEventType.Value);
         }
     }
     setName(name) {
         if (this._name != name) {
             this._name = name;
-            this.emitEvent(IOPinEventType.Name);
+            this.events.emit(IOPinEventType.Name);
         }
     }
     setDatatype(datatype) {
         if (this._datatype != datatype) {
             this._datatype = datatype;
-            this.emitEvent(IOPinEventType.Datatype);
+            this.events.emit(IOPinEventType.Datatype);
         }
     }
     setSource(source) {
         if (this._source != source) {
             this._source = source;
-            this.emitEvent(IOPinEventType.Source);
+            this.events.emit(IOPinEventType.Source);
         }
     }
     setInverted(inverted) {
         if (this._inverted != inverted) {
             this._inverted = inverted;
-            this.emitEvent(IOPinEventType.Inverted);
+            this.events.emit(IOPinEventType.Inverted);
         }
     }
-    subscribe(fn) {
-        this.subscribers.add(fn);
-    }
-    unsubscribe(fn) {
-        this.subscribers.delete(fn);
-    }
     remove() {
-        this.emitEvent(IOPinEventType.Removed);
-        this.subscribers.clear();
+        this.events.emit(IOPinEventType.Removed);
+        this.events.clear();
         this._source = null;
     }
     toString() {
@@ -71,10 +66,5 @@ export class IOPin {
         const inverted = (this.inverted) ? 'inverted' : '';
         const str = (this.name + ': ').padEnd(6) + this.value.toString().padStart(8) + ('  [' + this.datatype + ']').padEnd(10) + '  #' + this.ioNum + ' ' + connected + inverted;
         return str;
-    }
-    //////////////////////////////////////////////
-    emitEvent(type) {
-        const event = { type, target: this };
-        this.subscribers.forEach(fn => fn(event));
     }
 }

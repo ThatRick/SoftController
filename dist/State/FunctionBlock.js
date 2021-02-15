@@ -1,16 +1,10 @@
+import { EventEmitter } from "../Lib/Events.js";
 import Circuit from "./Circuit.js";
 import { IOPin } from "./IOPin.js";
-export var BlockEventType;
-(function (BlockEventType) {
-    BlockEventType[BlockEventType["Name"] = 0] = "Name";
-    BlockEventType[BlockEventType["InputCount"] = 1] = "InputCount";
-    BlockEventType[BlockEventType["OutputCount"] = 2] = "OutputCount";
-    BlockEventType[BlockEventType["Removed"] = 3] = "Removed";
-})(BlockEventType || (BlockEventType = {}));
 export class FunctionBlock {
     //////////////  CONSTRUCTOR /////////////////
     constructor(typeDef) {
-        this.subscribers = new Set();
+        this.events = new EventEmitter();
         this.getIONum = (io) => {
             if (io.type == 'input')
                 return this.inputs.findIndex(input => input == io);
@@ -77,7 +71,7 @@ export class FunctionBlock {
                 this.inputs.push(...newInputs);
             }
         }
-        this.emitEvent(BlockEventType.InputCount);
+        this.events.emit(0 /* InputCount */);
     }
     setVariableOutputCount(n) { }
     update(dt) {
@@ -92,17 +86,11 @@ export class FunctionBlock {
             this.outputs[0].setValue(ret);
         }
     }
-    subscribe(obj) {
-        this.subscribers.add(obj);
-    }
-    unsubscribe(obj) {
-        this.subscribers.delete(obj);
-    }
     remove() {
         this.inputs.forEach(input => input.remove());
         this.outputs.forEach(output => output.remove());
-        this.emitEvent(BlockEventType.Removed);
-        this.subscribers.clear();
+        this.events.emit(2 /* Removed */);
+        this.events.clear();
     }
     toString() {
         let text = '';
@@ -120,10 +108,6 @@ export class FunctionBlock {
         this.variableInputs && addLine('Variable inputs: ' + this.variableInputs.min + ' - ' + this.variableInputs.max);
         this.variableOutputs && addLine('Variable outputs: ' + this.variableOutputs.min + ' - ' + this.variableOutputs.max);
         return text;
-    }
-    emitEvent(type) {
-        const event = { type, target: this };
-        this.subscribers.forEach(fn => fn(event));
     }
     updateInputs() {
         this.inputs.forEach(input => {

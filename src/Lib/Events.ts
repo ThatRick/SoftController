@@ -1,23 +1,31 @@
 export type Subscriber<T> = (event: T) => void
 
 interface Event {
-    type:   unknown
+    type:   number
     target: object
 } 
 
-export class EventEmitter<T extends Event, Type = Event['type']>
+export class EventEmitter<T extends Event>
 {
-    subscribe(obj: Subscriber<T>, eventTypes?: Type[]): void {
-
+    subscribe(fn: Subscriber<T>, eventTypes?: number[]): void {
+        const typeMask = eventTypes ? eventTypes.reduce((mask, type) => mask += (1 << type), 0) : null
+        console.log('subscribe with type mask', typeMask)
+        this.subscribers.set(fn, typeMask)
     }
-    unsubscribe(obj: Subscriber<Event>): void {
-
+    unsubscribe(fn: Subscriber<T>): void {
+        this.subscribers.delete(fn)
     }
 
-    protected emitEvent(type: Type) {
+    emit(type: number) {
         const event = { type, target: this }
-        this.subscribers.forEach(fn => fn(event))
+        this.subscribers.forEach((typeMask, fn) => {
+            if (typeMask == null || ((1 << type) & typeMask)) fn(event)
+        })
     }
 
-    protected subscribers = new Set<Subscriber<Event>>()
-} 
+    clear() {
+        this.subscribers.clear()
+    }
+
+    protected subscribers = new Map<Subscriber<Event>, number>()
+}

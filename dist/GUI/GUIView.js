@@ -21,8 +21,8 @@ export default class GUIView {
         this.rescale(scale);
         this.restyle(style);
         this.children = new GUIContainer(this);
-        this.setup?.();
         this.pointer = new GUIPointer(this);
+        this.setup?.();
         requestAnimationFrame(this.update.bind(this));
     }
     set size(v) {

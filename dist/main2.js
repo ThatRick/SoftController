@@ -9,14 +9,27 @@ import { vec2 } from './Lib/Vector2.js';
 //
 window.onload = () => app().catch(rejected => console.error(rejected));
 function testzone(terminal) {
-    const sel = getFunctionBlock({ typeName: 'Select' });
-    sel.inputs[0].setValue(69);
-    sel.inputs[1].setValue(420);
-    sel.update(1);
-    terminal.print(sel.toString());
-    sel.inputs[2].setValue(1);
-    sel.update(1);
-    terminal.print(sel.toString());
+    const and = getFunctionBlock({ typeName: 'AND' });
+    and.events.subscribe(ev => {
+        switch (ev.type) {
+            case 0 /* InputCount */:
+                console.log('Function block input count changed');
+                break;
+            case 3 /* Test */:
+                console.log('Got test event');
+                break;
+        }
+    }, [3 /* Test */]);
+    and.inputs[0].setValue(0);
+    and.update(1);
+    terminal.print(and.toString());
+    and.inputs[0].setValue(1);
+    and.update(1);
+    terminal.print(and.toString());
+    and.setVariableInputCount(3);
+    and.update(1);
+    terminal.print(and.toString());
+    and.events.emit(3 /* Test */);
 }
 async function app() {
     const mainMenubar = new Menubar(document.getElementById('mainMenubar'));

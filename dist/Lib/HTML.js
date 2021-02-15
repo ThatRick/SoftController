@@ -7,9 +7,8 @@ export function domElement(parentDOM, tagName, style) {
 export class Text {
     constructor(text, style, parent) {
         this.DOMElement = domElement(null, 'div', {
-            display: 'inline-block',
             paddingLeft: '2px',
-            paddingRight: '2px',
+            paddingRight: '4px',
             ...style
         });
         this.setText(text);

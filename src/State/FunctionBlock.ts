@@ -1,3 +1,4 @@
+import { EventEmitter } from "../Lib/Events.js"
 import Circuit, { CircuitDefinition, CircuitInterface } from "./Circuit.js"
 import { Subscriber } from "./CommonTypes.js"
 import { FunctionTypeName } from "./FunctionLib.js"
@@ -36,11 +37,11 @@ interface VariableIOCountDefinition {
     structSize?:    number
 }
 
-export enum BlockEventType {
-    Name,
+export const enum BlockEventType {
     InputCount,
     OutputCount,
-    Removed
+    Removed,
+    Test
 }
 
 export interface BlockEvent {
@@ -60,13 +61,11 @@ export interface FunctionBlockInterface
     readonly variableInputs?:   VariableIOCountDefinition
     readonly variableOutputs?:  VariableIOCountDefinition
     readonly typeDef:           FunctionTypeDefinition
+    readonly events:            EventEmitter<BlockEvent>
 
     setVariableInputCount(n: number): void
     setVariableOutputCount(n: number): void
     update(dt: number): void
-
-    subscribe(obj: Subscriber<BlockEvent>, eventTypes?: BlockEventType[]): void
-    unsubscribe(obj: Subscriber<BlockEvent>): void
 
     remove(): void
 }
@@ -84,6 +83,8 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     readonly    variableInputs?:   VariableIOCountDefinition
     readonly    variableOutputs?:  VariableIOCountDefinition
     readonly    typeDef:           FunctionTypeDefinition
+    readonly    events =           new EventEmitter<BlockEvent>()
+
 
     setVariableInputCount(n: number) {
         if (!this.variableInputs) return
@@ -120,7 +121,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
                 this.inputs.push(...newInputs)
             }
         }
-        this.emitEvent(BlockEventType.InputCount)
+        this.events.emit(BlockEventType.InputCount)
     }
 
     setVariableOutputCount(n: number) { /* todo */ }
@@ -137,18 +138,11 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         }
     }
 
-    subscribe(obj: Subscriber<BlockEvent>) {
-        this.subscribers.add(obj)
-    }
-    unsubscribe(obj: Subscriber<BlockEvent>) {
-        this.subscribers.delete(obj)
-    }
-
     remove() {
         this.inputs.forEach(input => input.remove())
         this.outputs.forEach(output => output.remove())
-        this.emitEvent(BlockEventType.Removed)
-        this.subscribers.clear()
+        this.events.emit(BlockEventType.Removed)
+        this.events.clear()
     }
 
     toString() {
@@ -188,6 +182,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.variableInputs = typeDef.variableInputs
         this.variableOutputs = typeDef.variableOutputs
         this.statics = typeDef.statics
+        
         if (typeDef.circuit) {
             this.circuit = new Circuit(typeDef.circuit)
         }
@@ -205,13 +200,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     protected _parentCircuit?: FunctionBlockInterface
 
-    protected subscribers = new Set<Subscriber<BlockEvent>>()
-    
-    protected emitEvent(type: BlockEventType) {
-        const event = { type, target: this }
-        this.subscribers.forEach(fn => fn(event))
-    }
-    
     protected updateInputs() {
         this.inputs.forEach(input => {
             if (input.source) {

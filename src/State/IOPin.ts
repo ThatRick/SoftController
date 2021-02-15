@@ -1,3 +1,4 @@
+import { EventEmitter } from "../Lib/Events.js"
 import { IODataType, Subscriber } from "./CommonTypes.js"
 import { FunctionBlockInterface } from "./FunctionBlock.js"
 
@@ -50,16 +51,13 @@ export interface IOPinInterface
     readonly block: FunctionBlockInterface
     readonly source?: { value: number }
     readonly inverted?: boolean
+    readonly events: EventEmitter<IOPinEvent>
 
     setValue(n: number): void
     setName(name: string): void
     setDatatype(type: IODataType): void
     setSource(source: { value: number })
     setInverted(inverted: boolean)
-
-    subscribe(obj: Subscriber<IOPinEvent>)
-    unsubscribe(obj: Subscriber<IOPinEvent>)
-
     remove(): void
 }
 
@@ -78,44 +76,39 @@ export class IOPin implements IOPinInterface
     setValue(value: number) {
         if (this._value != value) {
             this._value = value
-            this.emitEvent(IOPinEventType.Value)
+            this.events.emit(IOPinEventType.Value)
         }
     }
     setName(name: string) {
         if (this._name != name) {
             this._name = name
-            this.emitEvent(IOPinEventType.Name)
+            this.events.emit(IOPinEventType.Name)
         }
     }
     setDatatype(datatype: IODataType) {
         if (this._datatype != datatype) {
             this._datatype = datatype
-            this.emitEvent(IOPinEventType.Datatype)
+            this.events.emit(IOPinEventType.Datatype)
         }
     }
     setSource(source: { value: number }) {
         if (this._source != source) {
             this._source = source
-            this.emitEvent(IOPinEventType.Source)
+            this.events.emit(IOPinEventType.Source)
         }
     }
     setInverted(inverted: boolean) {
         if (this._inverted != inverted) {
             this._inverted = inverted
-            this.emitEvent(IOPinEventType.Inverted)
+            this.events.emit(IOPinEventType.Inverted)
         }
     }
 
-    subscribe(fn: Subscriber<IOPinEvent>) {
-        this.subscribers.add(fn)
-    }
-    unsubscribe(fn: Subscriber<IOPinEvent>) {
-        this.subscribers.delete(fn)
-    }
+    events = new EventEmitter<IOPinEvent>()
 
     remove() {
-        this.emitEvent(IOPinEventType.Removed)
-        this.subscribers.clear()
+        this.events.emit(IOPinEventType.Removed)
+        this.events.clear()
         this._source = null
     }
 
@@ -146,17 +139,11 @@ export class IOPin implements IOPinInterface
 
     //////////////////////////////////////////////
 
-    private emitEvent(type: IOPinEventType) {
-        const event = { type, target: this }
-        this.subscribers.forEach(fn => fn(event))
-    }
-    private _value: number
-    private _name: string
-    private _datatype: IODataType
-    private getIONum: (io: IOPinInterface) => number
-    private _block: FunctionBlockInterface
-    private _source: { value: number }
-    private _inverted: boolean
-
-    private subscribers = new Set<Subscriber<IOPinEvent>>()
+    protected _value: number
+    protected _name: string
+    protected _datatype: IODataType
+    protected getIONum: (io: IOPinInterface) => number
+    protected _block: FunctionBlockInterface
+    protected _source: { value: number }
+    protected _inverted: boolean
 }
