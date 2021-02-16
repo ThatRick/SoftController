@@ -133,7 +133,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         let ret = this.run(inputs, outputs, dt)
         if (typeof ret == 'object') {
             outputs.forEach((value, i) => this.outputs[i].setValue(value))
-        } else {
+        } else if (typeof ret == 'number') {
             this.outputs[0].setValue(ret)
         }
     }
@@ -190,7 +190,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     ///////////////  PROTECTED  //////////////////
 
-    protected abstract run: (inputs: number[], outputs: number[], dt: number) => number | number[]
+    protected abstract run: (inputs: number[], outputs: number[], dt: number) => number | number[] | void
 
     protected statics: {}
 

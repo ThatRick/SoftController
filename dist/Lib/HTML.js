@@ -91,6 +91,12 @@ export class Table {
         if (options.cellIterator)
             this.iterateCells(options.cellIterator);
     }
+    delete() {
+        this.rows = null,
+            this.cells = null;
+        this.DOMElement.parentElement.removeChild(this.DOMElement);
+        this.DOMElement = null;
+    }
     getCell(row, col) { return this.cells[row][col]; }
     iterateCells(iterator) {
         this.cells.forEach((row, y) => row.forEach((cell, x) => iterator(cell, y, x)));

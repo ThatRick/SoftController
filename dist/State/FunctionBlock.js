@@ -82,7 +82,7 @@ export class FunctionBlock {
         if (typeof ret == 'object') {
             outputs.forEach((value, i) => this.outputs[i].setValue(value));
         }
-        else {
+        else if (typeof ret == 'number') {
             this.outputs[0].setValue(ret);
         }
     }

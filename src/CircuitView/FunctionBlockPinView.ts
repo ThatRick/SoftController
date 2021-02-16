@@ -1,5 +1,5 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
-import { IViewContainerGUI, IRootViewGUI } from '../GUI/GUITypes.js'
+import { IContainerGUI, IRootViewGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock } from './FunctionBlockState.js'
 import * as HTML from '../Lib/HTML.js'
@@ -14,7 +14,7 @@ function logError(...args: any[]) { console.error('Circuit View:', ...args)}
 
 export default class FunctionBlockPinView extends GUIChildElement implements CircuitElement
 {
-    constructor(parent: IViewContainerGUI, funcState: FunctionBlock, ioNum: number, pos: Vec2, isInternalCircuitIO = false) {
+    constructor(parent: IContainerGUI, funcState: FunctionBlock, ioNum: number, pos: Vec2, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1))
         this.funcState = funcState
         this.ioNum = ioNum

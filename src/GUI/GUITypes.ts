@@ -66,15 +66,15 @@ export interface IRootViewGUI extends IElementGUI {
 
 export interface IChildElementGUI extends IElementGUI, GUIPointerEventHandler
 {
-    parentContainer?: IViewContainerGUI
-    children?: IViewContainerGUI
+    parentContainer?: IContainerGUI
+    children?: IContainerGUI
 
     isDraggable?: boolean
     isSelectable?: boolean
     isMultiSelectable?: boolean
 }
 
-export interface IViewContainerGUI extends IElementGUI
+export interface IContainerGUI extends IElementGUI
 {
     elements: Set<IChildElementGUI>
     attachChildElement(elem: IChildElementGUI): void

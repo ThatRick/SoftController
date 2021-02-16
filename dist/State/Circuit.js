@@ -33,6 +33,9 @@ export default class Circuit {
     unsubscribe(obj) {
         this.subscribers.delete(obj);
     }
+    update(dt) {
+        this._blocks.forEach(block => block.update(dt));
+    }
     remove() {
         this.emitEvent(CircuitEventType.Removed);
         this.subscribers.clear();

@@ -1,8 +1,25 @@
 // Just a helper to shorten Vec2 construction syntax
-export function vec2(x: number, y: number = x): Vec2 { return new Vec2(x, y) }
 
+export function vec2(v: IVec2): Vec2
+export function vec2(x: number, y: number): Vec2
+export function vec2(xy: number): Vec2
+export function vec2(xv: number | IVec2, y?: number): Vec2
+{
+  if (typeof xv == 'object') {
+    return new Vec2(xv.x, xv.y)
+  }
+  else if (typeof xv == 'number') {
+    return new Vec2(xv, y ?? xv)
+  }
+}
 
-export default class Vec2
+export interface IVec2
+{
+  x: number
+  y: number
+}
+
+export default class Vec2 implements IVec2
 {
   constructor(
     public x: number,

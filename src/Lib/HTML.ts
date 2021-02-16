@@ -137,6 +137,13 @@ export class Table
         if (options.cellIterator) this.iterateCells(options.cellIterator)
     }
 
+    delete() {
+        this.rows = null,
+        this.cells = null
+        this.DOMElement.parentElement.removeChild(this.DOMElement)
+        this.DOMElement = null
+    }
+
     getCell(row: number, col: number) { return this.cells[row][col] }
 
     iterateCells(iterator: TableCellIterator) {

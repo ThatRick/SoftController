@@ -1,5 +1,5 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
-import { IViewContainerGUI, IRootViewGUI } from '../GUI/GUITypes.js'
+import { IContainerGUI, IRootViewGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock } from './FunctionBlockState.js'
 import CircuitView from './CircuitView.js'
@@ -46,7 +46,7 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
 
     get callIndex() { return this.state.parentCircuit?.getBlockCallIndex(this.id) }
 
-    constructor(circuitView: IViewContainerGUI, pos: Vec2, state: FunctionBlock)
+    constructor(circuitView: IContainerGUI, pos: Vec2, state: FunctionBlock)
     {
         super(circuitView, 'div', pos, FunctionBlockView.getBlockSize(state), {
             color: 'white',

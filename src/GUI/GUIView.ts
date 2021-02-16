@@ -25,7 +25,7 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
     absPos = vec2(0, 0)
     
     private _size: Vec2
-    set size(v: Vec2) {
+    setSize(v: Vec2) {
         if (this._size?.equal(v)) return
         this._size = Object.freeze(v.copy())
         this._resize()

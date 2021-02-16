@@ -1,12 +1,12 @@
 import { vec2 } from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
-import { IChildElementGUI, IViewContainerGUI, IRootViewGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
+import { IChildElementGUI, IContainerGUI, IRootViewGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
 
 export class GUIChildElement implements IChildElementGUI{
     DOMElement: HTMLElement
 
-    parentContainer?: IViewContainerGUI
-    children?: IViewContainerGUI
+    parentContainer?: IContainerGUI
+    children?: IContainerGUI
 
     isDraggable?: boolean
     isSelectable?: boolean
@@ -18,7 +18,7 @@ export class GUIChildElement implements IChildElementGUI{
     //      Constructor
     ////////////////////////////
     constructor(
-        parent: IViewContainerGUI,
+        parent: IContainerGUI,
         elem:   HTMLElement | 'div',
         pos:    Vec2,
         size?:  Vec2,

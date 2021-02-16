@@ -1,5 +1,12 @@
 // Just a helper to shorten Vec2 construction syntax
-export function vec2(x, y = x) { return new Vec2(x, y); }
+export function vec2(xv, y) {
+    if (typeof xv == 'object') {
+        return new Vec2(xv.x, xv.y);
+    }
+    else if (typeof xv == 'number') {
+        return new Vec2(xv, y ?? xv);
+    }
+}
 export default class Vec2 {
     constructor(x, y) {
         this.x = x;

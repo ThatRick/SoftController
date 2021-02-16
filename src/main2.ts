@@ -4,13 +4,51 @@ import { Menubar } from './Lib/HTMLMenubar.js'
 import { BlockEventType } from './State/FunctionBlock.js'
 
 import { getFunctionBlock } from './State/FunctionLib.js'
-import CircuitView from './View/CircuitView.js'
+import CircuitView, { CircuitViewDefinition } from './View/CircuitView.js'
 import Vec2, { vec2 } from './Lib/Vector2.js';
+import { IODataType } from './State/CommonTypes.js';
 
 //////////////////////////
 //  PROGRAM ENTRY POINT
 //
 window.onload = () => app().catch(rejected => console.error(rejected))
+
+const myProg: CircuitViewDefinition = {
+    definition: {
+        name: 'My circuit',
+        inputs: {
+            meas: { value: 123, dataType: 'FLOAT' },
+            fault: { value: 0, dataType: 'BINARY' }
+        },
+        outputs: {
+            out: { value: 0, dataType: 'FLOAT' }
+        },
+        circuit: {
+            blocks: [
+                { typeName: 'AND' },
+                { typeName: 'OR' },
+                { typeName: 'Select' },
+            ]
+        }
+    },
+    size: {x: 40, y: 30},
+    positions: {
+        blocks: [
+            {x: 8, y: 4},
+            {x: 8, y: 10},
+            {x: 8, y: 16},
+        ],
+        inputs: [4, 6],
+        outputs: [4]
+    }
+}
+
+function testCircuit(view: CircuitView, terminal: ControllerTerminal) {
+    view.loadCircuitDefinition(myProg)
+    const blocks = view.circuitBlock.circuit.blocks
+    blocks[0].setVariableInputCount(3)
+    blocks[1].remove()
+}
 
 function testzone(terminal: ControllerTerminal) {
     const and = getFunctionBlock({typeName: 'AND'})
@@ -52,8 +90,8 @@ async function app()
     
     const view = new CircuitView(guiContainer, vec2(64, 48), vec2(12, 12))
 
-    testzone(terminal)
-
+    // testzone(terminal)
+    testCircuit(view, terminal)
 
     mainMenubar.addItems([
         new HTML.Text('Controller :: '),

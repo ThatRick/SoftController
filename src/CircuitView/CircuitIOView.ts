@@ -1,5 +1,5 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
-import { IViewContainerGUI, IRootViewGUI } from '../GUI/GUITypes.js'
+import { IContainerGUI, IRootViewGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { Circuit } from './CircuitState.js'
 import CircuitView from './CircuitView.js'
@@ -27,7 +27,7 @@ export default class CircuitIOView extends GUIChildElement implements CircuitEle
         super.setPos(v)
     }
 
-    constructor(parent: IViewContainerGUI, circuit: Circuit, ioNum: number, pos: Vec2)
+    constructor(parent: IContainerGUI, circuit: Circuit, ioNum: number, pos: Vec2)
     {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
             borderBottom: '1px solid',

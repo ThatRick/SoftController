@@ -1,11 +1,12 @@
 
+import Circuit from "./Circuit.js"
 import { FunctionBlock, FunctionInstanceDefinition, FunctionTypeDefinition } from "./FunctionBlock.js"
 
 function createFunctionCollection <T extends {[name: string]: FunctionTypeDefinition }>(def: T) { return def }
 
 export const FunctionDefinitions = createFunctionCollection(
 {
-    CIRCUIT: {
+    Circuit: {
         name: 'CIRCUIT',
         description: 'Circuit',
         inputs: {
@@ -100,6 +101,7 @@ export const FunctionDefinitions = createFunctionCollection(
     }
 })
 
+
 class AND extends FunctionBlock
 {
     constructor() { super(FunctionDefinitions.AND) }
@@ -168,4 +170,25 @@ export function getFunctionBlock(instance: FunctionInstanceDefinition) {
         instance.inputs.forEach((input, i) => block.inputs[i].setValue(input.value))
     }
     return block
+}
+
+export class CircuitBlock extends FunctionBlock
+{
+    constructor(definition: FunctionTypeDefinition) { 
+        super(definition)
+    }
+    protected run = (inputs, outputs, dt: number) => {
+        this.circuit.update(dt)
+        this.updateOutputs()
+    }
+    protected updateOutputs() {
+        this.outputs.forEach(output => {
+            if (output.source) {
+                let newValue = output.source.value
+                if (output.inverted) newValue = (newValue) ? 0 : 1
+                else if (output.datatype == 'INTEGER') newValue = Math.trunc(newValue)
+                output.setValue(newValue)
+            }
+        })
+    }
 }

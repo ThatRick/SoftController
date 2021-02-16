@@ -25,7 +25,7 @@ export default class GUIView {
         this.setup?.();
         requestAnimationFrame(this.update.bind(this));
     }
-    set size(v) {
+    setSize(v) {
         if (this._size?.equal(v))
             return;
         this._size = Object.freeze(v.copy());

@@ -1,7 +1,7 @@
 import { FunctionBlock } from "./FunctionBlock.js";
 function createFunctionCollection(def) { return def; }
 export const FunctionDefinitions = createFunctionCollection({
-    CIRCUIT: {
+    Circuit: {
         name: 'CIRCUIT',
         description: 'Circuit',
         inputs: {
@@ -149,4 +149,25 @@ export function getFunctionBlock(instance) {
         instance.inputs.forEach((input, i) => block.inputs[i].setValue(input.value));
     }
     return block;
+}
+export class CircuitBlock extends FunctionBlock {
+    constructor(definition) {
+        super(definition);
+        this.run = (inputs, outputs, dt) => {
+            this.circuit.update(dt);
+            this.updateOutputs();
+        };
+    }
+    updateOutputs() {
+        this.outputs.forEach(output => {
+            if (output.source) {
+                let newValue = output.source.value;
+                if (output.inverted)
+                    newValue = (newValue) ? 0 : 1;
+                else if (output.datatype == 'INTEGER')
+                    newValue = Math.trunc(newValue);
+                output.setValue(newValue);
+            }
+        });
+    }
 }

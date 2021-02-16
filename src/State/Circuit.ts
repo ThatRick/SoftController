@@ -33,6 +33,7 @@ export interface CircuitInterface
     removeBlock(block: FunctionBlockInterface)
     connect(inputPin: IOPinInterface, outputPin: IOPinInterface, inverted?: boolean)
     disconnect(inputPin: IOPinInterface)
+    update(dt: number)
 
     subscribe(obj: Subscriber<CircuitEvent>): void
     unsubscribe(obj: Subscriber<CircuitEvent>): void
@@ -43,18 +44,27 @@ export interface CircuitInterface
 export default class Circuit implements CircuitInterface
 {
     get blocks() { return Array.from(this._blocks.values()) }
+
     addBlock(def: FunctionInstanceDefinition) {
         const block = getFunctionBlock(def)
         this._blocks.add(block)
     }
+
     removeBlock(block: FunctionBlockInterface) {}
+
     connect(inputPin: IOPinInterface, outputPin: IOPinInterface, inverted?: boolean) {}
+
     disconnect(inputPin: IOPinInterface) {}
+
     subscribe(obj: Subscriber<CircuitEvent>) {
         this.subscribers.add(obj)
     }
     unsubscribe(obj: Subscriber<CircuitEvent>) {
         this.subscribers.delete(obj)
+    }
+
+    update(dt: number) {
+        this._blocks.forEach(block => block.update(dt))
     }
 
     remove() {
