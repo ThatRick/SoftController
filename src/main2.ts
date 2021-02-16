@@ -27,6 +27,8 @@ const myProg: CircuitViewDefinition = {
             blocks: [
                 { typeName: 'AND' },
                 { typeName: 'OR' },
+                { typeName: 'RS' },
+                { typeName: 'RisingEdge' },
                 { typeName: 'Select' },
             ]
         }
@@ -37,6 +39,9 @@ const myProg: CircuitViewDefinition = {
             {x: 8, y: 4},
             {x: 8, y: 10},
             {x: 8, y: 16},
+            {x: 18, y: 4},
+            {x: 18, y: 10},
+            {x: 18, y: 16},
         ],
         inputs: [4, 6],
         outputs: [4]
@@ -47,7 +52,6 @@ function testCircuit(view: CircuitView, terminal: ControllerTerminal) {
     view.loadCircuitDefinition(myProg)
     const blocks = view.circuitBlock.circuit.blocks
     blocks[0].setVariableInputCount(3)
-    blocks[1].remove()
 }
 
 function testzone(terminal: ControllerTerminal) {

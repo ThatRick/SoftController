@@ -4,6 +4,7 @@ export const FunctionDefinitions = createFunctionCollection({
     Circuit: {
         name: 'CIRCUIT',
         description: 'Circuit',
+        visualStyle: 'full',
         inputs: {
             0: { value: 0, dataType: 'FLOAT' },
             1: { value: 0, dataType: 'FLOAT' },
@@ -24,6 +25,7 @@ export const FunctionDefinitions = createFunctionCollection({
     AND: {
         name: 'AND',
         symbol: '&',
+        visualStyle: 'minimum',
         description: 'Logical AND function',
         inputs: {
             0: { value: 1, dataType: 'BINARY' },
@@ -39,6 +41,7 @@ export const FunctionDefinitions = createFunctionCollection({
     OR: {
         name: 'OR',
         symbol: '≥1',
+        visualStyle: 'minimum',
         description: 'Logical OR function',
         inputs: {
             0: { value: 0, dataType: 'BINARY' },
@@ -53,6 +56,7 @@ export const FunctionDefinitions = createFunctionCollection({
     },
     RS: {
         name: 'RS',
+        visualStyle: 'no title min',
         description: 'Set-Reset flip-flop with dominant reset',
         inputs: {
             R: { value: 0, dataType: 'BINARY' },
@@ -65,6 +69,7 @@ export const FunctionDefinitions = createFunctionCollection({
     RisingEdge: {
         name: 'Rising edge',
         symbol: '_|‾',
+        visualStyle: 'minimum',
         description: 'Rising signal edge detector (0 -> 1)',
         inputs: {
             input: { value: 0, dataType: 'BINARY' }
@@ -79,6 +84,7 @@ export const FunctionDefinitions = createFunctionCollection({
     Select: {
         name: 'Select',
         symbol: 'SEL',
+        visualStyle: 'no title min',
         description: 'Select between two values',
         inputs: {
             0: { value: 0, dataType: 'FLOAT' },

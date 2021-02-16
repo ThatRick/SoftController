@@ -1,7 +1,6 @@
 import { EventEmitter } from "../Lib/Events.js"
 import Circuit, { CircuitDefinition, CircuitInterface } from "./Circuit.js"
-import { Subscriber } from "./CommonTypes.js"
-import { FunctionTypeName } from "./FunctionLib.js"
+import { FunctionTypeName, BlockVisualStyle } from "./FunctionLib.js"
 import { IOPin, IOPinDefinition, IOPinInstanceDefinition, IOPinInterface } from "./IOPin.js"
 
 
@@ -17,6 +16,7 @@ export interface FunctionTypeDefinition
     outputs:            { [name: string]: IOPinDefinition }
     symbol?:            string
     description?:       string
+    visualStyle?:       BlockVisualStyle
     variableInputs?:    VariableIOCountDefinition
     variableOutputs?:   VariableIOCountDefinition
     statics?:           { [name: string]: number }

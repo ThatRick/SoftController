@@ -1,6 +1,12 @@
-
-import Circuit from "./Circuit.js"
 import { FunctionBlock, FunctionInstanceDefinition, FunctionTypeDefinition } from "./FunctionBlock.js"
+
+export type BlockVisualStyle =
+    | 'full'
+    | 'no title'
+    | 'no title min'
+    | 'name on first row'
+    | 'minimum'
+
 
 function createFunctionCollection <T extends {[name: string]: FunctionTypeDefinition }>(def: T) { return def }
 
@@ -9,15 +15,16 @@ export const FunctionDefinitions = createFunctionCollection(
     Circuit: {
         name: 'CIRCUIT',
         description: 'Circuit',
+        visualStyle: 'full',
         inputs: {
-            0: { value: 0, dataType: 'FLOAT'},
-            1: { value: 0, dataType: 'FLOAT'},
-            2: { value: 0, dataType: 'FLOAT'},
-            3: { value: 0, dataType: 'FLOAT'}
+            0: { value: 0, dataType: 'FLOAT' },
+            1: { value: 0, dataType: 'FLOAT' },
+            2: { value: 0, dataType: 'FLOAT' },
+            3: { value: 0, dataType: 'FLOAT' }
         },
         outputs: {
-            0: { value: 0, dataType: 'FLOAT'},
-            1: { value: 0, dataType: 'FLOAT'},
+            0: { value: 0, dataType: 'FLOAT' },
+            1: { value: 0, dataType: 'FLOAT' },
         },
         variableInputs : {
             min: 0, max: 32, initialCount: 4
@@ -30,6 +37,7 @@ export const FunctionDefinitions = createFunctionCollection(
     AND: {
         name: 'AND',
         symbol: '&',
+        visualStyle: 'minimum',
         description: 'Logical AND function',
         inputs: {
             0: { value: 1, dataType: 'BINARY' },
@@ -46,6 +54,7 @@ export const FunctionDefinitions = createFunctionCollection(
     OR: {
         name: 'OR',
         symbol: '≥1',
+        visualStyle: 'minimum',
         description: 'Logical OR function',
         inputs: {
             0: { value: 0, dataType: 'BINARY' },
@@ -61,6 +70,7 @@ export const FunctionDefinitions = createFunctionCollection(
 
     RS: {
         name: 'RS',
+        visualStyle: 'no title min',
         description: 'Set-Reset flip-flop with dominant reset',
         inputs: {
             R: { value: 0, dataType: 'BINARY' },
@@ -74,6 +84,7 @@ export const FunctionDefinitions = createFunctionCollection(
     RisingEdge: {
         name: 'Rising edge',
         symbol: '_|‾',
+        visualStyle: 'minimum',
         description: 'Rising signal edge detector (0 -> 1)',
         inputs: {
             input: { value: 0, dataType: 'BINARY' }
@@ -89,6 +100,7 @@ export const FunctionDefinitions = createFunctionCollection(
     Select: {
         name: 'Select',
         symbol: 'SEL',
+        visualStyle: 'no title min',
         description: 'Select between two values',
         inputs: {
             0: { value: 0, dataType: 'FLOAT' },
