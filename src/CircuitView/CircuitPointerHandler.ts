@@ -7,7 +7,7 @@ import * as HTML from '../Lib/HTML.js'
 
 
 const enum PointerMode {
-    NONE,
+    POINT,
     SCROLL_VIEW,
     DRAG_ELEMENT,
     SELECTION_BOX,
@@ -165,7 +165,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                 break
         }
 
-        mode = PointerMode.NONE
+        mode = PointerMode.POINT
     }
 
     return {

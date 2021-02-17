@@ -5,6 +5,17 @@ export interface IElement
     DOMElement: HTMLElement
 }
 
+class Element {
+    DOMElement: HTMLElement
+    remove() {
+        this.DOMElement.parentElement.removeChild(this.DOMElement)
+        this.DOMElement = null
+    }
+    setStyle(style: Partial<CSSStyleDeclaration>) {
+        Object.assign(this.DOMElement.style, style)
+    }
+}
+
 export function domElement<K extends keyof HTMLElementTagNameMap>(parentDOM: HTMLElement, tagName: K, style?: Partial<CSSStyleDeclaration>): HTMLElementTagNameMap[K] {
     const elem = document.createElement(tagName)
     Object.assign(elem.style, style)
@@ -12,21 +23,24 @@ export function domElement<K extends keyof HTMLElementTagNameMap>(parentDOM: HTM
     return elem
 }
 
-export class Text {
-    DOMElement: HTMLDivElement
-    constructor (text: string, style?: Partial<CSSStyleDeclaration>, parent?: HTMLElement) {
+export class Text extends Element {
+    constructor (text: string, options?: {
+        style?: Partial<CSSStyleDeclaration>,
+        parent?: HTMLElement
+    }) {
+        super()
         this.DOMElement = domElement(null, 'div', {
             paddingLeft: '2px',
             paddingRight: '4px',
-            ...style
+            ...options?.style
         })
         this.setText(text)
-        parent?.appendChild(this.DOMElement)
+        options?.parent?.appendChild(this.DOMElement)
     }
     setText(text: string) { this.DOMElement.textContent = text }
 }
 
-export class Button
+export class Button extends Element
 {
     DOMElement: HTMLDivElement
     onClick?: (ev: MouseEvent) => void
@@ -42,6 +56,7 @@ export class Button
     backgroundColor = this.color.base
 
     constructor(text: string, parent?: HTMLElement, style?: Partial<CSSStyleDeclaration>) {
+        super()
         this.DOMElement = domElement(null, 'div', {
             color: 'white',
             paddingLeft: '2px',
@@ -77,13 +92,12 @@ export class Button
 
 export class ActionButton extends Button
 {
-    constructor(options: {
-        name:       string,
+    constructor(name: string, options: {
+        action: () => void,
         parent?:    HTMLElement,
         style?:     Partial<CSSStyleDeclaration>,
-        action: () => void,
     }) {
-        super(options.name, options.parent, options.style)
+        super(name, options.parent, options.style)
 
         this.onClick = () => {
             this.flash(this.color.active)
@@ -112,7 +126,7 @@ export class ToggleButton extends Button
 
 type TableCellIterator = (cell: HTMLTableCellElement, row: number, col: number) => void
 
-export class Table
+export class Table extends Element
 {
     DOMElement: HTMLTableElement
     rows: HTMLTableRowElement[] = []
@@ -128,6 +142,7 @@ export class Table
         cellIterator?: TableCellIterator
     }) 
     {
+        super()
         this.DOMElement = domElement(options.parentElement, 'table', options.tableStyle)
 
         for (let y = 0; y < options.rows; y++) {

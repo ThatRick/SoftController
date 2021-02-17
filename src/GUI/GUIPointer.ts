@@ -52,7 +52,10 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
             dot: new GUIChildElement(this.view.children, 'div', vec2(2,2), vec2(1, 1 * (this.view.scale.x / this.view.scale.y)), {
                 borderRadius: this.view.scale.x / 2 + 'px', backgroundColor: 'rgba(192,192,255,0.25)'
             }),
-            coords: new HTML.Text('coordinates: 123, 123', { left: '300px', top: '2px', color: 'white', position: 'fixed' }, this.view.DOMElement)
+            coords: new HTML.Text('coordinates: 123, 123', {
+                parent: this.view.DOMElement,
+                style: { left: '300px', top: '2px', color: 'white', position: 'fixed' }
+            })
         }
     }
 

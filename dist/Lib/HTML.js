@@ -1,23 +1,34 @@
+class Element {
+    remove() {
+        this.DOMElement.parentElement.removeChild(this.DOMElement);
+        this.DOMElement = null;
+    }
+    setStyle(style) {
+        Object.assign(this.DOMElement.style, style);
+    }
+}
 export function domElement(parentDOM, tagName, style) {
     const elem = document.createElement(tagName);
     Object.assign(elem.style, style);
     parentDOM?.appendChild(elem);
     return elem;
 }
-export class Text {
-    constructor(text, style, parent) {
+export class Text extends Element {
+    constructor(text, options) {
+        super();
         this.DOMElement = domElement(null, 'div', {
             paddingLeft: '2px',
             paddingRight: '4px',
-            ...style
+            ...options?.style
         });
         this.setText(text);
-        parent?.appendChild(this.DOMElement);
+        options?.parent?.appendChild(this.DOMElement);
     }
     setText(text) { this.DOMElement.textContent = text; }
 }
-export class Button {
+export class Button extends Element {
     constructor(text, parent, style) {
+        super();
         this.color = {
             base: '#446',
             light: '#669',
@@ -54,8 +65,8 @@ export class Button {
     }
 }
 export class ActionButton extends Button {
-    constructor(options) {
-        super(options.name, options.parent, options.style);
+    constructor(name, options) {
+        super(name, options.parent, options.style);
         this.onClick = () => {
             this.flash(this.color.active);
             options.action();
@@ -74,8 +85,9 @@ export class ToggleButton extends Button {
         };
     }
 }
-export class Table {
+export class Table extends Element {
     constructor(options) {
+        super();
         this.rows = [];
         this.cells = [];
         this.DOMElement = domElement(options.parentElement, 'table', options.tableStyle);

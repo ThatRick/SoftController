@@ -85,8 +85,7 @@ async function app() {
     ]);
     terminalMenubar.addItems([
         new HTML.Text('Terminal  '),
-        new HTML.ActionButton({
-            name: 'clear',
+        new HTML.ActionButton('clear', {
             action: () => terminal.clear()
         }),
     ]);

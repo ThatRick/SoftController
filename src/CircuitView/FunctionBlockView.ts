@@ -1,5 +1,5 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
-import { IContainerGUI, IRootViewGUI } from '../GUI/GUITypes.js'
+import { IContainerGUI } from '../GUI/GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { FunctionBlock } from './FunctionBlockState.js'
 import CircuitView from './CircuitView.js'
@@ -111,14 +111,17 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
         if (this.isMinimal) {
             const fontSize = (this.name.length == 1) ? '150%' : '100%'
             const nameElem = new HTML.Text(this.name, {
-                textAlign: 'center',
-                verticalAlign: 'middle',
-                lineHeight: this._sizeScaled.y + 'px',
-                width: '100%',
-                padding: '0',
-                pointerEvents: 'none',
-                fontSize
-            }, this.DOMElement)
+                parent: this.DOMElement,
+                style: {
+                    textAlign: 'center',
+                    verticalAlign: 'middle',
+                    lineHeight: this._sizeScaled.y + 'px',
+                    width: '100%',
+                    padding: '0',
+                    pointerEvents: 'none',
+                    fontSize
+                }
+            })
         }
         // show io names
         else {

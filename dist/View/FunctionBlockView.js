@@ -13,12 +13,7 @@ export default class FunctionBlockView extends GUIChildElement {
         }, true);
         block.events.subscribe(this.blockEventHandler.bind(this));
         this.block = block;
-        if (this.visualStyle == 'full' || this.visualStyle == 'name on first row')
-            this.createTitle();
-        if (this.visualStyle == 'minimum')
-            this.createSymbol();
-        else
-            this.createIONames();
+        this.create();
     }
     blockEventHandler(ev) {
         switch (ev.type) {
@@ -37,22 +32,39 @@ export default class FunctionBlockView extends GUIChildElement {
                 console.error('FunctionBlockView: Unhandled block event!');
         }
     }
+    onRescale() {
+        this.create();
+    }
     get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
+    create() {
+        if (this.visualStyle == 'full' || this.visualStyle == 'name on first row')
+            this.createTitle();
+        if (this.visualStyle == 'minimum')
+            this.createSymbol();
+        else
+            this.createIONames();
+    }
     createTitle() {
         const gui = this.gui;
-        this.titleElem = new HTML.Text(this.block.typeName, {
+        this.titleElem ??= new HTML.Text(this.block.typeName, {
+            parent: this.DOMElement
+        });
+        this.titleElem.setStyle({
             color: 'black',
             textAlign: 'center',
             width: '100%',
             height: gui.scale.y + 'px',
             padding: '0',
             pointerEvents: 'none',
-        }, this.DOMElement);
+        });
     }
     createSymbol() {
         const symbol = this.block.typeDef.symbol;
         const fontSize = (symbol.length < 3) ? '130%' : '100%';
         this.titleElem ??= new HTML.Text(symbol, {
+            parent: this.DOMElement,
+        });
+        this.titleElem.setStyle({
             fontSize,
             color: 'black',
             textAlign: 'center',
@@ -60,8 +72,8 @@ export default class FunctionBlockView extends GUIChildElement {
             width: '100%',
             padding: '0',
             pointerEvents: 'none',
-        }, this.DOMElement);
-        this.titleElem.DOMElement.style.lineHeight = this.size.y * this.gui.scale.y + 'px';
+            lineHeight: this.size.y * this.gui.scale.y + 'px'
+        });
     }
     createIONames() {
         const gui = this.gui;

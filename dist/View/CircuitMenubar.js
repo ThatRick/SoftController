@@ -38,15 +38,15 @@ export class CircuitMenuBar {
         ]);
     }
     scaleControls() {
-        const title = new HTML.Text('Scale');
-        this.view.guiEvents.subscribe(() => title.setText('Scale ' + this.view.scale.toString()), [1 /* Rescaled */]);
-        const decBtn = new HTML.ActionButton({
-            name: '-',
+        const title = new HTML.Text('Scale: ' + this.view.scale.y, {
+            style: { width: this.menu.height * 3.5 + 'px' }
+        });
+        this.view.guiEvents.subscribe(() => title.setText('Scale: ' + this.view.scale.y), [1 /* Rescaled */]);
+        const decBtn = new HTML.ActionButton('-', {
             action: () => this.view.rescale(Vec2.sub(this.view.scale, vec2(1))),
             style: { width: this.menu.parentHeight + 'px' }
         });
-        const incBtn = new HTML.ActionButton({
-            name: '+',
+        const incBtn = new HTML.ActionButton('+', {
             action: () => this.view.rescale(Vec2.add(this.view.scale, vec2(1))),
             style: { width: this.menu.parentHeight + 'px' }
         });

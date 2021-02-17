@@ -128,7 +128,7 @@ export default function CircuitPointerHandler(circuit) {
                 });
                 break;
         }
-        mode = 0 /* NONE */;
+        mode = 0 /* POINT */;
     };
     return {
         onPointerDown,

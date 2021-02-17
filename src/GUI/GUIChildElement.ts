@@ -47,9 +47,7 @@ export class GUIChildElement implements IChildElementGUI{
         
         this.update(true)
     }
-
-
-
+    
     // Position
     protected _pos: Vec2
     protected _posScaled: Vec2
@@ -120,9 +118,9 @@ export class GUIChildElement implements IChildElementGUI{
         this.onRestyle?.(style)
     }
 
-    onUpdate?(force?: boolean): void
-    onRescale?(scale: Vec2): void
-    onRestyle?(style: IStyleGUI): void
+    protected onUpdate?(force?: boolean): void
+    protected onRescale?(scale: Vec2): void
+    protected onRestyle?(style: IStyleGUI): void
 
     requestUpdate() {
         this.gui.requestElementUpdate(this)
