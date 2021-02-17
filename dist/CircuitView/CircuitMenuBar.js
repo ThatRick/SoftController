@@ -20,7 +20,9 @@ export class CircuitMenuBar {
         menu.addItems([
             new HTML.Text(`Circuit (id ${view.circuit.onlineDB})`),
             new HTML.ToggleButton('Immediate', state => view.circuit.setImmediateMode(state), view.circuit.immediateMode),
-            new HTML.ActionButton('Upload', async () => view.circuit.sendModifications()),
+            new HTML.ActionButton({ name: 'Upload',
+                action: async () => view.circuit.sendModifications()
+            }),
             new HTML.Text('Blocks'),
             ...funcLibMenus
         ]);

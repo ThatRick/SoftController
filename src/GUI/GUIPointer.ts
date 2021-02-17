@@ -33,9 +33,9 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
         }
     }
 
-    setEventHandler(handler: GUIPointerEventHandler) {
+    attachEventHandler(handler: GUIPointerEventHandler) {
         this.eventHandler = handler
-        this.setupPointerHandlers()
+        this.setupEventListeners()
     }
     
     constructor(protected view: GUIView<Element, Style>, eventHandler?: GUIPointerEventHandler)
@@ -46,7 +46,7 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
         this.viewOffset = vec2(bounds.x, bounds.y)
         this.scrollOffset = vec2(view.parentDOM.scrollLeft, view.parentDOM.scrollTop)
 
-        this.setupPointerHandlers()
+        this.setupEventListeners()
 
         this.markers = {
             dot: new GUIChildElement(this.view.children, 'div', vec2(2,2), vec2(1, 1 * (this.view.scale.x / this.view.scale.y)), {
@@ -116,7 +116,7 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
         return this.view.eventTargetMap.get(ev.target)
     }
 
-    protected setupPointerHandlers() {
+    protected setupEventListeners() {
         const view = this.view
         const handler = this.eventHandler
 

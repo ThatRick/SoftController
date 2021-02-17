@@ -63,23 +63,26 @@ async function app() {
     circuitMenubar.attachCircuit(view);
     mainMenubar.addItems([
         new HTML.Text('Controller'),
-        new HTML.ActionButton('Run', async () => {
-            await cpu.startController(100);
+        new HTML.ActionButton({
+            name: 'Run',
+            action: async () => await cpu.startController(100)
         }),
-        new HTML.ActionButton('Stop', async () => {
-            await cpu.stopController();
+        new HTML.ActionButton({
+            name: 'Stop',
+            action: async () => await cpu.stopController()
         }),
-        new HTML.ActionButton('Step', async () => {
-            await cpu.stepController(100);
+        new HTML.ActionButton({
+            name: 'Step',
+            action: async () => await cpu.stepController(100)
         }),
     ]);
     terminalMenubar.addItems([
         new HTML.Text('Terminal'),
-        new HTML.ActionButton('System', async () => terminal.printSystemSector()),
-        new HTML.ActionButton('Table', async () => terminal.printDatablockTable()),
-        new HTML.ActionButton('Circuit', async () => terminal.printFunctionBlock(circuit.onlineDB)),
-        new HTML.ActionButton('Blocks', async () => circuit.blocks.forEach(async (block) => terminal.printFunctionBlock(block.onlineDB))),
-        new HTML.ActionButton('Clear', () => terminal.clear()),
+        new HTML.ActionButton({ name: 'System', action: async () => terminal.printSystemSector() }),
+        new HTML.ActionButton({ name: 'Table', action: async () => terminal.printDatablockTable() }),
+        new HTML.ActionButton({ name: 'Circuit', action: async () => terminal.printFunctionBlock(circuit.onlineDB) }),
+        new HTML.ActionButton({ name: 'Blocks', action: async () => circuit.blocks.forEach(async (block) => terminal.printFunctionBlock(block.onlineDB)) }),
+        new HTML.ActionButton({ name: 'Clear', action: () => terminal.clear() }),
     ]);
 }
 ////////////////////

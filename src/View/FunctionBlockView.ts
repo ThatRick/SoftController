@@ -16,7 +16,7 @@ export default class FunctionBlockView extends GUIChildElement
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
-            borderRadius: '3px',
+            borderRadius: '2px',
             backgroundColor: style.colors.primary
         }, true)
 

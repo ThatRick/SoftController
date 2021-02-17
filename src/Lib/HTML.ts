@@ -77,12 +77,17 @@ export class Button
 
 export class ActionButton extends Button
 {
-    constructor(text: string, action: () => void, parent?: HTMLElement) {
-        super(text, parent)
+    constructor(options: {
+        name:       string,
+        parent?:    HTMLElement,
+        style?:     Partial<CSSStyleDeclaration>,
+        action: () => void,
+    }) {
+        super(options.name, options.parent, options.style)
 
         this.onClick = () => {
             this.flash(this.color.active)
-            action()
+            options.action()
         }
     }
 }
@@ -168,4 +173,13 @@ export function backgroundDotStyle(scale: Vec2, lineColor: string) {
         backgroundImage: `radial-gradient(circle, ${lineColor} 1px, transparent 1px)`,
         backgroundSize: `${scale.x}px ${scale.y}px`
     } as Partial<CSSStyleDeclaration>
+}
+
+export function getInnerHeight( elm: HTMLElement ) {
+    const computed = getComputedStyle(elm)
+    const padding = parseInt(computed.paddingTop) + parseInt(computed.paddingBottom)
+    const margin = parseInt(computed.marginTop) + parseInt(computed.marginBottom)
+    const border = parseInt(computed.borderTop) + parseInt(computed.borderBottom)
+    console.log('getinnerheight', elm.clientHeight, padding, border, margin)
+    return elm.clientHeight - padding - border
 }

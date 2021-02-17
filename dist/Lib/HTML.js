@@ -54,11 +54,11 @@ export class Button {
     }
 }
 export class ActionButton extends Button {
-    constructor(text, action, parent) {
-        super(text, parent);
+    constructor(options) {
+        super(options.name, options.parent, options.style);
         this.onClick = () => {
             this.flash(this.color.active);
-            action();
+            options.action();
         };
     }
 }
@@ -119,4 +119,12 @@ export function backgroundDotStyle(scale, lineColor) {
         backgroundImage: `radial-gradient(circle, ${lineColor} 1px, transparent 1px)`,
         backgroundSize: `${scale.x}px ${scale.y}px`
     };
+}
+export function getInnerHeight(elm) {
+    const computed = getComputedStyle(elm);
+    const padding = parseInt(computed.paddingTop) + parseInt(computed.paddingBottom);
+    const margin = parseInt(computed.marginTop) + parseInt(computed.marginBottom);
+    const border = parseInt(computed.borderTop) + parseInt(computed.borderBottom);
+    console.log('getinnerheight', elm.clientHeight, padding, border, margin);
+    return elm.clientHeight - padding - border;
 }

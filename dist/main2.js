@@ -4,6 +4,7 @@ import { Menubar } from './Lib/HTMLMenubar.js';
 import { getFunctionBlock } from './State/FunctionLib.js';
 import CircuitView from './View/CircuitView.js';
 import { vec2 } from './Lib/Vector2.js';
+import { CircuitMenuBar } from './View/CircuitMenubar.js';
 //////////////////////////
 //  PROGRAM ENTRY POINT
 //
@@ -72,20 +73,21 @@ function testzone(terminal) {
 }
 async function app() {
     const mainMenubar = new Menubar(document.getElementById('mainMenubar'));
+    const circuitMenubar = new CircuitMenuBar(document.getElementById('guiMenubar'));
+    const view = new CircuitView(document.getElementById('gui'), vec2(64, 48), vec2(12, 12));
     const terminalMenubar = new Menubar(document.getElementById('terminalMenubar'));
-    const guiContainer = document.getElementById('gui');
     const terminal = new ControllerTerminal(document.getElementById('terminal'), null);
-    const view = new CircuitView(guiContainer, vec2(64, 48), vec2(12, 12));
+    circuitMenubar.attachCircuitView(view);
     // testzone(terminal)
     testCircuit(view, terminal);
     mainMenubar.addItems([
-        new HTML.Text('Controller :: '),
-        new HTML.ActionButton('Test', async () => {
-            console.log('Test was pressed.');
-        }),
+        new HTML.Text('Controller :: ')
     ]);
     terminalMenubar.addItems([
         new HTML.Text('Terminal  '),
-        new HTML.ActionButton('Clear', () => terminal.clear()),
+        new HTML.ActionButton({
+            name: 'clear',
+            action: () => terminal.clear()
+        }),
     ]);
 }

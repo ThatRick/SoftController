@@ -4,26 +4,39 @@ import * as HTML from '../Lib/HTML.js';
 import { defaultStyle } from './Common.js';
 import { CircuitBlock } from '../State/FunctionLib.js';
 import FunctionBlockView from './FunctionBlockView.js';
+import { EventEmitter } from '../Lib/Events.js';
 export default class CircuitView extends GUIView {
     constructor(parent, size, scale, style = defaultStyle) {
         super(parent, size, scale, style, {
             backgroundColor: style.colors.background,
-            ...HTML.backgroundGridStyle(scale, style.colors.dark),
+            ...HTML.backgroundGridStyle(scale, style.colors.gridLines),
             fontFamily: 'system-ui',
             fontSize: Math.round(scale.y * style.fontSize) + 'px'
         });
+        this.events = new EventEmitter();
         this.blockViews = new Set();
     }
     loadCircuitDefinition(circuitViewDefinition) {
         const { definition, positions, size } = circuitViewDefinition;
-        this.setSize(vec2(size));
+        this.resize(vec2(size));
         this._circuitBlock = new CircuitBlock(definition);
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index];
             const blockView = new FunctionBlockView(block, vec2(pos), this.children, this.style);
             this.blockViews.add(blockView);
         });
+        this.guiEvents.emit(0 /* CircuitLoaded */);
     }
     get circuitBlock() { return this._circuitBlock; }
+    onRescale() {
+        this.onRestyle();
+    }
+    onRestyle() {
+        this.setStyle({
+            backgroundColor: this.style.colors.background,
+            ...HTML.backgroundGridStyle(this.scale, this.style.colors.gridLines),
+            fontSize: Math.round(this.scale.y * this.style.fontSize) + 'px'
+        });
+    }
     get circuit() { return this._circuitBlock?.circuit; }
 }

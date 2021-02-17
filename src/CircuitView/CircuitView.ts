@@ -64,7 +64,7 @@ export default class CircuitView extends GUIView<CircuitElement, CircuitStyle>
         window.onkeydown = this.onKeyDown.bind(this)
         window.onkeyup = this.onKeyUp.bind(this)
 
-        this.pointer.setEventHandler(CircuitPointerHandler(this))
+        this.pointer.attachEventHandler(CircuitPointerHandler(this))
 
     }
 

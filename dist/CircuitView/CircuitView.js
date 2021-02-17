@@ -43,7 +43,7 @@ export default class CircuitView extends GUIView {
         this.outputArea = new IOArea(this, 'outputArea');
         window.onkeydown = this.onKeyDown.bind(this);
         window.onkeyup = this.onKeyUp.bind(this);
-        this.pointer.setEventHandler(CircuitPointerHandler(this));
+        this.pointer.attachEventHandler(CircuitPointerHandler(this));
     }
     loadCircuit(circuit) {
         console.log('CircuitView: Load circuit');

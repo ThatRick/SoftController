@@ -4,11 +4,23 @@ import GUIContainer from './GUIContainer.js'
 import { GUIChildElement } from './GUIChildElement.js'
 import * as HTML from './../Lib/HTML.js'
 import GUIPointer from './GUIPointer.js'
-
+import { EventEmitter } from '../Lib/Events.js'
 
 
 interface Updateable {
     update(force?: boolean): boolean
+}
+
+export const enum GUIEventType {
+    Resized,
+    Rescaled,
+    Restyled,
+    Removed
+}
+
+export interface GUIEvent {
+    type:   GUIEventType
+    target: IRootViewGUI
 }
 
 export default class GUIView<Element extends IChildElementGUI, Style extends IStyleGUI> implements IElementGUI, IRootViewGUI { 
@@ -16,46 +28,46 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
     DOMElement: HTMLElement
 
     gui = this
-    children: GUIContainer<Element>
-
-    eventTargetMap = new WeakMap<EventTarget, Element>()
-    updateRequests = new Set<Updateable>()
 
     pos = vec2(0, 0)
     absPos = vec2(0, 0)
     
-    private _size: Vec2
-    setSize(v: Vec2) {
+    get size() { return this._size }
+    get scale() { return this._scale }
+    get style(): Style { return this._style }
+
+    resize(v: Vec2) {
         if (this._size?.equal(v)) return
         this._size = Object.freeze(v.copy())
         this._resize()
+        this.onResize?.()
+        this.guiEvents.emit(GUIEventType.Resized)
     }
-    get size() { return this._size }
-
-    private _resize() {
-        this.DOMElement.style.width = this._size.x * this._scale.x + 'px'
-        this.DOMElement.style.height = this._size.y * this._scale.y + 'px'
-    }
-    
-    private _scale: Vec2
     rescale(scale: Vec2) {
         if (this._scale?.equal(scale)) return
         this._scale = Object.freeze(scale.copy())
         this._resize()
+        this.onRescale?.()
         this.children?.rescale(scale)
+        this.guiEvents.emit(GUIEventType.Rescaled)
     }
-    get scale() { return this._scale }
-    
-    private _style: Style
     restyle(style: Style) {
         this._style = Object.freeze(style)
+        this.onRestyle?.()
         this.children?.restyle(style)
+        this.guiEvents.emit(GUIEventType.Restyled)
     }
-    get style(): Style { return this._style }
 
     pointer: GUIPointer<Element, Style>
 
-    constructor(
+    guiEvents = new EventEmitter<GUIEvent>()
+
+
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    //                CONSTRUCTOR  
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+
+    constructor (
         public parentDOM: HTMLElement,
         size: Vec2,
         scale: Vec2,
@@ -73,17 +85,33 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
  
         Object.assign(this.DOMElement.style, defaultStyle, css)
 
-        this._size = size
-        this.rescale(scale)
-        this.restyle(style)
+        this._size = Object.freeze(size.copy())
+        this._scale = Object.freeze(scale.copy())
+        this._style = Object.freeze(style)
 
         this.children = new GUIContainer(this)
         this.pointer = new GUIPointer(this)
 
-        this.setup?.()
-
         requestAnimationFrame(this.update.bind(this))
     }
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    //            PRIVATE & PROTECTED  
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    
+    private _scale: Vec2
+    private _size: Vec2
+    private _style: Style
+
+    private _resize() {
+        this.DOMElement.style.width = this._size.x * this._scale.x + 'px'
+        this.DOMElement.style.height = this._size.y * this._scale.y + 'px'
+    }
+    
+    children: GUIContainer<Element>
+
+    eventTargetMap = new WeakMap<EventTarget, Element>()
+    
+    protected updateRequests = new Set<Updateable>()
 
     update() {
         this.pointer.update()
@@ -92,26 +120,35 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
             if (!keep) this.updateRequests.delete(elem)
         })
 
-        this.loop?.()
+        this.onUpdate?.()
 
         requestAnimationFrame(this.update.bind(this))
 
         return false
     }
 
+    setStyle(style: Partial<CSSStyleDeclaration>) {
+        Object.assign(this.DOMElement.style, style)
+    }
+
     delete() {
         this.children?.delete()
+        this.eventTargetMap = null
+        this.updateRequests.clear()
         this.parentDOM.removeChild(this.DOMElement)
         requestAnimationFrame(null)
+        this.guiEvents.emit(GUIEventType.Removed)
+        this.guiEvents.clear()
     }
 
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     //   User defined functions
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
 
-    setup?(): void
-
-    loop?(): void
+    protected onUpdate?(): void
+    protected onRescale?(): void
+    protected onRestyle?(): void
+    protected onResize?(): void
 
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     //     Element handling
@@ -142,5 +179,4 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
     onDragStarted?:  (ev: PointerEvent) => void
     onDragging?:     (ev: PointerEvent) => void
     onDragEnded?:    (ev: PointerEvent) => void
-
 }

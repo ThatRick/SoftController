@@ -1,5 +1,5 @@
 import Vec2, { IVec2, vec2 } from '../Lib/Vector2.js'
-import GUIView from '../GUI/GUIView.js'
+import GUIView, { GUIEventType } from '../GUI/GUIView.js'
 import Circuit from '../State/Circuit.js'
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import * as HTML from '../Lib/HTML.js'
@@ -7,6 +7,8 @@ import { defaultStyle, Style } from './Common.js'
 import { FunctionBlock, FunctionBlockInterface, FunctionTypeDefinition } from '../State/FunctionBlock.js'
 import { CircuitBlock } from '../State/FunctionLib.js'
 import FunctionBlockView from './FunctionBlockView.js'
+import { EventEmitter } from '../Lib/Events.js'
+import { IRootViewGUI } from '../GUI/GUITypes.js'
 
 export interface CircuitViewDefinition
 {
@@ -19,18 +21,37 @@ export interface CircuitViewDefinition
     }
 }
 
+export const enum CircuitViewEventType {
+    CircuitLoaded,
+    CircuitClosed,
+}
+
+export interface CircuitViewEvent {
+    type:   CircuitViewEventType
+    target: ICircuitView
+}
+
+export interface ICircuitView extends IRootViewGUI
+{
+    readonly circuitBlock: FunctionBlockInterface
+    loadCircuitDefinition(circuitViewDefinition: CircuitViewDefinition)
+}
+
 export default class CircuitView extends GUIView<GUIChildElement, Style>
 {
     loadCircuitDefinition(circuitViewDefinition: CircuitViewDefinition) {
         const { definition, positions, size } = circuitViewDefinition
-        this.setSize(vec2(size))
+        this.resize(vec2(size))
         this._circuitBlock = new CircuitBlock(definition)
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index]
             const blockView = new FunctionBlockView(block, vec2(pos), this.children, this.style)
             this.blockViews.add(blockView)
         })
+        this.guiEvents.emit(CircuitViewEventType.CircuitLoaded)
     }
+
+    events = new EventEmitter<CircuitViewEvent>()
 
     get circuitBlock(): FunctionBlockInterface { return this._circuitBlock }
 
@@ -38,9 +59,21 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     {
         super(parent, size, scale, style, {
             backgroundColor: style.colors.background,
-            ...HTML.backgroundGridStyle(scale, style.colors.dark),
+            ...HTML.backgroundGridStyle(scale, style.colors.gridLines),
             fontFamily: 'system-ui',
             fontSize: Math.round(scale.y * style.fontSize)+'px'
+        })
+    }
+    
+    protected onRescale() {
+        this.onRestyle()
+    }
+
+    protected onRestyle() {
+        this.setStyle({
+            backgroundColor: this.style.colors.background,
+            ...HTML.backgroundGridStyle(this.scale, this.style.colors.gridLines),
+            fontSize: Math.round(this.scale.y * this.style.fontSize)+'px'
         })
     }
 

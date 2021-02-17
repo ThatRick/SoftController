@@ -22,7 +22,7 @@ export default class GUIPointer {
         const bounds = view.DOMElement.getBoundingClientRect();
         this.viewOffset = vec2(bounds.x, bounds.y);
         this.scrollOffset = vec2(view.parentDOM.scrollLeft, view.parentDOM.scrollTop);
-        this.setupPointerHandlers();
+        this.setupEventListeners();
         this.markers = {
             dot: new GUIChildElement(this.view.children, 'div', vec2(2, 2), vec2(1, 1 * (this.view.scale.x / this.view.scale.y)), {
                 borderRadius: this.view.scale.x / 2 + 'px', backgroundColor: 'rgba(192,192,255,0.25)'
@@ -36,9 +36,9 @@ export default class GUIPointer {
             this.latestMovementEvent = null;
         }
     }
-    setEventHandler(handler) {
+    attachEventHandler(handler) {
         this.eventHandler = handler;
-        this.setupPointerHandlers();
+        this.setupEventListeners();
     }
     updatePointerPosition(ev) {
         const view = this.view;
@@ -80,7 +80,7 @@ export default class GUIPointer {
     getPointerTargetElem(ev) {
         return this.view.eventTargetMap.get(ev.target);
     }
-    setupPointerHandlers() {
+    setupEventListeners() {
         const view = this.view;
         const handler = this.eventHandler;
         // Pointer down

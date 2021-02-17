@@ -105,7 +105,7 @@ export default class Vec2 implements IVec2
   }
 
   toString() {
-    return `(x: ${this.x}, y: ${this.y})`
+    return `(${this.x}, ${this.y})`
   }
 
   // ###################################################

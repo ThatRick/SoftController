@@ -1,14 +1,19 @@
 import { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 import GUIPointer from './GUIPointer.js';
+import { EventEmitter } from '../Lib/Events.js';
 export default class GUIView {
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    //                CONSTRUCTOR  
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     constructor(parentDOM, size, scale, style, css) {
         this.parentDOM = parentDOM;
         this.gui = this;
-        this.eventTargetMap = new WeakMap();
-        this.updateRequests = new Set();
         this.pos = vec2(0, 0);
         this.absPos = vec2(0, 0);
+        this.guiEvents = new EventEmitter();
+        this.eventTargetMap = new WeakMap();
+        this.updateRequests = new Set();
         this.DOMElement = document.createElement('div');
         parentDOM.appendChild(this.DOMElement);
         const defaultStyle = {
@@ -17,38 +22,43 @@ export default class GUIView {
             left: '0px',
         };
         Object.assign(this.DOMElement.style, defaultStyle, css);
-        this._size = size;
-        this.rescale(scale);
-        this.restyle(style);
+        this._size = Object.freeze(size.copy());
+        this._scale = Object.freeze(scale.copy());
+        this._style = Object.freeze(style);
         this.children = new GUIContainer(this);
         this.pointer = new GUIPointer(this);
-        this.setup?.();
         requestAnimationFrame(this.update.bind(this));
     }
-    setSize(v) {
+    get size() { return this._size; }
+    get scale() { return this._scale; }
+    get style() { return this._style; }
+    resize(v) {
         if (this._size?.equal(v))
             return;
         this._size = Object.freeze(v.copy());
         this._resize();
-    }
-    get size() { return this._size; }
-    _resize() {
-        this.DOMElement.style.width = this._size.x * this._scale.x + 'px';
-        this.DOMElement.style.height = this._size.y * this._scale.y + 'px';
+        this.onResize?.();
+        this.guiEvents.emit(0 /* Resized */);
     }
     rescale(scale) {
         if (this._scale?.equal(scale))
             return;
         this._scale = Object.freeze(scale.copy());
         this._resize();
+        this.onRescale?.();
         this.children?.rescale(scale);
+        this.guiEvents.emit(1 /* Rescaled */);
     }
-    get scale() { return this._scale; }
     restyle(style) {
         this._style = Object.freeze(style);
+        this.onRestyle?.();
         this.children?.restyle(style);
+        this.guiEvents.emit(2 /* Restyled */);
     }
-    get style() { return this._style; }
+    _resize() {
+        this.DOMElement.style.width = this._size.x * this._scale.x + 'px';
+        this.DOMElement.style.height = this._size.y * this._scale.y + 'px';
+    }
     update() {
         this.pointer.update();
         this.updateRequests.forEach(elem => {
@@ -56,14 +66,21 @@ export default class GUIView {
             if (!keep)
                 this.updateRequests.delete(elem);
         });
-        this.loop?.();
+        this.onUpdate?.();
         requestAnimationFrame(this.update.bind(this));
         return false;
     }
+    setStyle(style) {
+        Object.assign(this.DOMElement.style, style);
+    }
     delete() {
         this.children?.delete();
+        this.eventTargetMap = null;
+        this.updateRequests.clear();
         this.parentDOM.removeChild(this.DOMElement);
         requestAnimationFrame(null);
+        this.guiEvents.emit(3 /* Removed */);
+        this.guiEvents.clear();
     }
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     //     Element handling

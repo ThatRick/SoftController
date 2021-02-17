@@ -6,7 +6,8 @@ export const defaultStyle = {
         dark: '#666',
         highlight: '#DDF',
         selection: '#FFF',
-        background: '#446'
+        background: '#446',
+        gridLines: '#556',
     },
     fontSize: 0.8
 };
