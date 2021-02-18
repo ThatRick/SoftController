@@ -9,6 +9,8 @@ import { CircuitBlock } from '../State/FunctionLib.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import { EventEmitter } from '../Lib/Events.js'
 import { IRootViewGUI } from '../GUI/GUITypes.js'
+import CircuitSelection from './Selection.js'
+import CircuitPointerHandler from './PointerHandler.js'
 
 export interface CircuitViewDefinition
 {
@@ -53,6 +55,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
 
     events = new EventEmitter<CircuitViewEvent>()
 
+    selection = new CircuitSelection(this.style)
+
     get circuitBlock(): FunctionBlockInterface { return this._circuitBlock }
 
     constructor(parent: HTMLElement, size: Vec2, scale: Vec2, style: Readonly<Style> = defaultStyle)
@@ -63,6 +67,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
             fontFamily: 'system-ui',
             fontSize: Math.round(scale.y * style.fontSize)+'px'
         })
+        this.pointer.attachEventHandler(CircuitPointerHandler(this))
     }
     
     protected onRescale() {

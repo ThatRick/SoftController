@@ -4,7 +4,6 @@ import { BlockEvent, BlockEventType, FunctionBlockInterface } from '../State/Fun
 import * as HTML from '../Lib/HTML.js'
 import { IContainerGUI } from '../GUI/GUITypes.js'
 import { defaultStyle, Style } from './Common.js'
-import { BlockVisualStyle } from '../State/FunctionLib.js'
 
 export default class FunctionBlockView extends GUIChildElement
 {

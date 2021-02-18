@@ -50,7 +50,7 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
 
         this.markers = {
             dot: new GUIChildElement(this.view.children, 'div', vec2(2,2), vec2(1, 1 * (this.view.scale.x / this.view.scale.y)), {
-                borderRadius: this.view.scale.x / 2 + 'px', backgroundColor: 'rgba(192,192,255,0.25)'
+                borderRadius: this.view.scale.x / 2 + 'px', backgroundColor: 'rgba(192,192,255,0.25)', pointerEvents: 'none'
             }),
             coords: new HTML.Text('coordinates: 123, 123', {
                 parent: this.view.DOMElement,

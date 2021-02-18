@@ -5,6 +5,8 @@ import { defaultStyle } from './Common.js';
 import { CircuitBlock } from '../State/FunctionLib.js';
 import FunctionBlockView from './FunctionBlockView.js';
 import { EventEmitter } from '../Lib/Events.js';
+import CircuitSelection from './Selection.js';
+import CircuitPointerHandler from './PointerHandler.js';
 export default class CircuitView extends GUIView {
     constructor(parent, size, scale, style = defaultStyle) {
         super(parent, size, scale, style, {
@@ -14,7 +16,9 @@ export default class CircuitView extends GUIView {
             fontSize: Math.round(scale.y * style.fontSize) + 'px'
         });
         this.events = new EventEmitter();
+        this.selection = new CircuitSelection(this.style);
         this.blockViews = new Set();
+        this.pointer.attachEventHandler(CircuitPointerHandler(this));
     }
     loadCircuitDefinition(circuitViewDefinition) {
         const { definition, positions, size } = circuitViewDefinition;

@@ -1,7 +1,11 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
-import { GUIPointerEventHandler } from '../GUI/GUITypes.js'
+import GUIPointer from '../GUI/GUIPointer.js'
+import { GUIPointerEventHandler, IChildElementGUI } from '../GUI/GUITypes.js'
 import * as HTML from '../Lib/HTML.js'
 import CircuitView from './CircuitView.js'
+import { Style } from './Common.js'
+import FunctionBlockView from './FunctionBlockView.js'
+import IOPinView from './IOPinView.js'
 
 const enum PointerMode {
     POINT,
@@ -17,7 +21,30 @@ const enum MouseButton {
     MIDDLE = 4
 }
 
-export default function CircuitPointerHandler(circuit: CircuitView) //: GUIPointerEventHandler
+export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerEventHandler
 {
+    const pointer = circuit.pointer
+    const selection = circuit.selection
 
+    const onPointerDown = () => {
+        const elem = pointer.targetElem
+        console.log('Target', elem)
+        // Deselect all
+        if (!elem || elem?.isSelectable) {
+            selection.removeAll()
+            return
+        }
+        // Select Block
+        if (elem instanceof FunctionBlockView) {
+            selection.set(elem)
+        }
+        // Select Pin
+        else if (elem instanceof IOPinView) {
+            selection.set(elem)
+        }
+    }
+
+    return {
+        onPointerDown
+    }
 }
