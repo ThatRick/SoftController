@@ -52,6 +52,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         })
         this.guiEvents.emit(CircuitViewEventType.CircuitLoaded)
     }
+    
+    blockViews = new Set<FunctionBlockView>()
 
     events = new EventEmitter<CircuitViewEvent>()
 
@@ -82,7 +84,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         })
     }
 
-    protected blockViews = new Set<FunctionBlockView>()
+
     protected _circuitBlock: FunctionBlock
     protected get circuit() { return this._circuitBlock?.circuit }
 }
