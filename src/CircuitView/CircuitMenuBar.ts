@@ -20,7 +20,7 @@ export class CircuitMenuBar
         const menu = this.menu
 
         const funcLibMenus = instructions.libraries.map(lib => {
-            const libMenu = new DropdownMenu(lib.name, lib.functions.map(func => func.name))
+            const libMenu = new DropdownMenu(lib.name, {items: lib.functions.map(func => func.name)})
             libMenu.onItemSelected = (i, name) => {
                 view.insertBlock(lib.id, i)
             }

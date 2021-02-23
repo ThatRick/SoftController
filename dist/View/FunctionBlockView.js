@@ -49,7 +49,7 @@ export default class FunctionBlockView extends GUIChildElement {
         this.titleElem ??= new HTML.Text(this.block.typeName, {
             parent: this.DOMElement
         });
-        this.titleElem.setStyle({
+        this.titleElem.setCSS({
             color: 'black',
             textAlign: 'center',
             width: '100%',
@@ -64,7 +64,7 @@ export default class FunctionBlockView extends GUIChildElement {
         this.titleElem ??= new HTML.Text(symbol, {
             parent: this.DOMElement,
         });
-        this.titleElem.setStyle({
+        this.titleElem.setCSS({
             fontSize,
             color: 'black',
             textAlign: 'center',

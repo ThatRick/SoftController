@@ -15,9 +15,9 @@ export default class CircuitView extends GUIView {
             fontFamily: 'system-ui',
             fontSize: Math.round(scale.y * style.fontSize) + 'px'
         });
+        this.blockViews = new Set();
         this.events = new EventEmitter();
         this.selection = new CircuitSelection(this.style);
-        this.blockViews = new Set();
         this.pointer.attachEventHandler(CircuitPointerHandler(this));
     }
     loadCircuitDefinition(circuitViewDefinition) {

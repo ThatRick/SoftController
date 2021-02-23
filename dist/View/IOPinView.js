@@ -6,5 +6,7 @@ export default class IOPinView extends GUIChildElement {
         super(parentContainer, 'div', pos, vec2(1, 1), {
             backgroundColor: 'red'
         });
+        this.ioPin = ioPin;
     }
+    get type() { return this.ioPin.type; }
 }

@@ -1,9 +1,20 @@
-class Element {
+export const defaultStyle = {
+    colors: {
+        base: '#446',
+        light: '#669',
+        active: '#77D'
+    },
+    fontSize: 0.8
+};
+export class Element {
+    constructor() {
+        this.style = defaultStyle;
+    }
     remove() {
         this.DOMElement.parentElement.removeChild(this.DOMElement);
         this.DOMElement = null;
     }
-    setStyle(style) {
+    setCSS(style) {
         Object.assign(this.DOMElement.style, style);
     }
 }
@@ -29,12 +40,7 @@ export class Text extends Element {
 export class Button extends Element {
     constructor(text, parent, style) {
         super();
-        this.color = {
-            base: '#446',
-            light: '#669',
-            active: '#77D'
-        };
-        this.backgroundColor = this.color.base;
+        this.backgroundColor = this.style.colors.base;
         this.DOMElement = domElement(null, 'div', {
             color: 'white',
             paddingLeft: '2px',
@@ -42,7 +48,7 @@ export class Button extends Element {
             marginLeft: '1px',
             marginRight: '1px',
             backgroundColor: this.backgroundColor,
-            border: '1px solid ' + this.color.light,
+            border: '1px solid ' + this.style.colors.light,
             borderRadius: '2px',
             textAlign: 'center',
             userSelect: 'none',
@@ -50,11 +56,20 @@ export class Button extends Element {
             ...style
         });
         this.DOMElement.textContent = text;
-        this.DOMElement.onpointerenter = ev => this.DOMElement.style.backgroundColor = this.color.light;
+        this.DOMElement.onpointerenter = ev => this.DOMElement.style.backgroundColor = this.style.colors.light;
         this.DOMElement.onpointerleave = ev => this.DOMElement.style.backgroundColor = this.backgroundColor;
-        this.DOMElement.onclick = ev => this.onClick?.(ev);
-        this.DOMElement.onpointerdown = ev => this.onDown?.(ev);
-        this.DOMElement.onpointerup = ev => this.onUp?.(ev);
+        this.DOMElement.onclick = ev => {
+            ev.stopPropagation();
+            this.onClick?.(ev);
+        };
+        this.DOMElement.onpointerdown = ev => {
+            ev.stopPropagation();
+            this.onDown?.(ev);
+        };
+        this.DOMElement.onpointerup = ev => {
+            ev.stopPropagation();
+            this.onUp?.(ev);
+        };
         parent?.appendChild(this.DOMElement);
     }
     flash(color) {
@@ -68,7 +83,7 @@ export class ActionButton extends Button {
     constructor(name, options) {
         super(name, options.parent, options.style);
         this.onClick = () => {
-            this.flash(this.color.active);
+            this.flash(this.style.colors.active);
             options.action();
         };
     }
@@ -79,9 +94,9 @@ export class ToggleButton extends Button {
         this.state = initState;
         this.onClick = () => {
             this.state = toggle(!this.state);
-            this.backgroundColor = this.state ? this.color.light : this.color.base;
-            this.DOMElement.style.borderColor = this.state ? 'white' : this.color.light;
-            this.flash(this.color.active);
+            this.backgroundColor = this.state ? this.style.colors.light : this.style.colors.base;
+            this.DOMElement.style.borderColor = this.state ? 'white' : this.style.colors.light;
+            this.flash(this.style.colors.active);
         };
     }
 }

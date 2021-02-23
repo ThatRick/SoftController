@@ -1,19 +1,21 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
-import GUIPointer from '../GUI/GUIPointer.js'
-import { GUIPointerEventHandler, IChildElementGUI, Vec2 } from '../GUI/GUITypes.js'
+import { GUIPointerEventHandler } from '../GUI/GUITypes.js'
 import * as HTML from '../Lib/HTML.js'
-import { vec2 } from '../Lib/Vector2.js'
+import HTMLMenu from '../Lib/HTMLMenu.js'
+import Vec2, { vec2 } from '../Lib/Vector2.js'
 import CircuitView from './CircuitView.js'
-import { Style } from './Common.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import IOPinView from './IOPinView.js'
+import FunctionBlockMenu from './FunctionBlockMenu.js'
 
 const enum PointerMode {
-    POINT,
-    SCROLL_VIEW,
-    MOVE_ELEMENT,
-    SELECTION_BOX,
-    INSERT_NEW
+    DEFAULT,
+    DRAG_SCROLL_VIEW,
+    DRAG_SELECTION_BOX,
+    DRAG_BLOCK,
+    DRAG_INPUT_PIN,
+    DRAG_OUTPUT_PIN,
+    INSERT_NEW_BLOCK
 }
 
 const enum MouseButton {
@@ -24,7 +26,7 @@ const enum MouseButton {
 
 interface IDragBehaviour {
     start(ev: PointerEvent): void
-    drag(ev: PointerEvent): void
+    dragging(ev: PointerEvent): void
     end(ev: PointerEvent): void
 }
 
@@ -32,27 +34,89 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 {
     const pointer = circuit.pointer
     const selection = circuit.selection
-    let scrollStartPos: Vec2
-    let selectionBoxStartPos: Vec2
-    let selectionBox: HTMLElement
-    let dragBehaviour: IDragBehaviour | null
 
-    const scrollViewBehaviour: IDragBehaviour =
+    let menu: HTMLMenu
+
+    let pointerMode: PointerMode = PointerMode.DEFAULT
+    
+    const onPointerDown = (ev: PointerEvent) => {
+        const elem = pointer.targetElem
+        if (ev.altKey) console.log('Target', elem, pointer.screenPos)
+        if (menu) {
+            menu.remove()
+            menu = null
+        }
+    
+        // Select Block
+        if (!ev.shiftKey && elem instanceof FunctionBlockView && !selection.has(elem)) {
+            selection.set(elem)
+        }
+        // Select Pin
+        else if (elem instanceof IOPinView) {
+            selection.set(elem)
+        }
+    }
+
+    const onClicked = (ev: PointerEvent) => {
+        const elem = pointer.targetElem
+        // Deselect all
+        if (!elem) {
+            selection.removeAll()
+            return
+        }
+        else if (!ev.shiftKey && elem instanceof FunctionBlockView) {
+            selection.set(elem)
+        }
+        else if (ev.shiftKey && elem instanceof FunctionBlockView) {
+            selection.has(elem)
+                ? selection.remove(elem)
+                : selection.add(elem)
+        }
+    }
+
+    const onRightClicked = (ev: PointerEvent) => {
+        const elem = pointer.targetElem
+        // Deselect all
+        if (!elem) {
+            selection.removeAll()
+            return
+        }
+        else if (elem instanceof FunctionBlockView) {
+            menu = FunctionBlockMenu({
+                block: elem,
+                parentContainer: circuit.DOMElement,
+                pos: pointer.screenDownPos.copy(),
+                destructor: () => {
+                    menu.remove()
+                    menu = null
+                }
+            })
+        }
+    }
+
+    const dragBehaviour = new Map<PointerMode, IDragBehaviour>()
+
+    let scrollStartPos: Vec2
+
+    dragBehaviour.set(PointerMode.DRAG_SCROLL_VIEW,
     {
         start(ev: PointerEvent) {
             scrollStartPos = vec2(circuit.parentDOM.scrollLeft, circuit.parentDOM.scrollTop)
             circuit.DOMElement.style.cursor = 'grab'
         },
-        drag(ev: PointerEvent) {
-            circuit.parentDOM.scrollLeft = scrollStartPos.x - circuit.pointer.screenDragOffset.x
-            circuit.parentDOM.scrollTop = scrollStartPos.y - circuit.pointer.screenDragOffset.y
+        dragging(ev: PointerEvent) {
+            circuit.parentDOM.scrollLeft = scrollStartPos.x - pointer.screenDragOffset.x
+            circuit.parentDOM.scrollTop = scrollStartPos.y - pointer.screenDragOffset.y
         },
         end(ev: PointerEvent) {
             circuit.DOMElement.style.cursor = 'default'
         }
-    }
+    })
 
-    const selectionBoxBehaviour: IDragBehaviour = 
+    let selectionBoxStartPos: Vec2
+    let selectionBox: HTMLElement
+
+    dragBehaviour.set(PointerMode.DRAG_SELECTION_BOX,
     {
         start(ev: PointerEvent) {
             selectionBoxStartPos = pointer.screenDownPos
@@ -64,7 +128,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                 ...getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset)
             })
         },
-        drag(ev: PointerEvent) {
+        dragging(ev: PointerEvent) {
             Object.assign(selectionBox.style, getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset))
         },
         end(ev: PointerEvent) {
@@ -78,51 +142,77 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             })
             circuit.DOMElement.removeChild(selectionBox)
         }
-    }
+    })
 
-    const moveElementBehaviour: IDragBehaviour =
+    const selectedBlocksStartDragPos = new WeakMap<FunctionBlockView, Vec2>()
+
+    dragBehaviour.set(PointerMode.DRAG_BLOCK,
     {
         start(ev: PointerEvent) {
-            pointer.dragTargetInitPos = pointer.downTargetElem.pos.copy()
             selection.blocks.forEach(block => {
-                // circuit.dragElementStarted(block)
+                selectedBlocksStartDragPos.set(block, block.pos.copy())
                 block.onDragStarted?.(ev, circuit.pointer)
             })
         },
-        drag(ev: PointerEvent) {
-
+        dragging(ev: PointerEvent) {
+            selection.blocks.forEach(block => {
+                const startPos = selectedBlocksStartDragPos.get(block)
+                block.setPos(Vec2.add(startPos, pointer.scaledDragOffset))
+                block.onDragging?.(ev, circuit.pointer)
+            })
         },
         end(ev: PointerEvent) {
-
+            selection.blocks.forEach(block => {
+                const startPos = selectedBlocksStartDragPos.get(block)
+                block.setPos(Vec2.add(startPos, pointer.scaledDragOffset).round())
+                block.onDragEnded?.(ev, circuit.pointer)
+            })
         }
+    })
+
+
+    const onDragStarted = (ev: PointerEvent) =>
+    {
+        if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == MouseButton.RIGHT) {
+            pointerMode = PointerMode.DRAG_SCROLL_VIEW
+        }
+        else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == MouseButton.LEFT) {
+            pointerMode = PointerMode.DRAG_SELECTION_BOX
+        }
+        else if (selection.type == 'Block') {
+            pointerMode = PointerMode.DRAG_BLOCK
+        }
+        else if (selection.type == 'Pin' && selection.pin.type == 'input') {
+            pointerMode = PointerMode.DRAG_INPUT_PIN
+        }
+        else if (selection.type == 'Pin' && selection.pin.type == 'output') {
+            pointerMode = PointerMode.DRAG_OUTPUT_PIN
+        }
+        console.log('onDragStarted:', pointerMode)
+        dragBehaviour.get(pointerMode)?.start(ev)
     }
 
-    const onPointerDown = () => {
-        const elem = pointer.targetElem
-        console.log('Target', elem)
-        
-        // Deselect all
-        if (!elem || elem?.isSelectable) {
-            selection.removeAll()
-            return
-        }
-        // Select Block
-        if (elem instanceof FunctionBlockView) {
-            selection.set(elem)
-        }
-        // Select Pin
-        else if (elem instanceof IOPinView) {
-            selection.set(elem)
-        }
+    const onDragging = (ev: PointerEvent) => {
+        dragBehaviour.get(pointerMode)?.dragging(ev)
     }
 
+    const onDragEnded = (ev: PointerEvent) => {
+        dragBehaviour.get(pointerMode)?.end(ev)
+        pointerMode = PointerMode.DEFAULT
+    }
+    
     return {
-        onPointerDown
+        onPointerDown,
+        onClicked,
+        onRightClicked,
+        onDragStarted,
+        onDragging,
+        onDragEnded
     }
 }
 
 
-function getPositiveRectAttributes(pos: Vec2, size: Vec2)
+function getPositiveRectAttributes(pos: Vec2, size: Vec2): Partial<CSSStyleDeclaration>
 {
     let {x, y} = pos
     let {x: w, y: h} = size

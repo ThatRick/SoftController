@@ -69,6 +69,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     }
 
     const onClicked = (ev: PointerEvent) => {
+        
         console.log('clicked!')
         const elem = circuit.pointer.downTargetElem
 
@@ -106,7 +107,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         // Start dragging selection
         else if (circuit.pointer.isDragging && circuit.pointer.downTargetElem?.isDraggable) {
             mode = PointerMode.DRAG_ELEMENT
-            circuit.pointer.dragTargetInitPos = circuit.pointer.downTargetElem.pos.copy()
+
             circuit.selectedElements.forEach(elem => {
                 circuit.dragElementStarted(elem)
                 elem.onDragStarted?.(ev, circuit.pointer)

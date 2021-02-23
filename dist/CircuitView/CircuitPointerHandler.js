@@ -75,7 +75,6 @@ export default function CircuitPointerHandler(circuit) {
         // Start dragging selection
         else if (circuit.pointer.isDragging && circuit.pointer.downTargetElem?.isDraggable) {
             mode = 2 /* DRAG_ELEMENT */;
-            circuit.pointer.dragTargetInitPos = circuit.pointer.downTargetElem.pos.copy();
             circuit.selectedElements.forEach(elem => {
                 circuit.dragElementStarted(elem);
                 elem.onDragStarted?.(ev, circuit.pointer);

@@ -31,6 +31,7 @@ export interface GUIPointerEventHandler
     onPointerMove?:     EventHandlerFn
     onPointerUp?:       EventHandlerFn
     onClicked?:         EventHandlerFn
+    onRightClicked?:    EventHandlerFn
     onDoubleClicked?:   EventHandlerFn
     onDragStarted?:     EventHandlerFn
     onDragging?:        EventHandlerFn

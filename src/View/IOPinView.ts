@@ -6,10 +6,16 @@ import { defaultStyle, Style } from './Common.js'
 
 export default class IOPinView extends GUIChildElement
 {
+    get type() { return this.ioPin.type }
+
+    readonly ioPin: IOPinInterface
+
     constructor(ioPin: IOPinInterface, pos: Vec2, parentContainer: IContainerGUI, style: Style = defaultStyle )
     {
         super(parentContainer, 'div', pos, vec2(1, 1), {
             backgroundColor: 'red'
         })
+        this.ioPin = ioPin
     }
+
 }

@@ -13,7 +13,8 @@ export default class GUIPointer {
         this.scaledPos = vec2(0);
         this.scaledDownPos = vec2(0);
         this.scaledDragOffset = vec2(0);
-        this.dragTargetInitPos = vec2(0);
+        this.buttons = 0;
+        this.eventDownPos = vec2(0);
         this.screenLocalPos = vec2(0);
         this.dragHyst = 2;
         this.doubleClickPending = false;
@@ -63,7 +64,8 @@ export default class GUIPointer {
         handler.onPointerMove?.(ev);
         // Check if user is dragging
         if (this.isDown) {
-            this.screenDragOffset.set(this.screenPos).sub(this.screenDownPos);
+            //this.screenDragOffset.set(this.screenPos).sub(this.screenDownPos)
+            this.screenDragOffset.set(ev.x - this.eventDownPos.x, ev.y - this.eventDownPos.y);
             this.scaledDragOffset.set(this.screenDragOffset).div(view.scale);
             const pointerIsDragging = this.isDragging || this.screenDragOffset.len() > this.dragHyst;
             // Drag started
@@ -89,11 +91,14 @@ export default class GUIPointer {
         // Pointer down
         view.DOMElement.onpointerdown = ev => {
             ev.preventDefault();
+            this.buttons = ev.buttons;
             this.isDown = true;
             this.screenDownPos.set(this.screenPos);
+            this.eventDownPos.set(ev.x, ev.y);
             this.eventTarget = ev.target;
             this.targetElem = this.getPointerTargetElem?.(ev);
             this.downTargetElem = this.targetElem;
+            this.downEventTarget = ev.target;
             this.targetElem?.onPointerDown?.(ev, this);
             handler.onPointerDown?.(ev);
         };
@@ -103,6 +108,7 @@ export default class GUIPointer {
         };
         // Pointer up
         view.DOMElement.onpointerup = ev => {
+            ev.preventDefault();
             this.isDown = false;
             this.eventTarget = ev.target;
             this.targetElem = this.getPointerTargetElem?.(ev);
@@ -110,18 +116,24 @@ export default class GUIPointer {
             // Clicked
             if (!this.isDragging) {
                 // Double
-                if (this.doubleClickPending) {
+                if (this.buttons == 1 /* LEFT */ && this.doubleClickPending) {
                     if (this.targetElem == this.downTargetElem)
                         this.targetElem?.onDoubleClicked?.(ev, this);
                     handler.onDoubleClicked?.(ev);
                 }
                 // Single
-                else {
+                else if (this.buttons == 1 /* LEFT */) {
                     if (this.targetElem == this.downTargetElem)
                         this.targetElem?.onClicked?.(ev, this);
                     handler.onClicked?.(ev);
                     this.doubleClickPending = true;
                     setTimeout(() => this.doubleClickPending = false, DOUBLE_CLICK_INTERVAL);
+                }
+                // Right
+                else if (this.buttons == 2 /* RIGHT */) {
+                    if (this.targetElem == this.downTargetElem)
+                        this.targetElem?.onRightClicked?.(ev, this);
+                    handler.onRightClicked?.(ev);
                 }
             }
             // Stop dragging
@@ -131,5 +143,6 @@ export default class GUIPointer {
             }
             this.downTargetElem = undefined;
         };
+        view.DOMElement.addEventListener('contextmenu', ev => ev.preventDefault());
     }
 }

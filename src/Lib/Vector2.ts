@@ -34,7 +34,7 @@ export default class Vec2 implements IVec2
       this.y = vx.y
     } else {
       this.x = vx
-      this.y = y || vx
+      this.y = y ?? vx
     }
     return this
   }

@@ -6,14 +6,20 @@ export default class CircuitSelection {
         this.blocks = new Set();
     }
     get isMulti() { return this.blocks.size > 1; }
+    has(elem) {
+        if (elem instanceof FunctionBlockView) {
+            return this.blocks.has(elem);
+        }
+        else {
+            return (this.pin == elem);
+        }
+    }
     set(elem) {
         this.removeAll();
         if (elem instanceof FunctionBlockView) {
-            this.type = 'Block';
             this.selectBlock(elem);
         }
         else {
-            this.type = 'Pin';
             this.selectPin(elem);
         }
     }
@@ -36,6 +42,7 @@ export default class CircuitSelection {
     selectBlock(block) {
         block.setStyle({ boxShadow: `0px 0px 0px 1px ${this.style.colors.selection} inset` });
         this.blocks.add(block);
+        this.type = 'Block';
     }
     unselectBlock(block) {
         block.setStyle({ boxShadow: 'none' });
@@ -46,6 +53,7 @@ export default class CircuitSelection {
     selectPin(pin) {
         pin.setStyle({ boxShadow: `0px 0px 0px 1px ${this.style.colors.selection} inset` });
         this.pin = pin;
+        this.type = 'Pin';
     }
     unselectPin() {
         this.pin.setStyle({ boxShadow: 'none' });

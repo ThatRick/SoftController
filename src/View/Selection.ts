@@ -12,13 +12,18 @@ export default class CircuitSelection
 
     get isMulti() { return this.blocks.size > 1 }
 
+    has(elem: FunctionBlockView | IOPinView) {
+        if (elem instanceof FunctionBlockView) {
+            return this.blocks.has(elem)
+        } else {
+            return (this.pin == elem)
+        }   
+    }
     set(elem: FunctionBlockView | IOPinView) {
         this.removeAll()
         if (elem instanceof FunctionBlockView) {
-            this.type = 'Block'
             this.selectBlock(elem)
         } else {
-            this.type = 'Pin'
             this.selectPin(elem)
         }
     }
@@ -43,6 +48,7 @@ export default class CircuitSelection
     protected selectBlock(block: FunctionBlockView) {
         block.setStyle({ boxShadow: `0px 0px 0px 1px ${this.style.colors.selection} inset` })
         this.blocks.add(block)
+        this.type = 'Block'
     }
     protected unselectBlock(block: FunctionBlockView) {
         block.setStyle({ boxShadow: 'none' })
@@ -52,6 +58,7 @@ export default class CircuitSelection
     protected selectPin(pin: IOPinView) {
         pin.setStyle({ boxShadow: `0px 0px 0px 1px ${this.style.colors.selection} inset` })
         this.pin = pin
+        this.type = 'Pin'
     }
     protected unselectPin() {
         this.pin.setStyle({ boxShadow: 'none' })

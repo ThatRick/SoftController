@@ -19,7 +19,7 @@ export default class Vec2 {
         }
         else {
             this.x = vx;
-            this.y = y || vx;
+            this.y = y ?? vx;
         }
         return this;
     }

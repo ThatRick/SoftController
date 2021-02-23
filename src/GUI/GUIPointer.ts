@@ -6,6 +6,11 @@ import * as HTML from './../Lib/HTML.js'
 
 const DOUBLE_CLICK_INTERVAL = 400
 
+const enum MouseButton {
+    LEFT =   1,
+    RIGHT =  2,
+    MIDDLE = 4
+}
 
 export default class GUIPointer<Element extends IChildElementGUI, Style>
 {
@@ -14,6 +19,8 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
     
     eventTarget:        EventTarget
     targetElem:         Element
+
+    downEventTarget:    EventTarget
     downTargetElem:     Element
 
     screenPos =         vec2(0)
@@ -24,7 +31,8 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
     scaledDownPos =     vec2(0)
     scaledDragOffset =  vec2(0)
 
-    dragTargetInitPos = vec2(0)
+
+    buttons = 0
 
     update() {
         if (this.latestMovementEvent) {
@@ -65,11 +73,13 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
     }
     protected eventHandler: GUIPointerEventHandler
     protected latestMovementEvent: PointerEvent
+
     protected viewOffset: Vec2
     protected scrollOffset: Vec2
+    protected eventDownPos = vec2(0)
 
-    protected screenLocalPos =    vec2(0)
-    protected dragHyst =          2
+    protected screenLocalPos = vec2(0)
+    protected dragHyst = 2
     protected doubleClickPending = false
 
     protected updatePointerPosition(ev: PointerEvent)
@@ -96,7 +106,8 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
 
         // Check if user is dragging
         if (this.isDown) {
-            this.screenDragOffset.set(this.screenPos).sub(this.screenDownPos)
+            //this.screenDragOffset.set(this.screenPos).sub(this.screenDownPos)
+            this.screenDragOffset.set(ev.x - this.eventDownPos.x, ev.y - this.eventDownPos.y)
             this.scaledDragOffset.set(this.screenDragOffset).div(view.scale)
             const pointerIsDragging = this.isDragging || this.screenDragOffset.len() > this.dragHyst
             // Drag started
@@ -126,13 +137,16 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
         // Pointer down
         view.DOMElement.onpointerdown = ev => {
             ev.preventDefault()
+            this.buttons = ev.buttons
             this.isDown = true
             this.screenDownPos.set(this.screenPos)
-    
+            this.eventDownPos.set(ev.x, ev.y)
+
             this.eventTarget = ev.target
             this.targetElem = this.getPointerTargetElem?.(ev)
             
             this.downTargetElem = this.targetElem
+            this.downEventTarget = ev.target
     
             this.targetElem?.onPointerDown?.(ev, this)
             handler.onPointerDown?.(ev)
@@ -145,6 +159,7 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
     
         // Pointer up
         view.DOMElement.onpointerup = ev => {
+            ev.preventDefault()
             this.isDown = false
     
             this.eventTarget = ev.target
@@ -153,18 +168,23 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
             handler.onPointerUp?.(ev)
     
             // Clicked
-            if (!this.isDragging)  {
+            if (!this.isDragging) {
                 // Double
-                if (this.doubleClickPending) {
+                if (this.buttons == MouseButton.LEFT && this.doubleClickPending) {
                     if (this.targetElem == this.downTargetElem) this.targetElem?.onDoubleClicked?.(ev, this)
                     handler.onDoubleClicked?.(ev)
                 }
                 // Single
-                else {
+                else if (this.buttons == MouseButton.LEFT) {
                     if (this.targetElem == this.downTargetElem) this.targetElem?.onClicked?.(ev, this)
                     handler.onClicked?.(ev)
                     this.doubleClickPending = true
                     setTimeout(() => this.doubleClickPending = false, DOUBLE_CLICK_INTERVAL)
+                }
+                // Right
+                else if (this.buttons == MouseButton.RIGHT) {
+                    if (this.targetElem == this.downTargetElem) this.targetElem?.onRightClicked?.(ev, this)
+                    handler.onRightClicked?.(ev)
                 }
             }
             // Stop dragging
@@ -174,5 +194,7 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
             }
             this.downTargetElem = undefined
         }
+
+        view.DOMElement.addEventListener('contextmenu', ev => ev.preventDefault())
     }
 }
