@@ -1,20 +1,23 @@
 import { vec2 } from '../Lib/Vector2.js';
 import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import * as HTML from '../Lib/HTML.js';
-import { defaultStyle } from './Common.js';
+import IOPinView from './IOPinView.js';
 export default class FunctionBlockView extends GUIChildElement {
-    constructor(block, pos, parentContainer, style = defaultStyle) {
+    constructor(block, pos, parentContainer) {
         super(parentContainer, 'div', pos, FunctionBlockView.getBlockSize(block), {
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
             borderRadius: '2px',
-            backgroundColor: style.colors.primary
         }, true);
+        this.setStyle({
+            backgroundColor: this.gui.style.colors.primary
+        });
         block.events.subscribe(this.blockEventHandler.bind(this));
         this.block = block;
         this.create();
     }
+    get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
     blockEventHandler(ev) {
         switch (ev.type) {
             case 0 /* InputCount */:
@@ -24,6 +27,7 @@ export default class FunctionBlockView extends GUIChildElement {
                     this.createSymbol();
                 else
                     this.createIONames();
+                this.changePinCount();
                 break;
             case 2 /* Removed */:
                 this.delete();
@@ -35,7 +39,6 @@ export default class FunctionBlockView extends GUIChildElement {
     onRescale() {
         this.create();
     }
-    get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
     create() {
         if (this.visualStyle == 'full' || this.visualStyle == 'name on first row')
             this.createTitle();
@@ -43,6 +46,37 @@ export default class FunctionBlockView extends GUIChildElement {
             this.createSymbol();
         else
             this.createIONames();
+        this.createPins();
+    }
+    createPins() {
+        this.inputPins ??= this.block.inputs.map((input, index) => {
+            const pin = new IOPinView(input, vec2(-1, index), this.children);
+            return pin;
+        });
+        this.outputPins ??= this.block.outputs.map((output, index) => {
+            const pin = new IOPinView(output, vec2(this.size.x, index), this.children);
+            return pin;
+        });
+    }
+    changePinCount() {
+        while (this.block.inputs.length > this.inputPins.length) {
+            const index = this.inputPins.length;
+            const input = this.block.inputs[index];
+            const pin = new IOPinView(input, vec2(-1, index), this.children);
+            this.inputPins.push(pin);
+        }
+        while (this.block.inputs.length < this.inputPins.length) {
+            this.inputPins.pop();
+        }
+        while (this.block.outputs.length > this.outputPins.length) {
+            const index = this.outputPins.length;
+            const output = this.block.outputs[index];
+            const pin = new IOPinView(output, vec2(this.size.x, index), this.children);
+            this.outputPins.push(pin);
+        }
+        while (this.block.outputs.length < this.outputPins.length) {
+            this.outputPins.pop();
+        }
     }
     createTitle() {
         const gui = this.gui;

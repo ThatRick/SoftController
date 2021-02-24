@@ -75,9 +75,11 @@ export class GUIChildElement {
     rescale(scale) {
         this.update(true);
         this.onRescale?.(scale);
+        this.children?.rescale(scale);
     }
     restyle(style) {
         this.onRestyle?.(style);
+        this.children?.restyle(style);
     }
     requestUpdate() {
         this.gui.requestElementUpdate(this);

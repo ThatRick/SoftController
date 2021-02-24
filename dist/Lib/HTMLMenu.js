@@ -13,7 +13,8 @@ export default class HTMLMenu extends Element {
             display: 'block',
             textAlign: 'left',
             zIndex: '2',
-            boxShadow: '0px 2px 2px 2px rgba(0,0,0,0.2)',
+            backgroundColor: this.style.colors.base,
+            boxShadow: this.style.boxShadow,
             minWidth: '40px',
             ...menuStyle
         });

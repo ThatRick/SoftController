@@ -3,11 +3,14 @@ import Vec2 from './Vector2.js'
 export const defaultStyle =
 {
     colors: {
-        base:    '#446',
-        light:   '#669',
-        active:  '#77D'
+        base:    '#445',
+        light:   '#668',
+        active:  '#77D',
+        text:   'white',
+        altText: '#DDD'
     },
-    fontSize: 0.8
+    boxShadow: '0px 2px 2px 1px rgba(0,0,0,0.25)',
+    fontSize: 14
 }
 
 export type Style = typeof defaultStyle
@@ -20,7 +23,7 @@ export interface IElement
 export class Element {
     DOMElement: HTMLElement
     remove() {
-        this.DOMElement.parentElement.removeChild(this.DOMElement)
+        this.DOMElement?.parentElement?.removeChild(this.DOMElement)
         this.DOMElement = null
     }
     setCSS(style: Partial<CSSStyleDeclaration>) {
@@ -212,6 +215,5 @@ export function getInnerHeight( elm: HTMLElement ) {
     const padding = parseInt(computed.paddingTop) + parseInt(computed.paddingBottom)
     const margin = parseInt(computed.marginTop) + parseInt(computed.marginBottom)
     const border = parseInt(computed.borderTop) + parseInt(computed.borderBottom)
-    console.log('getinnerheight', elm.clientHeight, padding, border, margin)
     return elm.clientHeight - padding - border
 }

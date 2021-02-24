@@ -3,27 +3,40 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { BlockEvent, BlockEventType, FunctionBlockInterface } from '../State/FunctionBlock.js'
 import * as HTML from '../Lib/HTML.js'
 import { IContainerGUI } from '../GUI/GUITypes.js'
-import { defaultStyle, Style } from './Common.js'
+import IOPinView from './IOPinView.js'
+import CircuitView from './CircuitView.js'
 
 export default class FunctionBlockView extends GUIChildElement
 {
     readonly block: FunctionBlockInterface
-    
-    constructor(block: FunctionBlockInterface, pos: Vec2, parentContainer: IContainerGUI, style: Style = defaultStyle )
+
+    gui: CircuitView
+
+    constructor(block: FunctionBlockInterface, pos: Vec2, parentContainer: IContainerGUI )
     {
         super(parentContainer, 'div', pos, FunctionBlockView.getBlockSize(block), {
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
             borderRadius: '2px',
-            backgroundColor: style.colors.primary
         }, true)
+
+        this.setStyle({
+            backgroundColor: this.gui.style.colors.primary
+        })
 
         block.events.subscribe(this.blockEventHandler.bind(this))
 
         this.block = block
         this.create()
     }
+
+    protected inputPins: IOPinView[]
+    protected outputPins: IOPinView[]
+
+    protected get visualStyle() { return this.block.typeDef.visualStyle ?? 'full' }
+    protected IONameTable: HTML.Table
+    protected titleElem: HTML.Text
 
     protected blockEventHandler(ev: BlockEvent) {
         switch (ev.type)
@@ -33,6 +46,7 @@ export default class FunctionBlockView extends GUIChildElement
                 this.setSize(FunctionBlockView.getBlockSize(this.block))
                 if (this.visualStyle == 'minimum') this.createSymbol()
                 else this.createIONames()
+                this.changePinCount()
                 break
             case BlockEventType.Removed:
                 this.delete()
@@ -45,14 +59,43 @@ export default class FunctionBlockView extends GUIChildElement
         this.create()
     }
 
-    protected get visualStyle() { return this.block.typeDef.visualStyle ?? 'full' }
-    protected IONameTable: HTML.Table
-    protected titleElem: HTML.Text
-    
     protected create() {
         if (this.visualStyle == 'full' || this.visualStyle == 'name on first row') this.createTitle()
         if (this.visualStyle == 'minimum') this.createSymbol()
         else this.createIONames()
+        this.createPins()
+    }
+
+    protected createPins() {
+        this.inputPins ??= this.block.inputs.map((input, index) => {
+            const pin = new IOPinView(input, vec2(-1, index), this.children)
+            return pin
+        })
+        this.outputPins ??= this.block.outputs.map((output, index) => {
+            const pin = new IOPinView(output, vec2(this.size.x, index), this.children)
+            return pin
+        })
+    }
+
+    protected changePinCount() {
+        while (this.block.inputs.length > this.inputPins.length) {
+            const index = this.inputPins.length
+            const input = this.block.inputs[index]
+            const pin = new IOPinView(input, vec2(-1, index), this.children)
+            this.inputPins.push(pin)
+        }
+        while (this.block.inputs.length < this.inputPins.length) {
+            this.inputPins.pop()
+        }
+        while (this.block.outputs.length > this.outputPins.length) {
+            const index = this.outputPins.length
+            const output = this.block.outputs[index]
+            const pin = new IOPinView(output, vec2(this.size.x, index), this.children)
+            this.outputPins.push(pin)
+        }
+        while (this.block.outputs.length < this.outputPins.length) {
+            this.outputPins.pop()
+        }
     }
 
     protected createTitle() {

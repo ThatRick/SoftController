@@ -35,9 +35,11 @@ export interface CircuitViewEvent {
 
 export interface ICircuitView extends IRootViewGUI
 {
+    style: Style,
     readonly circuitBlock: FunctionBlockInterface
     loadCircuitDefinition(circuitViewDefinition: CircuitViewDefinition)
 }
+
 
 export default class CircuitView extends GUIView<GUIChildElement, Style>
 {
@@ -47,7 +49,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this._circuitBlock = new CircuitBlock(definition)
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index]
-            const blockView = new FunctionBlockView(block, vec2(pos), this.children, this.style)
+            const blockView = new FunctionBlockView(block, vec2(pos), this.children)
             this.blockViews.add(blockView)
         })
         this.guiEvents.emit(CircuitViewEventType.CircuitLoaded)
@@ -61,6 +63,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
 
     get circuitBlock(): FunctionBlockInterface { return this._circuitBlock }
 
+
     constructor(parent: HTMLElement, size: Vec2, scale: Vec2, style: Readonly<Style> = defaultStyle)
     {
         super(parent, size, scale, style, {
@@ -71,6 +74,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         })
         this.pointer.attachEventHandler(CircuitPointerHandler(this))
     }
+    
     
     protected onRescale() {
         this.onRestyle()

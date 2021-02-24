@@ -10,20 +10,16 @@ export class CircuitMenuBar {
     handleGuiEvent(ev) {
         switch (ev.type) {
             case 1 /* Rescaled */:
-                console.log('Event: rescaled!');
                 break;
             case 0 /* Resized */:
-                console.log('Event: resized!');
                 break;
         }
     }
     handleCircuitViewEvent(ev) {
         switch (ev.type) {
             case 0 /* CircuitLoaded */:
-                console.log('Event: rescaled!');
                 break;
             case 1 /* CircuitClosed */:
-                console.log('Event: resized!');
                 break;
         }
     }
@@ -32,7 +28,6 @@ export class CircuitMenuBar {
         view.guiEvents.subscribe(this.handleGuiEvent.bind(this));
         view.events.subscribe(this.handleCircuitViewEvent.bind(this));
         const menu = this.menu;
-        console.log('Building circuit menu bar...');
         menu.addItems([
             ...this.scaleControls()
         ]);

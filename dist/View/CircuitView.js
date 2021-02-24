@@ -26,7 +26,7 @@ export default class CircuitView extends GUIView {
         this._circuitBlock = new CircuitBlock(definition);
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index];
-            const blockView = new FunctionBlockView(block, vec2(pos), this.children, this.style);
+            const blockView = new FunctionBlockView(block, vec2(pos), this.children);
             this.blockViews.add(blockView);
         });
         this.guiEvents.emit(0 /* CircuitLoaded */);

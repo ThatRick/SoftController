@@ -113,9 +113,11 @@ export class GUIChildElement implements IChildElementGUI{
     rescale(scale: Vec2) {
         this.update(true)
         this.onRescale?.(scale)
+        this.children?.rescale(scale)
     }
     restyle(style: IStyleGUI) {
         this.onRestyle?.(style)
+        this.children?.restyle(style)
     }
 
     protected onUpdate?(force?: boolean): void

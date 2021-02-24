@@ -90,7 +90,7 @@ export default class GUIPointer {
         const handler = this.eventHandler;
         // Pointer down
         view.DOMElement.onpointerdown = ev => {
-            ev.preventDefault();
+            // ev.preventDefault()
             this.buttons = ev.buttons;
             this.isDown = true;
             this.screenDownPos.set(this.screenPos);
@@ -108,7 +108,7 @@ export default class GUIPointer {
         };
         // Pointer up
         view.DOMElement.onpointerup = ev => {
-            ev.preventDefault();
+            // ev.preventDefault()
             this.isDown = false;
             this.eventTarget = ev.target;
             this.targetElem = this.getPointerTargetElem?.(ev);

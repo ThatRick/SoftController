@@ -33,6 +33,7 @@ export class FunctionBlock {
     get description() { return this._description; }
     get parentCircuit() { return this._parentCircuit; }
     setVariableInputCount(n) {
+        console.log('Set variable input count to', n);
         if (!this.variableInputs)
             return;
         const { min, max, initialCount: initial, structSize = 1 } = this.variableInputs;

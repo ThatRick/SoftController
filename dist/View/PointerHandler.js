@@ -49,13 +49,15 @@ export default function CircuitPointerHandler(circuit) {
             return;
         }
         else if (elem instanceof FunctionBlockView) {
+            pointerMode = 7 /* MODAL_MENU */;
             menu = FunctionBlockMenu({
-                block: elem,
+                blockView: elem,
                 parentContainer: circuit.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove();
                     menu = null;
+                    pointerMode = 0 /* DEFAULT */;
                 }
             });
         }
@@ -128,7 +130,8 @@ export default function CircuitPointerHandler(circuit) {
         }
     });
     const onDragStarted = (ev) => {
-        if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == 2 /* RIGHT */) {
+        if (pointerMode == 7 /* MODAL_MENU */) { }
+        else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == 2 /* RIGHT */) {
             pointerMode = 1 /* DRAG_SCROLL_VIEW */;
         }
         else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == 1 /* LEFT */) {

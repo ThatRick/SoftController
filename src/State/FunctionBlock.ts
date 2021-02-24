@@ -87,6 +87,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
 
     setVariableInputCount(n: number) {
+        console.log('Set variable input count to', n)
         if (!this.variableInputs) return
         const { min, max, initialCount: initial, structSize=1 } = this.variableInputs
         if (n < min) n = min

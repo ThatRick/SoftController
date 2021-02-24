@@ -21,7 +21,14 @@ const myProg = {
         },
         circuit: {
             blocks: [
-                { typeName: 'AND' },
+                {
+                    typeName: 'AND',
+                    inputs: [
+                        { value: 1, source: { blockNum: -1, outputNum: 1, inverted: true } },
+                        { value: 1 },
+                        { value: 1 }
+                    ]
+                },
                 { typeName: 'OR' },
                 { typeName: 'RS' },
                 { typeName: 'RisingEdge' },
@@ -46,7 +53,6 @@ const myProg = {
 function testCircuit(view, terminal) {
     view.loadCircuitDefinition(myProg);
     const blocks = view.circuitBlock.circuit.blocks;
-    blocks[0].setVariableInputCount(3);
 }
 function testzone(terminal) {
     const and = getFunctionBlock({ typeName: 'AND' });

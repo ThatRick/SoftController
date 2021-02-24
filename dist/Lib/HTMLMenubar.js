@@ -29,7 +29,6 @@ export class Menubar {
             height: '100%',
         });
         const lineHeight = HTML.getInnerHeight(item.DOMElement);
-        console.log('line height:', lineHeight);
         item.DOMElement.style.lineHeight = lineHeight + 'px';
     }
     addItems(items) {

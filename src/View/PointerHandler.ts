@@ -15,7 +15,8 @@ const enum PointerMode {
     DRAG_BLOCK,
     DRAG_INPUT_PIN,
     DRAG_OUTPUT_PIN,
-    INSERT_NEW_BLOCK
+    INSERT_NEW_BLOCK,
+    MODAL_MENU,
 }
 
 const enum MouseButton {
@@ -82,13 +83,15 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             return
         }
         else if (elem instanceof FunctionBlockView) {
+            pointerMode = PointerMode.MODAL_MENU
             menu = FunctionBlockMenu({
-                block: elem,
+                blockView: elem,
                 parentContainer: circuit.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove()
                     menu = null
+                    pointerMode = PointerMode.DEFAULT
                 }
             })
         }
@@ -173,7 +176,8 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 
     const onDragStarted = (ev: PointerEvent) =>
     {
-        if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == MouseButton.RIGHT) {
+        if (pointerMode == PointerMode.MODAL_MENU) {}
+        else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == MouseButton.RIGHT) {
             pointerMode = PointerMode.DRAG_SCROLL_VIEW
         }
         else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == MouseButton.LEFT) {

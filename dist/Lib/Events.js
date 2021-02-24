@@ -4,7 +4,6 @@ export class EventEmitter {
     }
     subscribe(fn, eventTypes) {
         const typeMask = eventTypes ? eventTypes.reduce((mask, type) => mask += (1 << type), 0) : null;
-        console.log('subscribe with type mask', typeMask);
         this.subscribers.set(fn, typeMask);
     }
     unsubscribe(fn) {

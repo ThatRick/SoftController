@@ -23,10 +23,8 @@ export class CircuitMenuBar
         switch(ev.type)
         {
             case GUIEventType.Rescaled:
-                console.log('Event: rescaled!')
                 break
             case GUIEventType.Resized:
-                console.log('Event: resized!')
                 break
         }
     }
@@ -34,10 +32,8 @@ export class CircuitMenuBar
         switch(ev.type)
         {
             case CircuitViewEventType.CircuitLoaded:
-                console.log('Event: rescaled!')
                 break
             case CircuitViewEventType.CircuitClosed:
-                console.log('Event: resized!')
                 break
         }
     }
@@ -47,7 +43,6 @@ export class CircuitMenuBar
         view.guiEvents.subscribe(this.handleGuiEvent.bind(this))
         view.events.subscribe(this.handleCircuitViewEvent.bind(this))
         const menu = this.menu
-        console.log('Building circuit menu bar...')
         menu.addItems([
             ...this.scaleControls()
         ])

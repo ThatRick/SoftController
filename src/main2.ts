@@ -26,7 +26,14 @@ const myProg: CircuitViewDefinition = {
         },
         circuit: {
             blocks: [
-                { typeName: 'AND' },
+                {
+                    typeName: 'AND',
+                    inputs: [
+                        { value: 1, source: { blockNum: -1, outputNum: 1, inverted: true } },
+                        { value: 1 },
+                        { value: 1 }
+                    ]
+                },
                 { typeName: 'OR' },
                 { typeName: 'RS' },
                 { typeName: 'RisingEdge' },
@@ -52,7 +59,6 @@ const myProg: CircuitViewDefinition = {
 function testCircuit(view: CircuitView, terminal: ControllerTerminal) {
     view.loadCircuitDefinition(myProg)
     const blocks = view.circuitBlock.circuit.blocks
-    blocks[0].setVariableInputCount(3)
 }
 
 function testzone(terminal: ControllerTerminal) {

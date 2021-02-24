@@ -172,7 +172,8 @@ export function getFunctionBlock(instance: FunctionInstanceDefinition) {
     const ctor = functionLib[instance.typeName]
     const block = new ctor()
     if (instance.inputs) {
-        const { initialCount, structSize } = block.typeDef.variableInputs
+        const { initialCount, structSize=1 } = block.typeDef.variableInputs
+        console.log({ initialCount, structSize })
         const variableTotalCount = initialCount * structSize
         const variableDiff = (instance.inputs.length - variableTotalCount) / structSize
         console.assert(variableDiff % 1 == 0, 'variable input count does not fit variable input struct size multiplier')

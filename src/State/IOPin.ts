@@ -9,7 +9,9 @@ import { FunctionBlockInterface } from "./FunctionBlock.js"
 
 export interface IOPinSource
 {
-    keksijotain: unknown
+    blockNum:   number
+    outputNum:  number
+    inverted?:  boolean
 }
 
 export interface IOPinDefinition
