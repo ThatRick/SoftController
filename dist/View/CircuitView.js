@@ -32,6 +32,8 @@ export default class CircuitView extends GUIView {
         this.guiEvents.emit(0 /* CircuitLoaded */);
     }
     get circuitBlock() { return this._circuitBlock; }
+    onResize() {
+    }
     onRescale() {
         this.onRestyle();
     }

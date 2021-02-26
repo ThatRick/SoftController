@@ -40,9 +40,10 @@ export interface ICircuitView extends IRootViewGUI
     loadCircuitDefinition(circuitViewDefinition: CircuitViewDefinition)
 }
 
-
 export default class CircuitView extends GUIView<GUIChildElement, Style>
 {
+    static readonly IO_AREA_WIDTH = 5
+
     loadCircuitDefinition(circuitViewDefinition: CircuitViewDefinition) {
         const { definition, positions, size } = circuitViewDefinition
         this.resize(vec2(size))
@@ -75,6 +76,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.pointer.attachEventHandler(CircuitPointerHandler(this))
     }
     
+    protected onResize() {
+    }
     
     protected onRescale() {
         this.onRestyle()

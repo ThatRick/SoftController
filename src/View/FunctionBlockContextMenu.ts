@@ -5,7 +5,7 @@ import {defaultStyle} from '../Lib/HTML.js'
 import Vec2 from '../Lib/Vector2.js'
 import { BlockEventType } from '../State/FunctionBlock.js'
 
-export default function FunctionBlockMenu(options: {
+export default function FunctionBlockContextMenu(options: {
     blockView: FunctionBlockView,
     pos: Vec2,
     parentContainer: HTMLElement,

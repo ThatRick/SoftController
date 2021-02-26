@@ -6,7 +6,8 @@ import Vec2, { vec2 } from '../Lib/Vector2.js'
 import CircuitView from './CircuitView.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import IOPinView from './IOPinView.js'
-import FunctionBlockMenu from './FunctionBlockMenu.js'
+import FunctionBlockContextMenu from './FunctionBlockContextMenu.js'
+import CircuitContextMenu from './CircuitContextMenu.js'
 
 const enum PointerMode {
     DEFAULT,
@@ -77,14 +78,26 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 
     const onRightClicked = (ev: PointerEvent) => {
         const elem = pointer.targetElem
-        // Deselect all
+        // Open circuit context menu
         if (!elem) {
             selection.removeAll()
-            return
+
+            pointerMode = PointerMode.MODAL_MENU
+            menu = CircuitContextMenu({
+                circuitView: circuit,
+                parentContainer: circuit.DOMElement,
+                pos: pointer.screenDownPos.copy(),
+                destructor: () => {
+                    menu.remove()
+                    menu = null
+                    pointerMode = PointerMode.DEFAULT
+                }
+            })
         }
+        // Open function block context menu
         else if (elem instanceof FunctionBlockView) {
             pointerMode = PointerMode.MODAL_MENU
-            menu = FunctionBlockMenu({
+            menu = FunctionBlockContextMenu({
                 blockView: elem,
                 parentContainer: circuit.DOMElement,
                 pos: pointer.screenDownPos.copy(),
