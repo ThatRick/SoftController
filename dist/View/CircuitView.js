@@ -46,3 +46,4 @@ export default class CircuitView extends GUIView {
     }
     get circuit() { return this._circuitBlock?.circuit; }
 }
+CircuitView.IO_AREA_WIDTH = 5;

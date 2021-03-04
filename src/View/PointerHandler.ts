@@ -44,12 +44,12 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     const onPointerDown = (ev: PointerEvent) => {
         const elem = pointer.targetElem
         if (ev.altKey) console.log('Target', elem, pointer.screenPos)
+        // Discard modal menu
         if (menu) {
             menu.remove()
             menu = null
         }
-    
-        // Select Block
+        // Set selection to unselected block (to enable instant dragging of unselected)
         if (!ev.shiftKey && elem instanceof FunctionBlockView && !selection.has(elem)) {
             selection.set(elem)
         }
@@ -64,11 +64,12 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         // Deselect all
         if (!elem) {
             selection.removeAll()
-            return
         }
+        // Set selection to block (no shift key)
         else if (!ev.shiftKey && elem instanceof FunctionBlockView) {
             selection.set(elem)
         }
+        // Add or remove selection (with shift key)
         else if (ev.shiftKey && elem instanceof FunctionBlockView) {
             selection.has(elem)
                 ? selection.remove(elem)
@@ -78,10 +79,10 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 
     const onRightClicked = (ev: PointerEvent) => {
         const elem = pointer.targetElem
+        
         // Open circuit context menu
         if (!elem) {
             selection.removeAll()
-
             pointerMode = PointerMode.MODAL_MENU
             menu = CircuitContextMenu({
                 circuitView: circuit,
@@ -112,6 +113,8 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 
     const dragBehaviour = new Map<PointerMode, IDragBehaviour>()
 
+    //  Darg to scroll view
+    // ---------------------
     let scrollStartPos: Vec2
 
     dragBehaviour.set(PointerMode.DRAG_SCROLL_VIEW,
@@ -128,7 +131,9 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             circuit.DOMElement.style.cursor = 'default'
         }
     })
-
+    
+    //  Drag to draw selection box
+    // ----------------------------
     let selectionBoxStartPos: Vec2
     let selectionBox: HTMLElement
 
@@ -160,6 +165,8 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         }
     })
 
+    //  Drag a block
+    // --------------
     const selectedBlocksStartDragPos = new WeakMap<FunctionBlockView, Vec2>()
 
     dragBehaviour.set(PointerMode.DRAG_BLOCK,
@@ -186,10 +193,26 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         }
     })
 
+    //  Drag input pin
+    // ----------------
+    dragBehaviour.set(PointerMode.DRAG_INPUT_PIN,
+    {
+        start(ev: PointerEvent) {
+            circuit.DOMElement.style.cursor = 'grab'
 
+        },
+        dragging(ev: PointerEvent) {
+        },
+        end(ev: PointerEvent) {
+            circuit.DOMElement.style.cursor = 'default'
+        }
+    })
+
+    //  Handle dragging
+    // -----------------
     const onDragStarted = (ev: PointerEvent) =>
     {
-        if (pointerMode == PointerMode.MODAL_MENU) {}
+        if (pointerMode == PointerMode.MODAL_MENU) return
         else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == MouseButton.RIGHT) {
             pointerMode = PointerMode.DRAG_SCROLL_VIEW
         }

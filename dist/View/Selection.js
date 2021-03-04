@@ -51,12 +51,12 @@ export default class CircuitSelection {
             this.type = null;
     }
     selectPin(pin) {
-        pin.setStyle({ boxShadow: `0px 0px 0px 1px ${this.style.colors.selection} inset` });
+        pin.setStyle({ backgroundColor: this.style.colors.pinSelection });
         this.pin = pin;
         this.type = 'Pin';
     }
     unselectPin() {
-        this.pin.setStyle({ boxShadow: 'none' });
+        this.pin.setStyle({ backgroundColor: 'transparent' });
         this.pin = null;
         this.type = null;
     }

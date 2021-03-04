@@ -11,6 +11,8 @@ export default class IOPinView extends GUIChildElement
 
     readonly io: IOPinInterface
 
+    get color() { return this.pinColor }
+
     gui: CircuitView
 
     //////////////////////////////////////////////
@@ -49,6 +51,8 @@ export default class IOPinView extends GUIChildElement
 
     protected pin: HTMLElement
 
+    protected pinColor: string
+
     protected onRescale() {
         this.updateStyle()
     }
@@ -78,6 +82,8 @@ export default class IOPinView extends GUIChildElement
             ? this.pin.style.borderColor = color
             : this.pin.style.backgroundColor = color
         
+        this.pinColor = color
+
         // this.valueField.style.color = this.color
     }
 

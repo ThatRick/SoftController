@@ -74,13 +74,22 @@ export default class Circuit implements CircuitInterface
 
     constructor(def: CircuitDefinition)
     {
-        def.blocks.forEach(funcDef => {
-            const block = getFunctionBlock(funcDef)
-            this._blocks.add(block)
+        // Create blocks
+        const blocks = def.blocks.map(funcDef => getFunctionBlock(funcDef))
+        // Set block input sources
+        def.blocks.forEach((block, blockIndex) => {
+            block.inputs.forEach((input, inputIndex) => {
+                if (input.source) {
+                    const { blockNum, outputNum } = input.source
+                    const sourcePin = blocks[blockNum].outputs[outputNum]
+                    blocks[blockIndex].inputs[inputIndex].setSource(sourcePin)
+                }
+            })
         })
+        this._blocks = new Set(blocks)
     }
 
-    protected _blocks = new Set<FunctionBlock>()
+    protected _blocks: Set<FunctionBlock>
 
     protected subscribers = new Set<Subscriber<CircuitEvent>>()
     

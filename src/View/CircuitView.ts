@@ -48,11 +48,23 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         const { definition, positions, size } = circuitViewDefinition
         this.resize(vec2(size))
         this._circuitBlock = new CircuitBlock(definition)
+        
+        // Create block views
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index]
             const blockView = new FunctionBlockView(block, vec2(pos), this.children)
             this.blockViews.add(blockView)
         })
+        
+        // Create connection lines
+        this.blockViews.forEach(blockView => {
+            blockView.block.inputs.forEach(({source}) => {
+                if (source) {
+                    
+                }
+            })
+        })
+
         this.guiEvents.emit(CircuitViewEventType.CircuitLoaded)
     }
     
