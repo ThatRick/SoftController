@@ -2,7 +2,7 @@ import Vec2, {vec2} from '../Lib/Vector2.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
  
-const sizePadding = 10
+const viewportPadding = 10
 
 export interface ITracePathAnchors
 {
@@ -11,68 +11,27 @@ export interface ITracePathAnchors
     verticalX2?: number
 }
 
-export interface ITracePath
+export class Trace
 {
-    sourcePos: Vec2
-    destPos: Vec2,
-    minSourceReach: number,
-    minDestReach: number,
-    midpoints: Vec2[],
-    anchors: ITracePathAnchors,
+    get sourcePos(): Vec2 { return this.points[0] }
+    get destPos(): Vec2 { return this.points[this.points.length-1] }
+    minSourceReach: number
+    minDestReach: number
+    points: Vec2[]
+    anchors: ITracePathAnchors
     color: string
-    segments: SVGLineElement[]
+    lineSegments: SVGLineElement[]
 }
 
 export default class TraceLayer
 {
     addTrace(sourcePos: Vec2, destPos: Vec2, minSourceReach: number, minDestReach: number,
-        color: string, pathAnchors: ITracePathAnchors = {}): ITracePath
+        color: string, pathAnchors: ITracePathAnchors = {}): Trace
     {
-        let segments: SVGLineElement[]
-
-        const midpoints = this.calculatePath(sourcePos, destPos, minSourceReach, minDestReach, pathAnchors)
+        const points = this.calculateRoutePoints(sourcePos, destPos, minSourceReach, minDestReach, pathAnchors)
+        const lineSegments = this.createLineSegments(points, color)
         
-        switch (midpoints.length)
-        {
-            case 0:     // 1 line segment
-            {
-                segments = [this.createSegment(sourcePos, destPos, color)]
-                break
-            }
-
-            case 2:     // 3 line segments
-            {
-                const [ va, vb ] = midpoints
-    
-                segments = [
-                    this.createSegment(sourcePos, va, color),   // horizontal 1
-                    this.createSegment(va, vb, color),          // vertical
-                    this.createSegment(vb, destPos, color),     // horizontal 2
-                ]
-                break
-            }
-
-            case 4:     // 5 line segments
-            {    
-                const [ v1a, v1b, v2a, v2b ] = midpoints
-    
-                segments = [
-                    this.createSegment(sourcePos, v1a, color),  // horizontal 1
-                    this.createSegment(v1a, v1b, color),        // vertical 1
-                    this.createSegment(v1b, v2a, color),        // horizontal 2
-                    this.createSegment(v2a, v2b, color),        // vertical 2
-                    this.createSegment(v2b, destPos, color),    // horizontal 3
-                ]
-                break
-            }
-
-            default:
-            {
-                console.error('Trace layer: invalid number of trace midpoints:', midpoints.length)
-            }
-        }
-        
-        const path: ITracePath =
+        const trace: Trace =
         {
             sourcePos: sourcePos.copy(),
             destPos: destPos.copy(),
@@ -80,33 +39,43 @@ export default class TraceLayer
             minDestReach,
             color,
             anchors: {
-                verticalX1:     midpoints[1]?.x,
-                horizontalY:    midpoints[2]?.y,
-                verticalX2:     midpoints[3]?.x
+                verticalX1:     points[1]?.x,
+                horizontalY:    points[2]?.y,
+                verticalX2:     points[3]?.x
             },
-            midpoints,
-            segments
+            points: points,
+            lineSegments: lineSegments
         }
 
-        this.traces.add(path)
+        this.traces.add(trace)
 
-        return path
+        return trace
     }
 
-    updatePath(path: ITracePath, sourcePos: Vec2, destPos: Vec2) {
-        path.sourcePos = sourcePos.copy()
-        path.destPos = sourcePos.copy()
-        const midpoints = this.calculatePath(sourcePos, destPos, path.minSourceReach, path.minDestReach, path.anchors)
-
+    updateTracePath(trace: Trace, sourcePos: Vec2, destPos: Vec2) {
+        const points = this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach, trace.anchors)
+        // If route point count changes, recreate all line segments
+        if (points.length != trace.points.length) {
+            trace.lineSegments.forEach(line => this.svg.removeChild(line))
+            trace.lineSegments = this.createLineSegments(points, trace.color)
+        }
+        // if route points changed
+        trace.points.forEach((currentPoint, index) => {
+            const newPoint = points[index]
+            if (!currentPoint.equal(newPoint)) {
+                const segmentIndex = 0
+            }
+        })
     }
 
-    updateColor(path: ITracePath, color: string) {
-        path.segments.forEach(line => line.style.stroke = color)
+    updateColor(trace: Trace, color: string) {
+        trace.lineSegments.forEach(line => line.style.stroke = color)
     }
 
-    deleteTrace(path: ITracePath) {
-        path.segments.forEach(line => this.svg.removeChild(line))
-        this.traces.delete(path)
+    deleteTrace(trace: Trace) {
+        trace.lineSegments.forEach(line => this.svg.removeChild(line))
+        this.traces.delete(trace)
+        trace = null
     }
 
     get size() {
@@ -137,7 +106,7 @@ export default class TraceLayer
     protected scale: Vec2
     protected cellOffset: Vec2
 
-    protected traces: Set<ITracePath>
+    protected traces: Set<Trace>
 
     protected lineCSSStyle =
     {
@@ -145,8 +114,7 @@ export default class TraceLayer
         pointerEvents: 'visible'
     }
 
-
-    protected calculatePath(sourcePos: Vec2, destPos: Vec2,
+    protected calculateRoutePoints(sourcePos: Vec2, destPos: Vec2,
         sourceMinReach: number, destMinReach: number, anchors: ITracePathAnchors = {}): Vec2[]
     {
         let { verticalX1, horizontalY, verticalX2 } = anchors
@@ -154,24 +122,29 @@ export default class TraceLayer
         const offsetX = destPos.x - sourcePos.x
         const offsetY = destPos.y - sourcePos.y
         
-        // 1 segment (no midpoints)
+        // 1 line segment (2 points)
         if (offsetY == 0 && offsetX > 0) {
-            return []
+            return [
+                vec2(sourcePos),
+                vec2(destPos)
+            ]
         }
         
-        // 3 segments (2 midpoints)
+        // 3 line segments (4 points)
         else if (offsetX >= sourceMinReach + destMinReach) {
             if (verticalX1 == undefined) verticalX1 = sourcePos.x + offsetX / 2
             else if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = sourcePos.x + sourceMinReach
             else if (verticalX1 > destPos.x - destMinReach) verticalX1 = destPos.x - destMinReach
 
             return [
+                vec2(sourcePos),
                 vec2(verticalX1, sourcePos.y),
-                vec2(verticalX1, destPos.y)
+                vec2(verticalX1, destPos.y),
+                vec2(destPos)
             ]
         }
 
-        // 5 segments (4 midpoints)
+        // 5 line segments (6 points)
         else {
             if (!verticalX1) verticalX1 = sourcePos.x + sourceMinReach
             else if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = sourcePos.x + sourceMinReach
@@ -182,15 +155,78 @@ export default class TraceLayer
             if (!horizontalY) horizontalY = sourcePos.y + Math.round(offsetY / 2)
 
             return [
+                vec2(sourcePos),
                 vec2(verticalX1, sourcePos.y),
                 vec2(verticalX1, horizontalY),
                 vec2(verticalX2, horizontalY),
-                vec2(verticalX2, destPos.y)
+                vec2(verticalX2, destPos.y),
+                vec2(destPos)
             ]
         }
     }
 
-    protected createSegment(_a: Vec2, _b: Vec2, color: string): SVGLineElement {
+    protected createLineSegments(points: Vec2[], color: string) {
+        
+        let lineSegments: SVGLineElement[]
+        
+        switch (points.length)
+        {
+            case 2:     // 1 line segment
+            {
+                const [ start, end ] = points
+
+                lineSegments = [this.createLineSegment(start, end, color)]
+                break
+            }
+
+            case 4:     // 3 line lineSegments
+            {
+                const [ start, va, vb, end ] = points
+    
+                lineSegments = [
+                    this.createLineSegment(start, va, color),   // horizontal 1
+                    this.createLineSegment(va, vb, color),      // vertical
+                    this.createLineSegment(vb, end, color),     // horizontal 2
+                ]
+                break
+            }
+
+            case 6:     // 5 line lineSegments
+            {    
+                const [ start, v1a, v1b, v2a, v2b, end ] = points
+    
+                lineSegments = [
+                    this.createLineSegment(start, v1a, color),  // horizontal 1
+                    this.createLineSegment(v1a, v1b, color),    // vertical 1
+                    this.createLineSegment(v1b, v2a, color),    // horizontal 2
+                    this.createLineSegment(v2a, v2b, color),    // vertical 2
+                    this.createLineSegment(v2b, end, color),    // horizontal 3
+                ]
+                break
+            }
+
+            default:
+            {
+                console.error('Trace layer: invalid number of trace midpoints:', points.length)
+            }
+
+            return lineSegments
+        }
+    }
+
+    protected setLineSegmentStartPos(line: SVGLineElement, pos: Vec2) {
+        const scaledPos = Vec2.mul(pos, this.scale).add(this.cellOffset)
+        line.setAttributeNS(null, 'x1', scaledPos.x.toString())
+        line.setAttributeNS(null, 'y1', scaledPos.y.toString())
+    }
+
+    protected setLineSegmentEndPos(line: SVGLineElement, pos: Vec2) {
+        const scaledPos = Vec2.mul(pos, this.scale).add(this.cellOffset)
+        line.setAttributeNS(null, 'x2', scaledPos.x.toString())
+        line.setAttributeNS(null, 'y2', scaledPos.y.toString())
+    }
+
+    protected createLineSegment(_a: Vec2, _b: Vec2, color: string): SVGLineElement {
 
         const a = Vec2.mul(_a, this.scale).add(this.cellOffset)
         const b = Vec2.mul(_b, this.scale).add(this.cellOffset)
@@ -218,8 +254,8 @@ export default class TraceLayer
         }
         // Resize SVG viewport if line point is outside viewport bounds
         const max = Vec2.max(a, b).round()
-        if (max.x > this.svg.clientWidth - sizePadding) this.svg.style.width = max.x + sizePadding + 'px'
-        if (max.y > this.svg.clientHeight - sizePadding) this.svg.style.height = max.y + sizePadding + 'px'
+        if (max.x > this.svg.clientWidth - viewportPadding) this.svg.style.width = max.x + viewportPadding + 'px'
+        if (max.y > this.svg.clientHeight - viewportPadding) this.svg.style.height = max.y + viewportPadding + 'px'
 
         Object.entries(lineProps).forEach(([key, value]) => line.setAttributeNS(null, key.toString(), value.toString()))
         

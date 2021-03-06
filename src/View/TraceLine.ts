@@ -1,9 +1,9 @@
 import Vec2 from "../Lib/Vector2"
 import IOPinView from "./IOPinView"
-import TraceLayer, { ITracePath } from "./TraceLayer"
+import TraceLayer, { Trace } from "./TraceLayer"
 
 export class TraceLine {
-    path: ITracePath
+    path: Trace
 
     constructor (
         public layer: TraceLayer,
@@ -24,7 +24,7 @@ export class TraceLine {
     }
 
     update() {
-        this.layer.updatePath(this.path, this.outputPin.absPos, this.inputPin.absPos)
+        this.layer.updateTracePath(this.path, this.outputPin.absPos, this.inputPin.absPos)
     }
     delete() {
         this.layer.deleteTrace(this.path)
