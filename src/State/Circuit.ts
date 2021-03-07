@@ -7,7 +7,7 @@ import { Subscriber } from "./CommonTypes.js";
 //          Circuit
 ///////////////////////////////
 
-enum CircuitEventType
+export const enum CircuitEventType
 {
     BlockAdded,
     BlockRemoved,
@@ -72,22 +72,28 @@ export default class Circuit implements CircuitInterface
         this.subscribers.clear()
     }
 
-    constructor(def: CircuitDefinition)
+    constructor(def: CircuitDefinition, circBlock: FunctionBlock)
     {
+        this.circBlock = circBlock
         // Create blocks
         const blocks = def.blocks.map(funcDef => getFunctionBlock(funcDef))
         // Set block input sources
         def.blocks.forEach((block, blockIndex) => {
-            block.inputs.forEach((input, inputIndex) => {
+            block.inputs?.forEach((input, inputIndex) => {
                 if (input.source) {
                     const { blockNum, outputNum } = input.source
-                    const sourcePin = blocks[blockNum].outputs[outputNum]
+                    // Connect to circuit input (blockNum = -1) or block output (blockNum = 0..n)
+                    const sourcePin = (blockNum == -1)
+                        ? circBlock.inputs[outputNum]
+                        : blocks[blockNum].outputs[outputNum]
                     blocks[blockIndex].inputs[inputIndex].setSource(sourcePin)
                 }
             })
         })
         this._blocks = new Set(blocks)
     }
+
+    protected circBlock: FunctionBlock
 
     protected _blocks: Set<FunctionBlock>
 

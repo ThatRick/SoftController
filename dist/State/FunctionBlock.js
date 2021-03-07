@@ -4,7 +4,7 @@ import { IOPin } from "./IOPin.js";
 export class FunctionBlock {
     //////////////  CONSTRUCTOR /////////////////
     constructor(typeDef) {
-        this.events = new EventEmitter();
+        this.events = new EventEmitter(this);
         this.getIONum = (io) => {
             if (io.type == 'input')
                 return this.inputs.findIndex(input => input == io);
@@ -25,7 +25,7 @@ export class FunctionBlock {
         this.variableOutputs = typeDef.variableOutputs;
         this.statics = typeDef.statics;
         if (typeDef.circuit) {
-            this.circuit = new Circuit(typeDef.circuit);
+            this.circuit = new Circuit(typeDef.circuit, this);
         }
     }
     get typeName() { return this._typeName; }

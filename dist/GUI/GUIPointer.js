@@ -1,6 +1,4 @@
-import Vec2, { vec2 } from '../lib/Vector2.js';
-import { GUIChildElement } from './GUIChildElement.js';
-import * as HTML from './../Lib/HTML.js';
+import { vec2 } from '../lib/Vector2.js';
 const DOUBLE_CLICK_INTERVAL = 400;
 export default class GUIPointer {
     constructor(view, eventHandler) {
@@ -24,15 +22,15 @@ export default class GUIPointer {
         this.viewOffset = vec2(bounds.x, bounds.y);
         this.scrollOffset = vec2(view.parentDOM.scrollLeft, view.parentDOM.scrollTop);
         this.setupEventListeners();
-        this.markers = {
-            dot: new GUIChildElement(this.view.children, 'div', vec2(2, 2), vec2(1, 1 * (this.view.scale.x / this.view.scale.y)), {
-                borderRadius: this.view.scale.x / 2 + 'px', backgroundColor: 'rgba(192,192,255,0.25)', pointerEvents: 'none'
-            }),
-            coords: new HTML.Text('coordinates: 123, 123', {
-                parent: this.view.DOMElement,
-                style: { left: '300px', top: '2px', color: 'white', position: 'fixed' }
-            })
-        };
+        // this.markers = {
+        //     dot: new GUIChildElement(this.view.children, 'div', vec2(2,2), vec2(1, 1 * (this.view.scale.x / this.view.scale.y)), {
+        //         borderRadius: this.view.scale.x / 2 + 'px', backgroundColor: 'rgba(192,192,255,0.25)', pointerEvents: 'none'
+        //     }),
+        //     coords: new HTML.Text('coordinates: 123, 123', {
+        //         parent: this.view.DOMElement,
+        //         style: { left: '300px', top: '2px', color: 'white', position: 'fixed' }
+        //     })
+        // }
     }
     update() {
         if (this.latestMovementEvent) {
@@ -79,8 +77,8 @@ export default class GUIPointer {
             }
         }
         // Debug marker
-        this.markers.dot.setPos(Vec2.sub(this.scaledPos, vec2(0.5)));
-        this.markers.coords.setText('coords: ' + Vec2.round(this.scaledPos).toString());
+        // this.markers.dot.setPos(Vec2.sub(this.scaledPos, vec2(0.5)))
+        // this.markers.coords.setText('coords: ' + Vec2.round(this.scaledPos).toString())
     }
     getPointerTargetElem(ev) {
         return this.view.eventTargetMap.get(ev.target);

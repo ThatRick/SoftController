@@ -5,12 +5,20 @@ import * as HTML from '../Lib/HTML.js'
 import { IContainerGUI } from '../GUI/GUITypes.js'
 import IOPinView from './IOPinView.js'
 import CircuitView from './CircuitView.js'
+import { IOPinInterface } from '../State/IOPin.js'
 
 export default class FunctionBlockView extends GUIChildElement
 {
     readonly block: FunctionBlockInterface
 
     gui: CircuitView
+
+    getPinForIO(io: IOPinInterface) { 
+        let foundPin: IOPinView
+        foundPin = this.inputPins.find(pin => pin.io == io)
+        foundPin ??= this.outputPins.find(pin => pin.io == io)
+        return foundPin
+    }
 
     constructor(block: FunctionBlockInterface, pos: Vec2, parentContainer: IContainerGUI )
     {

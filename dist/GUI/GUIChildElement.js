@@ -1,3 +1,4 @@
+import { EventEmitter } from '../Lib/Events.js';
 import GUIContainer from './GUIContainer.js';
 import { Vec2 } from './GUITypes.js';
 export class GUIChildElement {
@@ -5,6 +6,7 @@ export class GUIChildElement {
     //      Constructor
     ////////////////////////////
     constructor(parent, elem, pos, size, style, hasChildren = false) {
+        this.events = new EventEmitter(this);
         this._posHasChanged = false;
         this._sizeHasChanged = false;
         this._pos = pos;
@@ -31,6 +33,8 @@ export class GUIChildElement {
         this._pos.set(p);
         this._posHasChanged = true;
         this.requestUpdate();
+        this.events.emit(0 /* Moved */);
+        this.children?.parentMoved();
     }
     get pos() { return this._pos.copy(); }
     // Element absolute position
@@ -80,6 +84,11 @@ export class GUIChildElement {
     restyle(style) {
         this.onRestyle?.(style);
         this.children?.restyle(style);
+    }
+    parentMoved() {
+        this.onParentMoved?.();
+        this.events.emit(0 /* Moved */);
+        this.children?.parentMoved();
     }
     requestUpdate() {
         this.gui.requestElementUpdate(this);

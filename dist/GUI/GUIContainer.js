@@ -36,4 +36,7 @@ export default class GUIContainer {
         this.elements.forEach(elem => elem.restyle(style));
         return false;
     }
+    parentMoved() {
+        this.elements.forEach(elem => elem.parentMoved?.());
+    }
 }

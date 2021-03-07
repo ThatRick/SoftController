@@ -46,7 +46,7 @@ export const enum BlockEventType {
 
 export interface BlockEvent {
     type:   BlockEventType
-    target: FunctionBlockInterface
+    source: FunctionBlockInterface
 }
 
 export interface FunctionBlockInterface
@@ -83,7 +83,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     readonly    variableInputs?:   VariableIOCountDefinition
     readonly    variableOutputs?:  VariableIOCountDefinition
     readonly    typeDef:           FunctionTypeDefinition
-    readonly    events =           new EventEmitter<BlockEvent>()
+    readonly    events =           new EventEmitter<BlockEvent>(this)
 
 
     setVariableInputCount(n: number) {
@@ -185,7 +185,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.statics = typeDef.statics
         
         if (typeDef.circuit) {
-            this.circuit = new Circuit(typeDef.circuit)
+            this.circuit = new Circuit(typeDef.circuit, this)
         }
     }
 

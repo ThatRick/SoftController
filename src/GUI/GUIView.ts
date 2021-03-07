@@ -20,7 +20,7 @@ export const enum GUIEventType {
 
 export interface GUIEvent {
     type:   GUIEventType
-    target: IRootViewGUI
+    source: IRootViewGUI
 }
 
 export default class GUIView<Element extends IChildElementGUI, Style extends IStyleGUI> implements IElementGUI, IRootViewGUI { 
@@ -41,7 +41,7 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
         this._size = Object.freeze(v.copy())
         this._resize()
         this.onResize?.()
-        this.guiEvents.emit(GUIEventType.Resized)
+        this.events.emit(GUIEventType.Resized)
     }
     rescale(scale: Vec2) {
         if (this._scale?.equal(scale)) return
@@ -49,18 +49,21 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
         this._resize()
         this.onRescale?.()
         this.children?.rescale(scale)
-        this.guiEvents.emit(GUIEventType.Rescaled)
+        this.events.emit(GUIEventType.Rescaled)
     }
     restyle(style: Style) {
         this._style = Object.freeze(style)
         this.onRestyle?.()
         this.children?.restyle(style)
-        this.guiEvents.emit(GUIEventType.Restyled)
+        this.events.emit(GUIEventType.Restyled)
+    }
+    parentMoved() {
+        this.children?.parentMoved()
     }
 
     pointer: GUIPointer<Element, Style>
 
-    guiEvents = new EventEmitter<GUIEvent>()
+    events = new EventEmitter<GUIEvent>(this)
 
 
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
@@ -137,8 +140,8 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
         this.updateRequests.clear()
         this.parentDOM.removeChild(this.DOMElement)
         requestAnimationFrame(null)
-        this.guiEvents.emit(GUIEventType.Removed)
-        this.guiEvents.clear()
+        this.events.emit(GUIEventType.Removed)
+        this.events.clear()
     }
 
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤

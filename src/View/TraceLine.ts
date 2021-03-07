@@ -1,18 +1,24 @@
+import { GUIChildEvent, GUIChildEventType } from "../GUI/GUIChildElement"
+import { IChildElementGUI } from "../GUI/GUITypes"
 import Vec2 from "../Lib/Vector2"
 import IOPinView from "./IOPinView"
-import TraceLayer, { Trace } from "./TraceLayer"
+import TraceLayer, { TraceRoute } from "./TraceLayer"
 
 export class TraceLine {
-    path: Trace
+    route: TraceRoute
 
     constructor (
         public layer: TraceLayer,
-        public outputPin: IOPinView,
-        public inputPin: IOPinView,
+        public sourcePin: IOPinView,
+        public destPin: IOPinView,
     ) {
-        const sourceMinReach = outputPin.io.datatype == 'BINARY' ? 1 : 3
-        const destMinReach = inputPin.io.datatype == 'BINARY' ? 1 : 3
-        this.path = layer.addTrace(outputPin.absPos, inputPin.absPos, sourceMinReach, destMinReach, this.getColor())
+        const sourceMinReach = sourcePin.io.datatype == 'BINARY' ? 1 : 3
+        const destMinReach = destPin.io.datatype == 'BINARY' ? 1 : 3
+
+        this.route = layer.addTrace(sourcePin.absPos, destPin.absPos, sourceMinReach, destMinReach, this.getColor())
+
+        this.sourcePin.events.subscribe(this.update.bind(this), [GUIChildEventType.Moved])
+        this.destPin.events.subscribe(this.update.bind(this), [GUIChildEventType.Moved])
     }
 
     protected getColor(): string {
@@ -20,13 +26,16 @@ export class TraceLine {
     }
 
     updateColor() {
-        this.layer.updateColor(this.path, this.outputPin.color)
+        this.layer.updateColor(this.route, this.sourcePin.color)
     }
 
-    update() {
-        this.layer.updateTracePath(this.path, this.outputPin.absPos, this.inputPin.absPos)
+    update(e: GUIChildEvent) {
+        this.layer.updateTraceRoute(this.route, this.sourcePin.absPos, this.destPin.absPos)
     }
+
     delete() {
-        this.layer.deleteTrace(this.path)
+        this.layer.deleteTrace(this.route)
+        this.sourcePin.events.unsubscribe(this.update)
+        this.destPin.events.unsubscribe(this.update)
     }
 }

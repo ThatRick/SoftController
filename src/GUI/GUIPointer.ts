@@ -56,15 +56,15 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
 
         this.setupEventListeners()
 
-        this.markers = {
-            dot: new GUIChildElement(this.view.children, 'div', vec2(2,2), vec2(1, 1 * (this.view.scale.x / this.view.scale.y)), {
-                borderRadius: this.view.scale.x / 2 + 'px', backgroundColor: 'rgba(192,192,255,0.25)', pointerEvents: 'none'
-            }),
-            coords: new HTML.Text('coordinates: 123, 123', {
-                parent: this.view.DOMElement,
-                style: { left: '300px', top: '2px', color: 'white', position: 'fixed' }
-            })
-        }
+        // this.markers = {
+        //     dot: new GUIChildElement(this.view.children, 'div', vec2(2,2), vec2(1, 1 * (this.view.scale.x / this.view.scale.y)), {
+        //         borderRadius: this.view.scale.x / 2 + 'px', backgroundColor: 'rgba(192,192,255,0.25)', pointerEvents: 'none'
+        //     }),
+        //     coords: new HTML.Text('coordinates: 123, 123', {
+        //         parent: this.view.DOMElement,
+        //         style: { left: '300px', top: '2px', color: 'white', position: 'fixed' }
+        //     })
+        // }
     }
 
     protected markers: {
@@ -122,8 +122,8 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
         }
 
         // Debug marker
-        this.markers.dot.setPos(Vec2.sub(this.scaledPos, vec2(0.5)))
-        this.markers.coords.setText('coords: ' + Vec2.round(this.scaledPos).toString())
+        // this.markers.dot.setPos(Vec2.sub(this.scaledPos, vec2(0.5)))
+        // this.markers.coords.setText('coords: ' + Vec2.round(this.scaledPos).toString())
     }
 
     protected getPointerTargetElem(ev: PointerEvent) {

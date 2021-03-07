@@ -40,7 +40,7 @@ export enum IOPinEventType
 export interface IOPinEvent
 {
     type:   IOPinEventType
-    target: IOPinInterface
+    source: IOPinInterface
 }
 
 export interface IOPinInterface
@@ -51,14 +51,14 @@ export interface IOPinInterface
     readonly datatype: IODataType
     readonly ioNum: number
     readonly block: FunctionBlockInterface
-    readonly source?: { value: number }
+    readonly source?: IOPinInterface
     readonly inverted?: boolean
     readonly events: EventEmitter<IOPinEvent>
 
     setValue(n: number): void
     setName(name: string): void
     setDatatype(type: IODataType): void
-    setSource(source: { value: number })
+    setSource(source: IOPinInterface)
     setInverted(inverted: boolean)
     remove(): void
 }
@@ -93,7 +93,7 @@ export class IOPin implements IOPinInterface
             this.events.emit(IOPinEventType.Datatype)
         }
     }
-    setSource(source: { value: number }) {
+    setSource(source: IOPinInterface) {
         if (this._source != source) {
             this._source = source
             this.events.emit(IOPinEventType.Source)
@@ -106,7 +106,7 @@ export class IOPin implements IOPinInterface
         }
     }
 
-    events = new EventEmitter<IOPinEvent>()
+    events = new EventEmitter<IOPinEvent>(this)
 
     remove() {
         this.events.emit(IOPinEventType.Removed)
@@ -146,6 +146,6 @@ export class IOPin implements IOPinInterface
     protected _datatype: IODataType
     protected getIONum: (io: IOPinInterface) => number
     protected _block: FunctionBlockInterface
-    protected _source: { value: number }
+    protected _source: IOPinInterface
     protected _inverted: boolean
 }

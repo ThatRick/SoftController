@@ -1,8 +1,10 @@
 import Vec2, {vec2} from '../Lib/Vector2.js'
+import { Style } from './Common.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
  
 const viewportPadding = 10
+const minReverseHorizontalYOffset = 5
 
 export interface ITracePathAnchors
 {
@@ -11,7 +13,7 @@ export interface ITracePathAnchors
     verticalX2?: number
 }
 
-export class Trace
+export class TraceRoute
 {
     get sourcePos(): Vec2 { return this.points[0] }
     get destPos(): Vec2 { return this.points[this.points.length-1] }
@@ -20,18 +22,17 @@ export class Trace
     points: Vec2[]
     anchors: ITracePathAnchors
     color: string
-    lineSegments: SVGLineElement[]
+    polyline: SVGPolylineElement
 }
 
 export default class TraceLayer
 {
     addTrace(sourcePos: Vec2, destPos: Vec2, minSourceReach: number, minDestReach: number,
-        color: string, pathAnchors: ITracePathAnchors = {}): Trace
+        color: string, pathAnchors: ITracePathAnchors = {}): TraceRoute
     {
         const points = this.calculateRoutePoints(sourcePos, destPos, minSourceReach, minDestReach, pathAnchors)
-        const lineSegments = this.createLineSegments(points, color)
-        
-        const trace: Trace =
+        const polyline = this.createPolyline(points, color)        
+        const trace: TraceRoute =
         {
             sourcePos: sourcePos.copy(),
             destPos: destPos.copy(),
@@ -44,7 +45,7 @@ export default class TraceLayer
                 verticalX2:     points[3]?.x
             },
             points: points,
-            lineSegments: lineSegments
+            polyline
         }
 
         this.traces.add(trace)
@@ -52,28 +53,26 @@ export default class TraceLayer
         return trace
     }
 
-    updateTracePath(trace: Trace, sourcePos: Vec2, destPos: Vec2) {
+    updateTraceRoute(trace: TraceRoute, sourcePos: Vec2, destPos: Vec2) {
+        trace.sourcePos.set(sourcePos)
+        trace.destPos.set(destPos)
+
         const points = this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach, trace.anchors)
-        // If route point count changes, recreate all line segments
-        if (points.length != trace.points.length) {
-            trace.lineSegments.forEach(line => this.svg.removeChild(line))
-            trace.lineSegments = this.createLineSegments(points, trace.color)
+        
+        // If route points has changed, update polyline
+        if (points.length != trace.points.length || !trace.points.every((current, index) => current.equal(points[index]))) {
+            this.updatePolylinePoints(trace.polyline, points)
         }
-        // if route points changed
-        trace.points.forEach((currentPoint, index) => {
-            const newPoint = points[index]
-            if (!currentPoint.equal(newPoint)) {
-                const segmentIndex = 0
-            }
-        })
+
+        trace.points = points
     }
 
-    updateColor(trace: Trace, color: string) {
-        trace.lineSegments.forEach(line => line.style.stroke = color)
+    updateColor(trace: TraceRoute, color: string) {
+        trace.polyline.style.stroke = color
     }
 
-    deleteTrace(trace: Trace) {
-        trace.lineSegments.forEach(line => this.svg.removeChild(line))
+    deleteTrace(trace: TraceRoute) {
+        this.svg.removeChild(trace.polyline)
         this.traces.delete(trace)
         trace = null
     }
@@ -81,15 +80,25 @@ export default class TraceLayer
     get size() {
         return vec2(this.svg.clientWidth, this.svg.clientHeight)
     }
+
+    rescale(scale: Vec2) {
+        this.scale = scale
+        this.calcCellOffset()
+        this.traces.forEach(trace => {
+            this.updatePolylinePoints(trace.polyline, trace.points)
+            trace.polyline.style.strokeWidth = this.traceWidth+'px'
+        })
+    }
     
     //  Constructor
     // -------------
-    constructor(parent: HTMLElement, scale: Vec2)
+    constructor(parent: HTMLElement, scale: Vec2, style: Style)
     {
         const svg = document.createElementNS(xmlns, 'svg');
         this.svg = svg
         this.scale = scale
-        this.cellOffset = Vec2.scale(this.scale, 0.5)
+        this.style = style
+        this.calcCellOffset()
 
         Object.assign(svg.style,
         {
@@ -102,17 +111,24 @@ export default class TraceLayer
         parent.appendChild(svg)
     }
 
+    protected calcCellOffset() {
+        const halfWidth = this.traceWidth / 2
+        const offsetX = Math.round(this.scale.x / 2)// - halfWidth
+        const offsetY = Math.round(this.scale.y / 2)// - halfWidth
+        this.cellOffset = vec2(offsetX, offsetY)
+        console.log('cell offset:', this.cellOffset.toString())
+        console.log('trace width', this.traceWidth)
+    }
+
+    protected get traceWidth() { return Math.round(this.style.traceWidth * this.scale.y) }
+
     protected svg: SVGSVGElement
     protected scale: Vec2
+    protected style: Style
+
     protected cellOffset: Vec2
 
-    protected traces: Set<Trace>
-
-    protected lineCSSStyle =
-    {
-        strokeWidth: 2,
-        pointerEvents: 'visible'
-    }
+    protected traces = new Set<TraceRoute>()
 
     protected calculateRoutePoints(sourcePos: Vec2, destPos: Vec2,
         sourceMinReach: number, destMinReach: number, anchors: ITracePathAnchors = {}): Vec2[]
@@ -132,7 +148,7 @@ export default class TraceLayer
         
         // 3 line segments (4 points)
         else if (offsetX >= sourceMinReach + destMinReach) {
-            if (verticalX1 == undefined) verticalX1 = sourcePos.x + offsetX / 2
+            if (verticalX1 == undefined) verticalX1 = Math.round(sourcePos.x + offsetX / 2)
             else if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = sourcePos.x + sourceMinReach
             else if (verticalX1 > destPos.x - destMinReach) verticalX1 = destPos.x - destMinReach
 
@@ -152,7 +168,10 @@ export default class TraceLayer
             if (!verticalX2) verticalX2 = destPos.x + destMinReach
             else if (verticalX2 > destPos.x - destMinReach) verticalX2 = destPos.x - destMinReach
 
-            if (!horizontalY) horizontalY = sourcePos.y + Math.round(offsetY / 2)
+            if (!horizontalY) {
+                if (Math.abs(offsetY / 2) >= minReverseHorizontalYOffset) horizontalY = sourcePos.y + Math.round(offsetY / 2)
+                else horizontalY = sourcePos.y + Math.sign(offsetY) * minReverseHorizontalYOffset
+            }
 
             return [
                 vec2(sourcePos),
@@ -165,107 +184,39 @@ export default class TraceLayer
         }
     }
 
-    protected createLineSegments(points: Vec2[], color: string) {
-        
-        let lineSegments: SVGLineElement[]
-        
-        switch (points.length)
-        {
-            case 2:     // 1 line segment
-            {
-                const [ start, end ] = points
+    protected polylinePoints(points: Vec2[])
+    {
+        const scaledPoints = points.map(pos => Vec2.mul(pos, this.scale).add(this.cellOffset))
+        const pointStrings = scaledPoints.map(pos => pos.x + ',' + pos.y)
+        const svgPoints = pointStrings.join(' ')
 
-                lineSegments = [this.createLineSegment(start, end, color)]
-                break
-            }
-
-            case 4:     // 3 line lineSegments
-            {
-                const [ start, va, vb, end ] = points
-    
-                lineSegments = [
-                    this.createLineSegment(start, va, color),   // horizontal 1
-                    this.createLineSegment(va, vb, color),      // vertical
-                    this.createLineSegment(vb, end, color),     // horizontal 2
-                ]
-                break
-            }
-
-            case 6:     // 5 line lineSegments
-            {    
-                const [ start, v1a, v1b, v2a, v2b, end ] = points
-    
-                lineSegments = [
-                    this.createLineSegment(start, v1a, color),  // horizontal 1
-                    this.createLineSegment(v1a, v1b, color),    // vertical 1
-                    this.createLineSegment(v1b, v2a, color),    // horizontal 2
-                    this.createLineSegment(v2a, v2b, color),    // vertical 2
-                    this.createLineSegment(v2b, end, color),    // horizontal 3
-                ]
-                break
-            }
-
-            default:
-            {
-                console.error('Trace layer: invalid number of trace midpoints:', points.length)
-            }
-
-            return lineSegments
-        }
+        return svgPoints
     }
 
-    protected setLineSegmentStartPos(line: SVGLineElement, pos: Vec2) {
-        const scaledPos = Vec2.mul(pos, this.scale).add(this.cellOffset)
-        line.setAttributeNS(null, 'x1', scaledPos.x.toString())
-        line.setAttributeNS(null, 'y1', scaledPos.y.toString())
+    protected updatePolylinePoints(polyline: SVGPolylineElement, points: Vec2[])
+    {
+        const svgPoints = this.polylinePoints(points)
+        polyline.setAttributeNS(null, 'points', svgPoints)
     }
 
-    protected setLineSegmentEndPos(line: SVGLineElement, pos: Vec2) {
-        const scaledPos = Vec2.mul(pos, this.scale).add(this.cellOffset)
-        line.setAttributeNS(null, 'x2', scaledPos.x.toString())
-        line.setAttributeNS(null, 'y2', scaledPos.y.toString())
-    }
+    protected createPolyline(points: Vec2[], color: string)
+    {
+        const svgPoints = this.polylinePoints(points)
 
-    protected createLineSegment(_a: Vec2, _b: Vec2, color: string): SVGLineElement {
+        const polyline = document.createElementNS(xmlns, 'polyline')
 
-        const a = Vec2.mul(_a, this.scale).add(this.cellOffset)
-        const b = Vec2.mul(_b, this.scale).add(this.cellOffset)
-
-        const addition = this.lineCSSStyle.strokeWidth / 2
-        // Elongate horizontal line to fix corners
-        if (_a.y == _b.y) {
-            const dir = (_a.x < _b.x) ? 1 : -1
-            a.x -= addition * dir
-            b.x += addition * dir
-        }
-        // Elongate vertical line to fix corners
-        if (_a.x == _b.x) {
-            const dir = (_a.y < _b.y) ? 1 : -1
-            a.y -= addition * dir
-            b.y += addition * dir
-        }
-
-        const line = document.createElementNS(xmlns, 'line');
-        const lineProps = {
-            x1: a.x,
-            y1: a.y,
-            x2: b.x,
-            y2: b.y
-        }
-        // Resize SVG viewport if line point is outside viewport bounds
-        const max = Vec2.max(a, b).round()
-        if (max.x > this.svg.clientWidth - viewportPadding) this.svg.style.width = max.x + viewportPadding + 'px'
-        if (max.y > this.svg.clientHeight - viewportPadding) this.svg.style.height = max.y + viewportPadding + 'px'
-
-        Object.entries(lineProps).forEach(([key, value]) => line.setAttributeNS(null, key.toString(), value.toString()))
-        
-        Object.assign(line.style, {
-            ...this.lineCSSStyle,
-            stroke: color
+        Object.assign(polyline.style, {
+            fill: 'none',
+            stroke: color,
+            strokeWidth: this.traceWidth,
+            pointerEvents: 'none'
         })
 
-        this.svg.appendChild(line)
+        polyline.setAttributeNS(null, 'points', svgPoints)
 
-        return line
+        this.svg.appendChild(polyline)
+
+        return polyline
     }
+
 }

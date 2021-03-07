@@ -9,7 +9,11 @@ export default class IOPinView extends GUIChildElement
 {
     get type() { return this.io.type }
 
+    readonly direction: 'left' | 'right'
+
     readonly io: IOPinInterface
+
+    readonly isCircuitIO: boolean
 
     get color() { return this.pinColor }
 
@@ -23,6 +27,8 @@ export default class IOPinView extends GUIChildElement
     {
         super(parentContainer, 'div', pos, vec2(1, 1))
         this.io = io
+        this.isCircuitIO = (io.block.circuit != null)
+        this.direction = ((this.type == 'input' && !this.isCircuitIO) || (this.type == 'output' && this.isCircuitIO)) ? 'left' : 'right'
         io.events.subscribe(this.ioEventHandler.bind(this))
         this.create()
     }
@@ -57,6 +63,10 @@ export default class IOPinView extends GUIChildElement
         this.updateStyle()
     }
 
+    protected onParentMoved() {
+
+    }
+
     protected updateStyle() {
         const pinStyle = (this.io.inverted) ? this.invertedPinStyle : this.pinStyle
         Object.assign(this.pin.style, pinStyle)
@@ -88,20 +98,19 @@ export default class IOPinView extends GUIChildElement
     }
 
     protected get pinStyle() {
-        const size = vec2(0.5, this.gui.style.traceWidth)
-        const scaledSize = Vec2.mul(size, this.gui.scale).round()
-
-        const scaledYOffset = Math.round(this.gui.scale.y / 2 - scaledSize.y / 2) 
-        const scaledOffset = (this.type == 'input')
-            ? vec2(this.gui.scale.x-scaledSize.x, scaledYOffset)
-            : vec2(0, scaledYOffset)
-
+        const height = Math.round(this.gui.style.traceWidth * this.gui.scale.y)
+        const width = Math.round(0.5 * this.gui.scale.x)
+        const halfHeight = Math.round(height / 2)
+        
+        const scaledOffsetX = (this.direction == 'left') ? this.gui.scale.x-width : 0
+        const scaledOffsetY = Math.round(this.gui.scale.y / 2 - halfHeight) 
+        
         return {
             position:   'absolute',
-            left:       scaledOffset.x + 'px',
-            top:        scaledOffset.y + 'px',
-            width:      scaledSize.x + 'px',
-            height:     scaledSize.y + 'px',
+            left:       scaledOffsetX + 'px',
+            top:        scaledOffsetY + 'px',
+            width:      width + 'px',
+            height:     height + 'px',
             border:     'none',
             borderRadius: '0',
             pointerEvents: 'none',
@@ -113,7 +122,7 @@ export default class IOPinView extends GUIChildElement
         const scaledSize = vec2(scale.x * 0.6).round()
         const yOffset = (scale.y - scaledSize.y) / 2
         
-        const scaledOffset = (this.type == 'input') ? vec2(scale.x - scaledSize.x, yOffset) : vec2(0, yOffset)
+        const scaledOffset = (this.direction == 'left') ? vec2(scale.x - scaledSize.x, yOffset) : vec2(0, yOffset)
 
         return {
             position:   'absolute',

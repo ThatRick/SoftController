@@ -17,6 +17,12 @@ export default class FunctionBlockView extends GUIChildElement {
         this.block = block;
         this.create();
     }
+    getPinForIO(io) {
+        let foundPin;
+        foundPin = this.inputPins.find(pin => pin.io == io);
+        foundPin ??= this.outputPins.find(pin => pin.io == io);
+        return foundPin;
+    }
     get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
     blockEventHandler(ev) {
         switch (ev.type) {

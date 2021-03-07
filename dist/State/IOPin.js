@@ -11,7 +11,7 @@ export var IOPinEventType;
 export class IOPin {
     //////////////////////////////////////////////
     constructor(type, value, name, datatype, block, getIONum) {
-        this.events = new EventEmitter();
+        this.events = new EventEmitter(this);
         this.type = type;
         this._value = value;
         this._name = name;

@@ -2,7 +2,7 @@ export type Subscriber<T> = (event: T) => void
 
 interface Event {
     type:   number
-    target: object
+    source: Object
 } 
 
 export class EventEmitter<T extends Event>
@@ -16,7 +16,8 @@ export class EventEmitter<T extends Event>
     }
 
     emit(type: number) {
-        const event = { type, target: this }
+        if (this.subscribers.size == 0) return
+        const event = { type, source: this.eventSource }
         this.subscribers.forEach((typeMask, fn) => {
             if (typeMask == null || ((1 << type) & typeMask)) fn(event)
         })
@@ -26,5 +27,9 @@ export class EventEmitter<T extends Event>
         this.subscribers.clear()
     }
 
+    constructor(protected eventSource: Object) {
+
+    }
+    
     protected subscribers = new Map<Subscriber<Event>, number>()
 }

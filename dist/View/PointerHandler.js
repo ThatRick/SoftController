@@ -13,11 +13,12 @@ export default function CircuitPointerHandler(circuit) {
         const elem = pointer.targetElem;
         if (ev.altKey)
             console.log('Target', elem, pointer.screenPos);
+        // Discard modal menu
         if (menu) {
             menu.remove();
             menu = null;
         }
-        // Select Block
+        // Set selection to unselected block (to enable instant dragging of unselected)
         if (!ev.shiftKey && elem instanceof FunctionBlockView && !selection.has(elem)) {
             selection.set(elem);
         }
@@ -31,11 +32,12 @@ export default function CircuitPointerHandler(circuit) {
         // Deselect all
         if (!elem) {
             selection.removeAll();
-            return;
         }
+        // Set selection to block (no shift key)
         else if (!ev.shiftKey && elem instanceof FunctionBlockView) {
             selection.set(elem);
         }
+        // Add or remove selection (with shift key)
         else if (ev.shiftKey && elem instanceof FunctionBlockView) {
             selection.has(elem)
                 ? selection.remove(elem)
@@ -75,6 +77,8 @@ export default function CircuitPointerHandler(circuit) {
         }
     };
     const dragBehaviour = new Map();
+    //  Darg to scroll view
+    // ---------------------
     let scrollStartPos;
     dragBehaviour.set(1 /* DRAG_SCROLL_VIEW */, {
         start(ev) {
@@ -89,6 +93,8 @@ export default function CircuitPointerHandler(circuit) {
             circuit.DOMElement.style.cursor = 'default';
         }
     });
+    //  Drag to draw selection box
+    // ----------------------------
     let selectionBoxStartPos;
     let selectionBox;
     dragBehaviour.set(2 /* DRAG_SELECTION_BOX */, {
@@ -118,6 +124,8 @@ export default function CircuitPointerHandler(circuit) {
             circuit.DOMElement.removeChild(selectionBox);
         }
     });
+    //  Drag a block
+    // --------------
     const selectedBlocksStartDragPos = new WeakMap();
     dragBehaviour.set(3 /* DRAG_BLOCK */, {
         start(ev) {
@@ -141,8 +149,23 @@ export default function CircuitPointerHandler(circuit) {
             });
         }
     });
+    //  Drag input pin
+    // ----------------
+    dragBehaviour.set(4 /* DRAG_INPUT_PIN */, {
+        start(ev) {
+            circuit.DOMElement.style.cursor = 'grab';
+        },
+        dragging(ev) {
+        },
+        end(ev) {
+            circuit.DOMElement.style.cursor = 'default';
+        }
+    });
+    //  Handle dragging
+    // -----------------
     const onDragStarted = (ev) => {
-        if (pointerMode == 7 /* MODAL_MENU */) { }
+        if (pointerMode == 7 /* MODAL_MENU */)
+            return;
         else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == 2 /* RIGHT */) {
             pointerMode = 1 /* DRAG_SCROLL_VIEW */;
         }

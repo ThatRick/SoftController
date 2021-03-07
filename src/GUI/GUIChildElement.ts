@@ -1,8 +1,20 @@
+import { EventEmitter } from '../Lib/Events.js'
 import { vec2 } from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
-import { IChildElementGUI, IContainerGUI, IRootViewGUI, GUIPointerState, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
+import { IChildElementGUI, IContainerGUI, IRootViewGUI, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
 
-export class GUIChildElement implements IChildElementGUI{
+export const enum GUIChildEventType {
+    Moved,
+    Removed
+}
+
+export interface GUIChildEvent {
+    type:   GUIChildEventType
+    source: IChildElementGUI
+}
+
+export class GUIChildElement implements IChildElementGUI
+{
     DOMElement: HTMLElement
 
     parentContainer?: IContainerGUI
@@ -13,6 +25,8 @@ export class GUIChildElement implements IChildElementGUI{
     isMultiSelectable?: boolean
 
     gui: IRootViewGUI
+
+    events = new EventEmitter<GUIChildEvent>(this)
 
     ////////////////////////////
     //      Constructor
@@ -58,6 +72,8 @@ export class GUIChildElement implements IChildElementGUI{
         this._pos.set(p)
         this._posHasChanged = true
         this.requestUpdate()
+        this.events.emit(GUIChildEventType.Moved)
+        this.children?.parentMoved()
     }
     get pos() { return this._pos.copy() }
 
@@ -119,10 +135,16 @@ export class GUIChildElement implements IChildElementGUI{
         this.onRestyle?.(style)
         this.children?.restyle(style)
     }
+    parentMoved() {
+        this.onParentMoved?.()
+        this.events.emit(GUIChildEventType.Moved)
+        this.children?.parentMoved()
+    }
 
     protected onUpdate?(force?: boolean): void
     protected onRescale?(scale: Vec2): void
     protected onRestyle?(style: IStyleGUI): void
+    protected onParentMoved?(): void
 
     requestUpdate() {
         this.gui.requestElementUpdate(this)

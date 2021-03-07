@@ -1,23 +1,24 @@
 import { getFunctionBlock } from './FunctionLib.js';
-///////////////////////////////
-//          Circuit
-///////////////////////////////
-var CircuitEventType;
-(function (CircuitEventType) {
-    CircuitEventType[CircuitEventType["BlockAdded"] = 0] = "BlockAdded";
-    CircuitEventType[CircuitEventType["BlockRemoved"] = 1] = "BlockRemoved";
-    CircuitEventType[CircuitEventType["Connected"] = 2] = "Connected";
-    CircuitEventType[CircuitEventType["Disconnected"] = 3] = "Disconnected";
-    CircuitEventType[CircuitEventType["Removed"] = 4] = "Removed";
-})(CircuitEventType || (CircuitEventType = {}));
 export default class Circuit {
-    constructor(def) {
-        this._blocks = new Set();
+    constructor(def, circBlock) {
         this.subscribers = new Set();
-        def.blocks.forEach(funcDef => {
-            const block = getFunctionBlock(funcDef);
-            this._blocks.add(block);
+        this.circBlock = circBlock;
+        // Create blocks
+        const blocks = def.blocks.map(funcDef => getFunctionBlock(funcDef));
+        // Set block input sources
+        def.blocks.forEach((block, blockIndex) => {
+            block.inputs?.forEach((input, inputIndex) => {
+                if (input.source) {
+                    const { blockNum, outputNum } = input.source;
+                    // Connect to circuit input (blockNum = -1) or block output (blockNum = 0..n)
+                    const sourcePin = (blockNum == -1)
+                        ? circBlock.inputs[outputNum]
+                        : blocks[blockNum].outputs[outputNum];
+                    blocks[blockIndex].inputs[inputIndex].setSource(sourcePin);
+                }
+            });
         });
+        this._blocks = new Set(blocks);
     }
     get blocks() { return Array.from(this._blocks.values()); }
     addBlock(def) {
@@ -37,7 +38,7 @@ export default class Circuit {
         this._blocks.forEach(block => block.update(dt));
     }
     remove() {
-        this.emitEvent(CircuitEventType.Removed);
+        this.emitEvent(4 /* Removed */);
         this.subscribers.clear();
     }
     emitEvent(type) {

@@ -52,6 +52,7 @@ export interface IElementGUI {
     update(force?: boolean): boolean
     rescale(scale: Vec2)
     restyle(style: IStyleGUI)
+    parentMoved()
     delete(): void
 }
 

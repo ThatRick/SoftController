@@ -11,7 +11,7 @@ export default class GUIView {
         this.gui = this;
         this.pos = vec2(0, 0);
         this.absPos = vec2(0, 0);
-        this.guiEvents = new EventEmitter();
+        this.events = new EventEmitter(this);
         this.eventTargetMap = new WeakMap();
         this.updateRequests = new Set();
         this.DOMElement = document.createElement('div');
@@ -38,7 +38,7 @@ export default class GUIView {
         this._size = Object.freeze(v.copy());
         this._resize();
         this.onResize?.();
-        this.guiEvents.emit(0 /* Resized */);
+        this.events.emit(0 /* Resized */);
     }
     rescale(scale) {
         if (this._scale?.equal(scale))
@@ -47,13 +47,16 @@ export default class GUIView {
         this._resize();
         this.onRescale?.();
         this.children?.rescale(scale);
-        this.guiEvents.emit(1 /* Rescaled */);
+        this.events.emit(1 /* Rescaled */);
     }
     restyle(style) {
         this._style = Object.freeze(style);
         this.onRestyle?.();
         this.children?.restyle(style);
-        this.guiEvents.emit(2 /* Restyled */);
+        this.events.emit(2 /* Restyled */);
+    }
+    parentMoved() {
+        this.children?.parentMoved();
     }
     _resize() {
         this.DOMElement.style.width = this._size.x * this._scale.x + 'px';
@@ -79,8 +82,8 @@ export default class GUIView {
         this.updateRequests.clear();
         this.parentDOM.removeChild(this.DOMElement);
         requestAnimationFrame(null);
-        this.guiEvents.emit(3 /* Removed */);
-        this.guiEvents.clear();
+        this.events.emit(3 /* Removed */);
+        this.events.clear();
     }
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
     //     Element handling

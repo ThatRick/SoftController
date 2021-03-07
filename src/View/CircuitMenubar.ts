@@ -40,8 +40,8 @@ export class CircuitMenuBar
 
     attachCircuitView(view: CircuitView) {
         this.view = view
-        view.guiEvents.subscribe(this.handleGuiEvent.bind(this))
-        view.events.subscribe(this.handleCircuitViewEvent.bind(this))
+        view.events.subscribe(this.handleGuiEvent.bind(this))
+        view.circuitViewEvents.subscribe(this.handleCircuitViewEvent.bind(this))
         const menu = this.menu
         menu.addItems([
             ...this.scaleControls()
@@ -52,7 +52,7 @@ export class CircuitMenuBar
         const title = new HTML.Text('Scale: '+this.view.scale.y, {
             style: { width: this.menu.height * 3.5 + 'px' }
         })
-        this.view.guiEvents.subscribe(() =>
+        this.view.events.subscribe(() =>
             title.setText('Scale: '+this.view.scale.y),
             [GUIEventType.Rescaled]
         )
