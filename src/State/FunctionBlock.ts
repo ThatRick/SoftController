@@ -203,8 +203,8 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     protected updateInputs() {
         this.inputs.forEach(input => {
-            if (input.source) {
-                let newValue = input.source.value
+            if (input.sourcePin) {
+                let newValue = input.sourcePin.value
                 if (input.inverted) newValue = (newValue) ? 0 : 1
                 else if (input.datatype == 'INTEGER') newValue = Math.trunc(newValue)
                 input.setValue(newValue)

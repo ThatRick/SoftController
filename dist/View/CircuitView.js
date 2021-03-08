@@ -18,10 +18,10 @@ export default class CircuitView extends GUIView {
             fontFamily: 'system-ui',
             fontSize: Math.round(scale.y * style.fontSize) + 'px'
         });
-        this.blockViews = new Map();
-        this.traceLines = new Map();
         this.circuitViewEvents = new EventEmitter(this);
         this.selection = new CircuitSelection(this.style);
+        this.blockViewsMap = new WeakMap();
+        this.traceLinesMap = new WeakMap();
         this.pointer.attachEventHandler(CircuitPointerHandler(this));
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale, this.style);
     }
@@ -33,32 +33,30 @@ export default class CircuitView extends GUIView {
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index];
             const blockView = new FunctionBlockView(block, vec2(pos), this.children);
-            this.blockViews.set(block, blockView);
+            this.blockViewsMap.set(block, blockView);
         });
         // Create circuit IO pins
         this.createPins(circuitViewDefinition);
         // Create connection lines
-        this.blockViews.forEach(blockView => {
-            blockView.block.inputs.forEach(input => {
-                if (input.source) {
-                    const destPin = blockView.getPinForIO(input);
-                    const sourceBlock = input.source.block;
-                    let sourcePin;
-                    if (sourceBlock == this.circuitBlock) {
-                        sourcePin = this.inputPins.find(pin => pin.io == input.source);
-                    }
-                    else {
-                        const blockView = this.blockViews.get(sourceBlock);
-                        sourcePin = blockView?.getPinForIO(input.source);
-                    }
-                    const traceLine = new TraceLine(this.traceLayer, sourcePin, destPin);
-                    this.traceLines.set(input, traceLine);
+        this.circuit.blocks.forEach((destBlock) => {
+            destBlock.inputs?.forEach(input => {
+                if (input.sourcePin) {
+                    const destPin = this.blockViewsMap.get(destBlock)?.getPinForIO(input);
+                    const sourceBlock = input.sourcePin.block;
+                    const sourcePin = (sourceBlock == this.circuitBlock)
+                        ? this.inputPins.find(pin => pin.io == input.sourcePin)
+                        : this.blockViewsMap.get(sourceBlock)?.getPinForIO(input.sourcePin);
+                    const traceLine = new TraceLine(this, sourcePin, destPin);
+                    this.traceLinesMap.set(input, traceLine);
                 }
             });
         });
         this.events.emit(0 /* CircuitLoaded */);
     }
     get circuitBlock() { return this._circuitBlock; }
+    get blockViews() {
+        return this.circuit.blocks.map(block => this.blockViewsMap.get(block));
+    }
     createPins(def) {
         this.inputPins ??= this.circuitBlock.inputs.map((input, index) => {
             const posY = def.positions?.inputs?.[index] || index;

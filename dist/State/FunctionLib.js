@@ -181,8 +181,8 @@ export class CircuitBlock extends FunctionBlock {
     }
     updateOutputs() {
         this.outputs.forEach(output => {
-            if (output.source) {
-                let newValue = output.source.value;
+            if (output.sourcePin) {
+                let newValue = output.sourcePin.value;
                 if (output.inverted)
                     newValue = (newValue) ? 0 : 1;
                 else if (output.datatype == 'INTEGER')

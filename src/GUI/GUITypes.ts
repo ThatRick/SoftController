@@ -63,7 +63,7 @@ export interface IRootViewGUI extends IElementGUI {
 
     registerElement(elem: IChildElementGUI)
     unregisterElement(elem: IChildElementGUI)
-    requestElementUpdate(elem: IChildElementGUI)
+    requestUpdate(elem: IChildElementGUI)
 }
 
 export interface IChildElementGUI extends IElementGUI, GUIPointerEventHandler

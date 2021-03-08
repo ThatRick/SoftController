@@ -8,7 +8,7 @@ import { EventEmitter } from '../Lib/Events.js'
 
 
 interface Updateable {
-    update(force?: boolean): boolean
+    update(force?: boolean): boolean | void
 }
 
 export const enum GUIEventType {
@@ -165,8 +165,8 @@ export default class GUIView<Element extends IChildElementGUI, Style extends ISt
         this.eventTargetMap.delete(elem.DOMElement)
     }
 
-    requestElementUpdate(elem: Element) {
-        this.updateRequests.add(elem)
+    requestUpdate(obj: Updateable) {
+        this.updateRequests.add(obj)
     }
 
     //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤

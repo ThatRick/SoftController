@@ -3,8 +3,7 @@ import { Style } from './Common.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
  
-const viewportPadding = 10
-const minReverseHorizontalYOffset = 5
+const minReverseHorizontalYOffset = 3
 
 export interface ITracePathAnchors
 {
@@ -17,12 +16,18 @@ export class TraceRoute
 {
     get sourcePos(): Vec2 { return this.points[0] }
     get destPos(): Vec2 { return this.points[this.points.length-1] }
+    get midPoints(): Vec2[] { return this.points.slice(1, this.points.length-1)}
+
     minSourceReach: number
     minDestReach: number
     points: Vec2[]
     anchors: ITracePathAnchors
     color: string
     polyline: SVGPolylineElement
+    
+    constructor(params: Partial<TraceRoute>) {
+        Object.assign(this, params)
+    }
 }
 
 export default class TraceLayer
@@ -32,10 +37,7 @@ export default class TraceLayer
     {
         const points = this.calculateRoutePoints(sourcePos, destPos, minSourceReach, minDestReach, pathAnchors)
         const polyline = this.createPolyline(points, color)        
-        const trace: TraceRoute =
-        {
-            sourcePos: sourcePos.copy(),
-            destPos: destPos.copy(),
+        const trace = new TraceRoute({
             minSourceReach,
             minDestReach,
             color,
@@ -46,7 +48,7 @@ export default class TraceLayer
             },
             points: points,
             polyline
-        }
+        })
 
         this.traces.add(trace)
 
@@ -54,20 +56,24 @@ export default class TraceLayer
     }
 
     updateTraceRoute(trace: TraceRoute, sourcePos: Vec2, destPos: Vec2) {
-        trace.sourcePos.set(sourcePos)
-        trace.destPos.set(destPos)
+        const deltaSource = Vec2.sub(sourcePos, trace.sourcePos)
+        const deltaDest = Vec2.sub(destPos, trace.destPos)
+        const diff = Vec2.sub(deltaSource, deltaDest).len()
+        const concurrentMovement = (diff < 0.001)
 
-        let points = this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach, trace.anchors)
-        if (points.length != trace.points.length) {
-                trace.anchors.verticalX1 = undefined
-                trace.anchors.horizontalY = undefined
-                trace.anchors.verticalX2 = undefined
-            points = this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach)
-        }
+        let points = (concurrentMovement)
+            ? [sourcePos, ...trace.midPoints.map(point => Vec2.add(point, deltaSource)), destPos]
+            : this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach, trace.anchors)
 
         // If route points has changed, update polyline
-        if (!trace.points.every((current, index) => current.equal(points[index]))) {
+        if (trace.points.some((current, index) => !current.equal(points[index]))) {
             this.updatePolylinePoints(trace.polyline, points)
+        }
+
+        if (concurrentMovement) {
+            trace.anchors.verticalX1 &&= points[1].x
+            trace.anchors.horizontalY &&= points[2].y
+            trace.anchors.verticalX2 &&= points[3].x
         }
 
         trace.points = points
@@ -137,7 +143,7 @@ export default class TraceLayer
     protected traces = new Set<TraceRoute>()
 
     protected calculateRoutePoints(sourcePos: Vec2, destPos: Vec2,
-        sourceMinReach: number, destMinReach: number, anchors: ITracePathAnchors = {}): Vec2[]
+        sourceMinReach: number, destMinReach: number, anchors: ITracePathAnchors): Vec2[]
     {
         let { verticalX1, horizontalY, verticalX2 } = anchors
                 
@@ -146,6 +152,11 @@ export default class TraceLayer
         
         // 1 line segment (2 points)
         if (deltaY == 0 && deltaX > 0) {
+            
+            anchors.verticalX1 = undefined
+            anchors.horizontalY = undefined
+            anchors.verticalX2 = undefined
+
             return [
                 vec2(sourcePos),
                 vec2(destPos)
@@ -153,10 +164,14 @@ export default class TraceLayer
         }
         
         // 3 line segments (4 points)
-        else if (deltaX >= (sourceMinReach + destMinReach) || Math.abs(deltaY) <= minReverseHorizontalYOffset) {
-            if (verticalX1 == undefined) verticalX1 = Math.round(sourcePos.x + deltaX / 2)
-            else if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = sourcePos.x + sourceMinReach
-            else if (verticalX1 > destPos.x - destMinReach) verticalX1 = destPos.x - destMinReach
+        else if (deltaX >= (sourceMinReach + destMinReach)) {
+            verticalX1 ??= Math.round(sourcePos.x + deltaX / 2)
+            if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = Math.round(sourcePos.x + sourceMinReach)
+            if (verticalX1 > destPos.x - destMinReach) verticalX1 = Math.round(destPos.x - destMinReach)
+            
+            anchors.verticalX1 = verticalX1
+            anchors.horizontalY = undefined
+            anchors.verticalX2 = undefined
 
             return [
                 vec2(sourcePos),
@@ -168,17 +183,28 @@ export default class TraceLayer
 
         // 5 line segments (6 points)
         else {
-            if (!verticalX1) verticalX1 = sourcePos.x + sourceMinReach
-            else if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = sourcePos.x + sourceMinReach
+            verticalX1 ??= Math.round(sourcePos.x + sourceMinReach)
+            if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = Math.round(sourcePos.x + sourceMinReach)
 
-            if (!verticalX2) verticalX2 = destPos.x + destMinReach
-            else if (verticalX2 > destPos.x - destMinReach) verticalX2 = destPos.x - destMinReach
+            verticalX2 ??= Math.round(destPos.x - destMinReach)
+            if (verticalX2 > destPos.x - destMinReach) verticalX2 = Math.round(destPos.x - destMinReach)
 
-            horizontalY ??= (Math.abs(deltaY / 2) >= minReverseHorizontalYOffset)
-                // Reverse line between source Y and dest Y
-                ? sourcePos.y + Math.round(deltaY / 2)
-                // Reverse line 
-                : sourcePos.y + Math.sign(deltaY) * minReverseHorizontalYOffset
+            if (horizontalY == undefined) {
+                if (Math.abs(deltaY / 2) >= minReverseHorizontalYOffset) {
+                    // Reverse line between source Y and dest Y
+                    horizontalY = Math.round(sourcePos.y + Math.round(deltaY / 2))
+                } else {
+                    // Reverse line over/under both
+                    horizontalY = (deltaY > 0)
+                        ? destPos.y + 4 
+                        : destPos.y - 4
+                    if (verticalX1 < destPos.x + 5) Math.round(verticalX1 = destPos.x + 5)
+                }
+            }
+
+            anchors.verticalX1 = verticalX1
+            anchors.horizontalY = horizontalY
+            anchors.verticalX2 = verticalX2
 
             return [
                 vec2(sourcePos),

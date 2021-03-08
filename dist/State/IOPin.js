@@ -24,7 +24,7 @@ export class IOPin {
     get datatype() { return this._datatype; }
     get block() { return this._block; }
     get ioNum() { return this.getIONum(this); }
-    get source() { return this._source; }
+    get sourcePin() { return this._sourcePin; }
     get inverted() { return this._inverted; }
     setValue(value) {
         if (this._value != value) {
@@ -45,8 +45,8 @@ export class IOPin {
         }
     }
     setSource(source) {
-        if (this._source != source) {
-            this._source = source;
+        if (this._sourcePin != source) {
+            this._sourcePin = source;
             this.events.emit(IOPinEventType.Source);
         }
     }
@@ -59,10 +59,10 @@ export class IOPin {
     remove() {
         this.events.emit(IOPinEventType.Removed);
         this.events.clear();
-        this._source = null;
+        this._sourcePin = null;
     }
     toString() {
-        const connected = (this.source) ? 'connected ' : ' ';
+        const connected = (this.sourcePin) ? 'connected ' : ' ';
         const inverted = (this.inverted) ? 'inverted' : '';
         const str = (this.name + ': ').padEnd(6) + this.value.toString().padStart(8) + ('  [' + this.datatype + ']').padEnd(10) + '  #' + this.ioNum + ' ' + connected + inverted;
         return str;

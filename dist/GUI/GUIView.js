@@ -94,7 +94,7 @@ export default class GUIView {
     unregisterElement(elem) {
         this.eventTargetMap.delete(elem.DOMElement);
     }
-    requestElementUpdate(elem) {
-        this.updateRequests.add(elem);
+    requestUpdate(obj) {
+        this.updateRequests.add(obj);
     }
 }

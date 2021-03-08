@@ -147,7 +147,7 @@ export class GUIChildElement implements IChildElementGUI
     protected onParentMoved?(): void
 
     requestUpdate() {
-        this.gui.requestElementUpdate(this)
+        this.gui.requestUpdate(this)
     }
 
     delete() {
