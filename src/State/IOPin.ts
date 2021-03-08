@@ -23,7 +23,7 @@ export interface IOPinDefinition
 
 export interface IOPinInstanceDefinition
 {
-    value:      number
+    value?:     number
     source?:    IOPinSource
 }
 

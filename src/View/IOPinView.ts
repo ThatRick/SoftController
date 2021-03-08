@@ -119,8 +119,9 @@ export default class IOPinView extends GUIChildElement
 
     protected get invertedPinStyle() {
         const scale = this.gui.scale
-        const scaledSize = vec2(scale.x * 0.6).round()
-        const yOffset = (scale.y - scaledSize.y) / 2
+        const scaledSize = vec2(scale.x * 0.5).round()
+        const yOffset = Math.round((scale.y - scaledSize.y) / 2)
+        const traceWidth = Math.round(this.gui.style.traceWidth * this.gui.scale.y)
         
         const scaledOffset = (this.direction == 'left') ? vec2(scale.x - scaledSize.x, yOffset) : vec2(0, yOffset)
 
@@ -131,7 +132,7 @@ export default class IOPinView extends GUIChildElement
             width:      scaledSize.x + 'px',
             height:     scaledSize.y + 'px',
             borderStyle:    'solid',
-            borderWidth:    this.gui.style.traceWidth * scale.y + 'px',
+            borderWidth:    traceWidth + 'px',
             borderRadius:   (scaledSize.x / 2) + 'px',
             backgroundColor: 'transparent',
             pointerEvents:  'none',

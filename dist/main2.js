@@ -23,16 +23,23 @@ const myProg = {
             blocks: [
                 {
                     typeName: 'AND',
-                    inputs: [
-                        { value: 1, source: { blockNum: -1, outputNum: 1, inverted: true } },
-                        { value: 1 },
-                        { value: 1 }
-                    ]
+                    inputs: {
+                        0: { source: { blockNum: -1, outputNum: 1, inverted: true } },
+                        1: { value: 1 },
+                        2: { value: 1 }
+                    }
                 },
                 { typeName: 'OR' },
                 { typeName: 'RS' },
                 { typeName: 'RisingEdge' },
-                { typeName: 'Select' },
+                {
+                    typeName: 'Select',
+                    inputs: {
+                        0: { value: 10 },
+                        1: { value: 5 },
+                        sel: { source: { blockNum: 1, outputNum: 0 } }
+                    }
+                },
             ]
         }
     },

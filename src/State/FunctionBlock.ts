@@ -26,8 +26,8 @@ export interface FunctionTypeDefinition
 export interface FunctionInstanceDefinition
 {
     typeName:       FunctionTypeName
-    inputs?:        IOPinInstanceDefinition[]
-    outputs?:       IOPinInstanceDefinition[]
+    inputs?:        { [name: string]: IOPinInstanceDefinition }
+    outputs?:       { [name: string]: IOPinInstanceDefinition }
 }
 
 interface VariableIOCountDefinition {

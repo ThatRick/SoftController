@@ -146,14 +146,28 @@ export function getFunctionBlock(instance) {
     const ctor = functionLib[instance.typeName];
     const block = new ctor();
     if (instance.inputs) {
-        const { initialCount, structSize = 1 } = block.typeDef.variableInputs;
-        console.log({ initialCount, structSize });
-        const variableTotalCount = initialCount * structSize;
-        const variableDiff = (instance.inputs.length - variableTotalCount) / structSize;
-        console.assert(variableDiff % 1 == 0, 'variable input count does not fit variable input struct size multiplier');
-        const variableCount = initialCount + variableDiff;
-        block.setVariableInputCount(variableCount);
-        instance.inputs.forEach((input, i) => block.inputs[i].setValue(input.value));
+        if (block.typeDef.variableInputs) {
+            const instanceInputCount = Math.max(
+            // Number of input definitions (for variable input struct types)
+            Object.keys(instance.inputs).length, 
+            // Max input name as number
+            Object.keys(instance.inputs).reduce((max, inputName) => Math.max(max, parseInt(inputName)), 0));
+            const { initialCount, structSize = 1 } = block.typeDef.variableInputs;
+            const variableTotalCount = initialCount * structSize;
+            const variableDiff = (instanceInputCount - variableTotalCount) / structSize;
+            console.assert(variableDiff % 1 == 0, 'variable input count does not fit variable input struct size multiplier');
+            const variableCount = initialCount + variableDiff;
+            block.setVariableInputCount(variableCount);
+        }
+        Object.entries(instance.inputs).forEach(([inputName, inputDef]) => {
+            const input = block.inputs.find(input => input.name == inputName);
+            if (!input)
+                console.error('Input instance definition has invalid input name:', inputName);
+            else {
+                if (inputDef.value != undefined)
+                    input.setValue(inputDef.value);
+            }
+        });
     }
     return block;
 }

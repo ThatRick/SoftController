@@ -57,10 +57,16 @@ export default class TraceLayer
         trace.sourcePos.set(sourcePos)
         trace.destPos.set(destPos)
 
-        const points = this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach, trace.anchors)
-        
+        let points = this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach, trace.anchors)
+        if (points.length != trace.points.length) {
+                trace.anchors.verticalX1 = undefined
+                trace.anchors.horizontalY = undefined
+                trace.anchors.verticalX2 = undefined
+            points = this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach)
+        }
+
         // If route points has changed, update polyline
-        if (points.length != trace.points.length || !trace.points.every((current, index) => current.equal(points[index]))) {
+        if (!trace.points.every((current, index) => current.equal(points[index]))) {
             this.updatePolylinePoints(trace.polyline, points)
         }
 
@@ -135,11 +141,11 @@ export default class TraceLayer
     {
         let { verticalX1, horizontalY, verticalX2 } = anchors
                 
-        const offsetX = destPos.x - sourcePos.x
-        const offsetY = destPos.y - sourcePos.y
+        const deltaX = destPos.x - sourcePos.x
+        const deltaY = destPos.y - sourcePos.y
         
         // 1 line segment (2 points)
-        if (offsetY == 0 && offsetX > 0) {
+        if (deltaY == 0 && deltaX > 0) {
             return [
                 vec2(sourcePos),
                 vec2(destPos)
@@ -147,8 +153,8 @@ export default class TraceLayer
         }
         
         // 3 line segments (4 points)
-        else if (offsetX >= sourceMinReach + destMinReach) {
-            if (verticalX1 == undefined) verticalX1 = Math.round(sourcePos.x + offsetX / 2)
+        else if (deltaX >= (sourceMinReach + destMinReach) || Math.abs(deltaY) <= minReverseHorizontalYOffset) {
+            if (verticalX1 == undefined) verticalX1 = Math.round(sourcePos.x + deltaX / 2)
             else if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = sourcePos.x + sourceMinReach
             else if (verticalX1 > destPos.x - destMinReach) verticalX1 = destPos.x - destMinReach
 
@@ -168,10 +174,11 @@ export default class TraceLayer
             if (!verticalX2) verticalX2 = destPos.x + destMinReach
             else if (verticalX2 > destPos.x - destMinReach) verticalX2 = destPos.x - destMinReach
 
-            if (!horizontalY) {
-                if (Math.abs(offsetY / 2) >= minReverseHorizontalYOffset) horizontalY = sourcePos.y + Math.round(offsetY / 2)
-                else horizontalY = sourcePos.y + Math.sign(offsetY) * minReverseHorizontalYOffset
-            }
+            horizontalY ??= (Math.abs(deltaY / 2) >= minReverseHorizontalYOffset)
+                // Reverse line between source Y and dest Y
+                ? sourcePos.y + Math.round(deltaY / 2)
+                // Reverse line 
+                : sourcePos.y + Math.sign(deltaY) * minReverseHorizontalYOffset
 
             return [
                 vec2(sourcePos),

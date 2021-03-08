@@ -79,16 +79,23 @@ export default class Circuit implements CircuitInterface
         const blocks = def.blocks.map(funcDef => getFunctionBlock(funcDef))
         // Set block input sources
         def.blocks.forEach((block, blockIndex) => {
-            block.inputs?.forEach((input, inputIndex) => {
-                if (input.source) {
-                    const { blockNum, outputNum } = input.source
-                    // Connect to circuit input (blockNum = -1) or block output (blockNum = 0..n)
-                    const sourcePin = (blockNum == -1)
-                        ? circBlock.inputs[outputNum]
-                        : blocks[blockNum].outputs[outputNum]
-                    blocks[blockIndex].inputs[inputIndex].setSource(sourcePin)
-                }
-            })
+            if (block.inputs) {
+                Object.entries(block.inputs).forEach(([inputName, inputDef]) => {
+                    if (inputDef.source) {
+                        const input = blocks[blockIndex].inputs.find(input => input.name == inputName)
+                        if (!input) console.error('Invalid input name in block instance definition:', inputName)
+                        else {
+                            const { blockNum, outputNum, inverted=false } = inputDef.source
+                            // Connect to circuit input (blockNum = -1) or block output (blockNum = 0..n)
+                            const sourcePin = (blockNum == -1)
+                                ? circBlock.inputs[outputNum]
+                                : blocks[blockNum].outputs[outputNum]
+                            input.setSource(sourcePin)
+                            input.setInverted(inverted)
+                        }
+                    }
+                })
+            }
         })
         this._blocks = new Set(blocks)
     }
