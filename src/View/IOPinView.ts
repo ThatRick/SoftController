@@ -19,13 +19,19 @@ export default class IOPinView extends GUIChildElement
 
     gui: CircuitView
 
+    set backgroundColor(color: string) {
+        this._backgroundColor = color
+        this.setStyle({ backgroundColor: color })
+    }
+
     //////////////////////////////////////////////
     //              Constructor
     //////////////////////////////////////////////
 
     constructor(io: IOPinInterface, pos: Vec2, parentContainer: IContainerGUI )
     {
-        super(parentContainer, 'div', pos, vec2(1, 1))
+        super(parentContainer, 'div', pos, vec2(1, 1), {cursor: 'crosshair'})
+        this.DOMElement.className = 'hoverBackground'
         this.io = io
         this.isCircuitIO = (io.block.circuit != null)
         this.direction = ((this.type == 'input' && !this.isCircuitIO) || (this.type == 'output' && this.isCircuitIO)) ? 'left' : 'right'
@@ -36,6 +42,8 @@ export default class IOPinView extends GUIChildElement
     //////////////////////////////////////////////
     //               Protected
     //////////////////////////////////////////////
+
+    protected _backgroundColor = 'transparent'
 
     protected ioEventHandler(ev: IOPinEvent) {
         switch (ev.type)
@@ -61,10 +69,6 @@ export default class IOPinView extends GUIChildElement
 
     protected onRescale() {
         this.updateStyle()
-    }
-
-    protected onParentMoved() {
-
     }
 
     protected updateStyle() {
@@ -139,4 +143,7 @@ export default class IOPinView extends GUIChildElement
             boxSizing: 'border-box'
         } as Partial<CSSStyleDeclaration>
     }
+
+    onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.pinHighlight })
+    onPointerLeave = () => this.setStyle({ backgroundColor: this._backgroundColor })
 }

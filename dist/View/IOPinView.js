@@ -7,7 +7,14 @@ export default class IOPinView extends GUIChildElement {
     //              Constructor
     //////////////////////////////////////////////
     constructor(io, pos, parentContainer) {
-        super(parentContainer, 'div', pos, vec2(1, 1));
+        super(parentContainer, 'div', pos, vec2(1, 1), { cursor: 'crosshair' });
+        //////////////////////////////////////////////
+        //               Protected
+        //////////////////////////////////////////////
+        this._backgroundColor = 'transparent';
+        this.onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.pinHighlight });
+        this.onPointerLeave = () => this.setStyle({ backgroundColor: this._backgroundColor });
+        this.DOMElement.className = 'hoverBackground';
         this.io = io;
         this.isCircuitIO = (io.block.circuit != null);
         this.direction = ((this.type == 'input' && !this.isCircuitIO) || (this.type == 'output' && this.isCircuitIO)) ? 'left' : 'right';
@@ -16,9 +23,10 @@ export default class IOPinView extends GUIChildElement {
     }
     get type() { return this.io.type; }
     get color() { return this.pinColor; }
-    //////////////////////////////////////////////
-    //               Protected
-    //////////////////////////////////////////////
+    set backgroundColor(color) {
+        this._backgroundColor = color;
+        this.setStyle({ backgroundColor: color });
+    }
     ioEventHandler(ev) {
         switch (ev.type) {
             case IOPinEventType.Value:
@@ -37,8 +45,6 @@ export default class IOPinView extends GUIChildElement {
     }
     onRescale() {
         this.updateStyle();
-    }
-    onParentMoved() {
     }
     updateStyle() {
         const pinStyle = (this.io.inverted) ? this.invertedPinStyle : this.pinStyle;

@@ -6,6 +6,8 @@ import { IContainerGUI } from '../GUI/GUITypes.js'
 import IOPinView from './IOPinView.js'
 import CircuitView from './CircuitView.js'
 import { IOPinInterface } from '../State/IOPin.js'
+import { EventEmitter } from '../Lib/Events.js'
+
 
 export default class FunctionBlockView extends GUIChildElement
 {
@@ -27,6 +29,7 @@ export default class FunctionBlockView extends GUIChildElement
             boxSizing: 'border-box',
             userSelect: 'none',
             borderRadius: '2px',
+            cursor: 'grab'
         }, true)
 
         this.setStyle({
@@ -178,6 +181,9 @@ export default class FunctionBlockView extends GUIChildElement
         })
     }
 
+    onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.primaryHL })
+    onPointerLeave = () => this.setStyle({ backgroundColor: this.gui.style.colors.primary })
+    
     static getBlockSize(block: FunctionBlockInterface) {
         let w: number, title: number
         switch (block.typeDef.visualStyle ?? 'full') {

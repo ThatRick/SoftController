@@ -8,6 +8,7 @@ import FunctionBlockView from './FunctionBlockView.js'
 import IOPinView from './IOPinView.js'
 import FunctionBlockContextMenu from './FunctionBlockContextMenu.js'
 import CircuitContextMenu from './CircuitContextMenu.js'
+import { TraceAnchorHandle } from './TraceLine.js'
 
 const enum PointerMode {
     DEFAULT,
@@ -16,6 +17,7 @@ const enum PointerMode {
     DRAG_BLOCK,
     DRAG_INPUT_PIN,
     DRAG_OUTPUT_PIN,
+    DRAG_TRACE_ANCHOR,
     INSERT_NEW_BLOCK,
     MODAL_MENU,
 }
@@ -28,7 +30,7 @@ const enum MouseButton {
 
 interface IDragBehaviour {
     start(ev: PointerEvent): void
-    dragging(ev: PointerEvent): void
+    move(ev: PointerEvent): void
     end(ev: PointerEvent): void
 }
 
@@ -36,6 +38,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 {
     const pointer = circuit.pointer
     const selection = circuit.selection
+    const body = circuit.body
 
     let menu: HTMLMenu
 
@@ -53,16 +56,19 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         if (!ev.shiftKey && elem instanceof FunctionBlockView && !selection.has(elem)) {
             selection.set(elem)
         }
-        // Select Pin
-        else if (elem instanceof IOPinView) {
+        // Select Pin or Anchor
+        else if (elem instanceof IOPinView || elem instanceof TraceAnchorHandle) {
             selection.set(elem)
+        }
+        else if (elem == body) {
+            selection.removeAll()
         }
     }
 
     const onClicked = (ev: PointerEvent) => {
         const elem = pointer.targetElem
         // Deselect all
-        if (!elem) {
+        if (elem == body) {
             selection.removeAll()
         }
         // Set selection to block (no shift key)
@@ -81,7 +87,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         const elem = pointer.targetElem
         
         // Open circuit context menu
-        if (!elem) {
+        if (elem == body) {
             selection.removeAll()
             pointerMode = PointerMode.MODAL_MENU
             menu = CircuitContextMenu({
@@ -123,7 +129,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             scrollStartPos = vec2(circuit.parentDOM.scrollLeft, circuit.parentDOM.scrollTop)
             circuit.DOMElement.style.cursor = 'grab'
         },
-        dragging(ev: PointerEvent) {
+        move(ev: PointerEvent) {
             circuit.parentDOM.scrollLeft = scrollStartPos.x - pointer.screenDragOffset.x
             circuit.parentDOM.scrollTop = scrollStartPos.y - pointer.screenDragOffset.y
         },
@@ -149,7 +155,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                 ...getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset)
             })
         },
-        dragging(ev: PointerEvent) {
+        move(ev: PointerEvent) {
             Object.assign(selectionBox.style, getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset))
         },
         end(ev: PointerEvent) {
@@ -172,12 +178,13 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     dragBehaviour.set(PointerMode.DRAG_BLOCK,
     {
         start(ev: PointerEvent) {
+            pointer.downTargetElem?.setStyle({cursor: 'grabbing'})
             selection.blocks.forEach(block => {
                 selectedBlocksStartDragPos.set(block, block.pos.copy())
                 block.onDragStarted?.(ev, circuit.pointer)
             })
         },
-        dragging(ev: PointerEvent) {
+        move(ev: PointerEvent) {
             selection.blocks.forEach(block => {
                 const startPos = selectedBlocksStartDragPos.get(block)
                 block.setPos(Vec2.add(startPos, pointer.scaledDragOffset))
@@ -185,6 +192,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             })
         },
         end(ev: PointerEvent) {
+            pointer.downTargetElem?.setStyle({cursor: 'grab'})
             selection.blocks.forEach(block => {
                 const startPos = selectedBlocksStartDragPos.get(block)
                 block.setPos(Vec2.add(startPos, pointer.scaledDragOffset).round())
@@ -198,25 +206,44 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     dragBehaviour.set(PointerMode.DRAG_INPUT_PIN,
     {
         start(ev: PointerEvent) {
-            circuit.DOMElement.style.cursor = 'grab'
-
         },
-        dragging(ev: PointerEvent) {
+        move(ev: PointerEvent) {
         },
         end(ev: PointerEvent) {
-            circuit.DOMElement.style.cursor = 'default'
+        }
+    })
+    
+    //  Drag trace anchor
+    // -------------------
+    let selectedAnchorStartDragPos: Vec2
+
+    dragBehaviour.set(PointerMode.DRAG_TRACE_ANCHOR,
+    {
+        start(ev: PointerEvent) {
+            selectedAnchorStartDragPos = selection.anchor.pos
+        },
+        move(ev: PointerEvent) {
+            const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset)
+            selection.anchor.move(newPos)
+        },
+        end(ev: PointerEvent) {
+            const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset).round()
+            selection.anchor.move(newPos)
+            selection.removeAll()            
         }
     })
 
-    //  Handle dragging
-    // -----------------
+    // =======================
+    //  Handle dragging modes
+    // =======================
     const onDragStarted = (ev: PointerEvent) =>
     {
+        ev.preventDefault()
         if (pointerMode == PointerMode.MODAL_MENU) return
-        else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == MouseButton.RIGHT) {
+        else if (pointer.downTargetElem == body && ev.buttons == MouseButton.RIGHT) {
             pointerMode = PointerMode.DRAG_SCROLL_VIEW
         }
-        else if (pointer.downEventTarget == circuit.DOMElement && ev.buttons == MouseButton.LEFT) {
+        else if (pointer.downTargetElem == body && ev.buttons == MouseButton.LEFT) {
             pointerMode = PointerMode.DRAG_SELECTION_BOX
         }
         else if (selection.type == 'Block') {
@@ -228,12 +255,16 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         else if (selection.type == 'Pin' && selection.pin.type == 'output') {
             pointerMode = PointerMode.DRAG_OUTPUT_PIN
         }
+        else if (selection.type == 'Anchor') {
+            pointerMode = PointerMode.DRAG_TRACE_ANCHOR
+        }
         console.log('onDragStarted:', pointerMode)
         dragBehaviour.get(pointerMode)?.start(ev)
     }
 
     const onDragging = (ev: PointerEvent) => {
-        dragBehaviour.get(pointerMode)?.dragging(ev)
+        ev.preventDefault()
+        dragBehaviour.get(pointerMode)?.move(ev)
     }
 
     const onDragEnded = (ev: PointerEvent) => {

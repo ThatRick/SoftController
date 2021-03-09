@@ -2,16 +2,26 @@ import CircuitView from './CircuitView.js'
 import { GUIChildElement, GUIChildEvent, GUIChildEventType } from '../GUI/GUIChildElement.js'
 import { IContainerGUI, Vec2 } from '../GUI/GUITypes.js'
 import IOPinView from './IOPinView.js'
-import TraceLayer, { TraceRoute } from './TraceLayer.js'
+import TraceLayer, { TraceRoute, ITraceAnchors } from './TraceLayer.js'
 import { vec2 } from '../Lib/Vector2.js'
 
-class TraceHandle extends GUIChildElement {
-    constructor(parent: IContainerGUI, pos: Vec2, size: Vec2) {
-        super(parent, 'div', pos, size, {
-            backgroundColor: 'rgba(255,255,0,0.3)'
-        })
-    }
+export class TraceAnchorHandle extends GUIChildElement {
+    readonly type: 'vertical' | 'horizontal'
 
+    constructor(readonly name: keyof ITraceAnchors, readonly traceLine: TraceLine, pos: Vec2, size: Vec2) {
+        super(traceLine.circuitView.body.children, 'div', pos, size)
+        this.type = (name == 'horizontal') ? 'horizontal' : 'vertical'
+        this.setStyle({cursor: (this.type == 'horizontal') ? 'n-resize' : 'e-resize'})
+    }
+    onClicked = () => {
+        console.log('Anchor:', this.name)
+    }
+    move(pos: Vec2) {
+        const value = (this.type == 'horizontal') ? pos.y : pos.x
+        this.traceLine.anchorHandleMoved(this.name, value)
+    }
+    onPointerEnter = () => this.setStyle({ backgroundColor: this.traceLine.circuitView.style.colors.pinHighlight })
+    onPointerLeave = () => this.setStyle({ backgroundColor: 'transparent' })
 }
 
 export class TraceLine {
@@ -42,27 +52,33 @@ export class TraceLine {
         this.route = this.traceLayer.addTrace(sourcePin.absPos, destPin.absPos, sourceMinReach, destMinReach, this.getColor())
         this.updateHandles()
 
-        this.sourcePin.events.subscribe(this.updateRoute.bind(this), [GUIChildEventType.Moved])
-        this.destPin.events.subscribe(this.updateRoute.bind(this), [GUIChildEventType.Moved])
+        this.sourcePin.events.subscribe(this.updateRoute.bind(this), [GUIChildEventType.PositionChanged])
+        this.destPin.events.subscribe(this.updateRoute.bind(this), [GUIChildEventType.PositionChanged])
     }
 
     protected traceLayer: TraceLayer
 
-    protected handles: {
-        vertical1?:    TraceHandle,
-        horizontal?:   TraceHandle,
-        vertical2?:    TraceHandle
-    } = {}
+    protected handles: Record<keyof ITraceAnchors, TraceAnchorHandle> =
+    {
+        vertical1:    undefined,
+        horizontal:   undefined,
+        vertical2:    undefined
+    }
+
+    anchorHandleMoved(name: keyof ITraceAnchors, value: number) {
+        this.route.anchors[name] = value
+        this.updateRoute()
+    }
 
     protected getColor(): string {
-        return 'white'
+        return '#AAA'
     }
 
     protected updateColor() {
         this.traceLayer.updateColor(this.route, this.sourcePin.color)
     }
     
-    protected updateRoute(e: GUIChildEvent) {
+    protected updateRoute() {
         this.circuitView.requestUpdate(this)
     }
 
@@ -72,11 +88,11 @@ export class TraceLine {
         {
             case 2: {
                 handles.vertical1?.delete()
-                handles.vertical1 ??= null
+                handles.vertical1 = null
                 handles.horizontal?.delete()
-                handles.horizontal ??= null
+                handles.horizontal = null
                 handles.vertical2?.delete()
-                handles.vertical2 ??= null
+                handles.vertical2 = null
                 break
             }
             case 4: {
@@ -89,12 +105,12 @@ export class TraceLine {
                     handles.vertical1.setPos(vert1pos)
                     handles.vertical1.setSize(vert1size)
                 } else {
-                    handles.vertical1 = new TraceHandle(this.circuitView.children, vert1pos, vert1size)
+                    handles.vertical1 = new TraceAnchorHandle('vertical1', this, vert1pos, vert1size)
                 }
                 handles.horizontal?.delete()
-                handles.horizontal ??= null
+                handles.horizontal = null
                 handles.vertical2?.delete()
-                handles.vertical2 ??= null
+                handles.vertical2 = null
                 break
             }
             case 6: {
@@ -108,33 +124,33 @@ export class TraceLine {
                     handles.vertical1.setPos(vert1pos)
                     handles.vertical1.setSize(vert1size)
                 } else {
-                    handles.vertical1 = new TraceHandle(this.circuitView.children, vert1pos, vert1size)
+                    handles.vertical1 = new TraceAnchorHandle('vertical1', this, vert1pos, vert1size)
                 }
 
                 // Horizontal handle
-                const [ha, hb] = this.route.points.slice(3, 5)
+                const [ha, hb] = this.route.points.slice(2, 4)
 
-                const horiPos = (ha.x < hb.x) ? ha : hb
-                const horiSize = vec2(Math.abs(ha.x - hb.x + 1), 1)
+                const horiPos = Vec2.add((ha.x < hb.x) ? ha : hb, vec2(1, 0))
+                const horiSize = vec2(Math.abs(ha.x - hb.x - 1), 1)
                 
                 if (handles.horizontal) {
                     handles.horizontal.setPos(horiPos)
                     handles.horizontal.setSize(horiSize)
                 } else {
-                    handles.horizontal = new TraceHandle(this.circuitView.children, horiPos, horiSize)
+                    handles.horizontal = new TraceAnchorHandle('horizontal', this, horiPos, horiSize)
                 }
 
                 // Vertical 2 handle
-                const [v2a, v2b] = this.route.points.slice(5, 7)
+                const [v2a, v2b] = this.route.points.slice(3, 5)
 
                 const vert2pos = (v2a.y < v2b.y) ? v2a : v2b
-                const vert2size = vec2(1, Math.abs(v2a.y - v2b.y + 1))
+                const vert2size = vec2(1, Math.abs(v2a.y - v2b.y) + 1)
                 
                 if (handles.vertical2) {
                     handles.vertical2.setPos(vert2pos)
                     handles.vertical2.setSize(vert2size)
                 } else {
-                    handles.vertical2 = new TraceHandle(this.circuitView.children, vert2pos, vert2size)
+                    handles.vertical2 = new TraceAnchorHandle('vertical2', this, vert2pos, vert2size)
                 }
                 break
             }

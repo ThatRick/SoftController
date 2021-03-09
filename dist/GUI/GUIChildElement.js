@@ -1,4 +1,5 @@
 import { EventEmitter } from '../Lib/Events.js';
+import { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 import { Vec2 } from './GUITypes.js';
 export class GUIChildElement {
@@ -9,8 +10,8 @@ export class GUIChildElement {
         this.events = new EventEmitter(this);
         this._posHasChanged = false;
         this._sizeHasChanged = false;
-        this._pos = pos;
-        this._size = size;
+        this._pos = vec2(pos);
+        this._size = vec2(size);
         if (typeof elem == 'object') {
             this.DOMElement = elem;
         }
@@ -33,7 +34,7 @@ export class GUIChildElement {
         this._pos.set(p);
         this._posHasChanged = true;
         this.requestUpdate();
-        this.events.emit(0 /* Moved */);
+        this.events.emit(0 /* PositionChanged */);
         this.children?.parentMoved();
     }
     get pos() { return this._pos.copy(); }
@@ -60,20 +61,20 @@ export class GUIChildElement {
     setStyle(style) {
         Object.assign(this.DOMElement.style, style);
     }
-    update(force) {
-        if (this._posHasChanged || force) {
+    update(forceUpdate) {
+        if (this._posHasChanged || forceUpdate) {
             this._posHasChanged = false;
             this._posScaled = Vec2.mul(this._pos, this.gui.scale);
             this.DOMElement.style.left = this._posScaled.x + 'px';
             this.DOMElement.style.top = this._posScaled.y + 'px';
         }
-        if (this._size && this._sizeHasChanged || force) {
+        if (this._size && this._sizeHasChanged || forceUpdate) {
             this._sizeHasChanged = false;
             this._sizeScaled = Vec2.mul(this._size, this.gui.scale);
             this.DOMElement.style.width = this._sizeScaled.x + 'px';
             this.DOMElement.style.height = this._sizeScaled.y + 'px';
         }
-        this.onUpdate?.(force);
+        this.onUpdate?.(forceUpdate);
         return false;
     }
     rescale(scale) {
@@ -87,7 +88,7 @@ export class GUIChildElement {
     }
     parentMoved() {
         this.onParentMoved?.();
-        this.events.emit(0 /* Moved */);
+        this.events.emit(0 /* PositionChanged */);
         this.children?.parentMoved();
     }
     requestUpdate() {

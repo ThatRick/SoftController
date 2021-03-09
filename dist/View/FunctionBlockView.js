@@ -9,7 +9,10 @@ export default class FunctionBlockView extends GUIChildElement {
             boxSizing: 'border-box',
             userSelect: 'none',
             borderRadius: '2px',
+            cursor: 'grab'
         }, true);
+        this.onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.primaryHL });
+        this.onPointerLeave = () => this.setStyle({ backgroundColor: this.gui.style.colors.primary });
         this.setStyle({
             backgroundColor: this.gui.style.colors.primary
         });

@@ -1,4 +1,6 @@
 import FunctionBlockView from './FunctionBlockView.js';
+import IOPinView from './IOPinView.js';
+import { TraceAnchorHandle } from './TraceLine.js';
 export default class CircuitSelection {
     constructor(style) {
         this.style = style;
@@ -10,8 +12,11 @@ export default class CircuitSelection {
         if (elem instanceof FunctionBlockView) {
             return this.blocks.has(elem);
         }
-        else {
+        else if (elem instanceof IOPinView) {
             return (this.pin == elem);
+        }
+        else if (elem instanceof TraceAnchorHandle) {
+            return (this.anchor == elem);
         }
     }
     set(elem) {
@@ -19,8 +24,11 @@ export default class CircuitSelection {
         if (elem instanceof FunctionBlockView) {
             this.selectBlock(elem);
         }
-        else {
+        else if (elem instanceof IOPinView) {
             this.selectPin(elem);
+        }
+        else if (elem instanceof TraceAnchorHandle) {
+            this.selectAnchor(elem);
         }
     }
     add(block) {
@@ -30,14 +38,19 @@ export default class CircuitSelection {
         if (elem instanceof FunctionBlockView) {
             this.unselectBlock(elem);
         }
-        else {
+        else if (elem instanceof IOPinView) {
             this.unselectPin();
+        }
+        else if (elem instanceof TraceAnchorHandle) {
+            this.unselectAnchor();
         }
     }
     removeAll() {
         this.blocks.forEach(block => this.unselectBlock(block));
         if (this.pin)
             this.unselectPin();
+        if (this.anchor)
+            this.unselectAnchor();
     }
     selectBlock(block) {
         block.setStyle({ boxShadow: `0px 0px 0px 1px ${this.style.colors.selection} inset` });
@@ -51,13 +64,21 @@ export default class CircuitSelection {
             this.type = null;
     }
     selectPin(pin) {
-        pin.setStyle({ backgroundColor: this.style.colors.pinSelection });
+        pin.backgroundColor = this.style.colors.pinSelection;
         this.pin = pin;
         this.type = 'Pin';
     }
     unselectPin() {
-        this.pin.setStyle({ backgroundColor: 'transparent' });
+        this.pin.backgroundColor = 'transparent';
         this.pin = null;
+        this.type = null;
+    }
+    selectAnchor(anchor) {
+        this.anchor = anchor;
+        this.type = 'Anchor';
+    }
+    unselectAnchor() {
+        this.anchor = null;
         this.type = null;
     }
 }

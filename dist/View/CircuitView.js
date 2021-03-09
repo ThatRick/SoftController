@@ -1,5 +1,6 @@
 import { vec2 } from '../Lib/Vector2.js';
 import GUIView from '../GUI/GUIView.js';
+import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import * as HTML from '../Lib/HTML.js';
 import { defaultStyle } from './Common.js';
 import { CircuitBlock } from '../State/FunctionLib.js';
@@ -10,11 +11,28 @@ import CircuitPointerHandler from './PointerHandler.js';
 import TraceLayer from './TraceLayer.js';
 import { TraceLine } from './TraceLine.js';
 import IOPinView from './IOPinView.js';
+class CircuitBody extends GUIChildElement {
+    constructor(circuitView) {
+        super(circuitView.children, 'div', vec2(0, 0), vec2(circuitView.size), {
+            cursor: 'auto'
+        }, true);
+        this.circuitView = circuitView;
+        this.onRestyle();
+        circuitView.events.subscribe((ev) => { this.setSize(this.circuitView.size); }, [0 /* Resized */]);
+    }
+    onRestyle() {
+        this.setStyle({
+            ...HTML.backgroundGridStyle(this.circuitView.scale, this.circuitView.style.colors.gridLines),
+        });
+    }
+    onRescale() {
+        this.onRestyle();
+    }
+}
 export default class CircuitView extends GUIView {
     constructor(parent, size, scale, style = defaultStyle) {
         super(parent, size, scale, style, {
             backgroundColor: style.colors.background,
-            ...HTML.backgroundGridStyle(scale, style.colors.gridLines),
             fontFamily: 'system-ui',
             fontSize: Math.round(scale.y * style.fontSize) + 'px'
         });
@@ -22,8 +40,9 @@ export default class CircuitView extends GUIView {
         this.selection = new CircuitSelection(this.style);
         this.blockViewsMap = new WeakMap();
         this.traceLinesMap = new WeakMap();
-        this.pointer.attachEventHandler(CircuitPointerHandler(this));
+        this.body = new CircuitBody(this);
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale, this.style);
+        this.pointer.attachEventHandler(CircuitPointerHandler(this));
     }
     loadCircuitDefinition(circuitViewDefinition) {
         const { definition, positions, size } = circuitViewDefinition;
@@ -32,7 +51,7 @@ export default class CircuitView extends GUIView {
         // Create block views
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index];
-            const blockView = new FunctionBlockView(block, vec2(pos), this.children);
+            const blockView = new FunctionBlockView(block, vec2(pos), this.body.children);
             this.blockViewsMap.set(block, blockView);
         });
         // Create circuit IO pins
@@ -60,12 +79,12 @@ export default class CircuitView extends GUIView {
     createPins(def) {
         this.inputPins ??= this.circuitBlock.inputs.map((input, index) => {
             const posY = def.positions?.inputs?.[index] || index;
-            const pin = new IOPinView(input, vec2(0, posY), this.children);
+            const pin = new IOPinView(input, vec2(0, posY), this.body.children);
             return pin;
         });
         this.outputPins ??= this.circuitBlock.outputs.map((output, index) => {
             const posY = def.positions?.outputs?.[index] || index;
-            const pin = new IOPinView(output, vec2(this.size.x - 1, posY), this.children);
+            const pin = new IOPinView(output, vec2(this.body.size.x - 1, posY), this.body.children);
             return pin;
         });
     }
@@ -78,7 +97,6 @@ export default class CircuitView extends GUIView {
     onRestyle() {
         this.setStyle({
             backgroundColor: this.style.colors.background,
-            ...HTML.backgroundGridStyle(this.scale, this.style.colors.gridLines),
             fontSize: Math.round(this.scale.y * this.style.fontSize) + 'px'
         });
     }

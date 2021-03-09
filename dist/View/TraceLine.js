@@ -1,10 +1,22 @@
 import { GUIChildElement } from '../GUI/GUIChildElement.js';
+import { Vec2 } from '../GUI/GUITypes.js';
 import { vec2 } from '../Lib/Vector2.js';
-class TraceHandle extends GUIChildElement {
-    constructor(parent, pos, size) {
-        super(parent, 'div', pos, size, {
-            backgroundColor: 'rgba(255,255,0,0.3)'
-        });
+export class TraceAnchorHandle extends GUIChildElement {
+    constructor(name, traceLine, pos, size) {
+        super(traceLine.circuitView.body.children, 'div', pos, size);
+        this.name = name;
+        this.traceLine = traceLine;
+        this.onClicked = () => {
+            console.log('Anchor:', this.name);
+        };
+        this.onPointerEnter = () => this.setStyle({ backgroundColor: this.traceLine.circuitView.style.colors.pinHighlight });
+        this.onPointerLeave = () => this.setStyle({ backgroundColor: 'transparent' });
+        this.type = (name == 'horizontal') ? 'horizontal' : 'vertical';
+        this.setStyle({ cursor: (this.type == 'horizontal') ? 'n-resize' : 'e-resize' });
+    }
+    move(pos) {
+        const value = (this.type == 'horizontal') ? pos.y : pos.x;
+        this.traceLine.anchorHandleMoved(this.name, value);
     }
 }
 export class TraceLine {
@@ -12,14 +24,18 @@ export class TraceLine {
         this.circuitView = circuitView;
         this.sourcePin = sourcePin;
         this.destPin = destPin;
-        this.handles = {};
+        this.handles = {
+            vertical1: undefined,
+            horizontal: undefined,
+            vertical2: undefined
+        };
         this.traceLayer = circuitView.traceLayer;
         const sourceMinReach = sourcePin.io.datatype == 'BINARY' ? 1 : 3;
         const destMinReach = destPin.io.datatype == 'BINARY' ? 1 : 3;
         this.route = this.traceLayer.addTrace(sourcePin.absPos, destPin.absPos, sourceMinReach, destMinReach, this.getColor());
         this.updateHandles();
-        this.sourcePin.events.subscribe(this.updateRoute.bind(this), [0 /* Moved */]);
-        this.destPin.events.subscribe(this.updateRoute.bind(this), [0 /* Moved */]);
+        this.sourcePin.events.subscribe(this.updateRoute.bind(this), [0 /* PositionChanged */]);
+        this.destPin.events.subscribe(this.updateRoute.bind(this), [0 /* PositionChanged */]);
     }
     update() {
         this.traceLayer.updateTraceRoute(this.route, this.sourcePin.absPos, this.destPin.absPos);
@@ -31,13 +47,17 @@ export class TraceLine {
         this.sourcePin.events.unsubscribe(this.updateRoute);
         this.destPin.events.unsubscribe(this.updateRoute);
     }
+    anchorHandleMoved(name, value) {
+        this.route.anchors[name] = value;
+        this.updateRoute();
+    }
     getColor() {
-        return 'white';
+        return '#AAA';
     }
     updateColor() {
         this.traceLayer.updateColor(this.route, this.sourcePin.color);
     }
-    updateRoute(e) {
+    updateRoute() {
         this.circuitView.requestUpdate(this);
     }
     updateHandles() {
@@ -45,11 +65,11 @@ export class TraceLine {
         switch (this.route.points.length) {
             case 2: {
                 handles.vertical1?.delete();
-                handles.vertical1 ??= null;
+                handles.vertical1 = null;
                 handles.horizontal?.delete();
-                handles.horizontal ??= null;
+                handles.horizontal = null;
                 handles.vertical2?.delete();
-                handles.vertical2 ??= null;
+                handles.vertical2 = null;
                 break;
             }
             case 4: {
@@ -61,12 +81,12 @@ export class TraceLine {
                     handles.vertical1.setSize(vert1size);
                 }
                 else {
-                    handles.vertical1 = new TraceHandle(this.circuitView.children, vert1pos, vert1size);
+                    handles.vertical1 = new TraceAnchorHandle('vertical1', this, vert1pos, vert1size);
                 }
                 handles.horizontal?.delete();
-                handles.horizontal ??= null;
+                handles.horizontal = null;
                 handles.vertical2?.delete();
-                handles.vertical2 ??= null;
+                handles.vertical2 = null;
                 break;
             }
             case 6: {
@@ -79,29 +99,29 @@ export class TraceLine {
                     handles.vertical1.setSize(vert1size);
                 }
                 else {
-                    handles.vertical1 = new TraceHandle(this.circuitView.children, vert1pos, vert1size);
+                    handles.vertical1 = new TraceAnchorHandle('vertical1', this, vert1pos, vert1size);
                 }
                 // Horizontal handle
-                const [ha, hb] = this.route.points.slice(3, 5);
-                const horiPos = (ha.x < hb.x) ? ha : hb;
-                const horiSize = vec2(Math.abs(ha.x - hb.x + 1), 1);
+                const [ha, hb] = this.route.points.slice(2, 4);
+                const horiPos = Vec2.add((ha.x < hb.x) ? ha : hb, vec2(1, 0));
+                const horiSize = vec2(Math.abs(ha.x - hb.x - 1), 1);
                 if (handles.horizontal) {
                     handles.horizontal.setPos(horiPos);
                     handles.horizontal.setSize(horiSize);
                 }
                 else {
-                    handles.horizontal = new TraceHandle(this.circuitView.children, horiPos, horiSize);
+                    handles.horizontal = new TraceAnchorHandle('horizontal', this, horiPos, horiSize);
                 }
                 // Vertical 2 handle
-                const [v2a, v2b] = this.route.points.slice(5, 7);
+                const [v2a, v2b] = this.route.points.slice(3, 5);
                 const vert2pos = (v2a.y < v2b.y) ? v2a : v2b;
-                const vert2size = vec2(1, Math.abs(v2a.y - v2b.y + 1));
+                const vert2size = vec2(1, Math.abs(v2a.y - v2b.y) + 1);
                 if (handles.vertical2) {
                     handles.vertical2.setPos(vert2pos);
                     handles.vertical2.setSize(vert2size);
                 }
                 else {
-                    handles.vertical2 = new TraceHandle(this.circuitView.children, vert2pos, vert2size);
+                    handles.vertical2 = new TraceAnchorHandle('vertical2', this, vert2pos, vert2size);
                 }
                 break;
             }

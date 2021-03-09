@@ -154,6 +154,7 @@ export default class GUIPointer<Element extends IChildElementGUI, Style>
     
         // Pointer move
         view.DOMElement.onpointermove = ev => {
+            ev.preventDefault()
             this.latestMovementEvent = ev
         }
     

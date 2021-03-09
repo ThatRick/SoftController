@@ -2,14 +2,52 @@ import Vec2, {vec2} from '../Lib/Vector2.js'
 import { Style } from './Common.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
+
+function svgElement<K extends keyof SVGElementTagNameMap>(name: K, options: {
+    svgAttributes?: Record<string, string | number>,
+    css?: Partial<CSSStyleDeclaration>,
+    parent?: SVGElement
+}): SVGElementTagNameMap[K]
+{
+    // Create SVG Element
+    const elem = document.createElementNS(xmlns, name)
+    // Set SVG attributes
+    options.svgAttributes && Object.entries(options.svgAttributes).forEach(([key, value]) => {
+        elem.setAttribute(key, value.toString())
+    })
+    // Set CSS style
+    options.css && Object.assign(elem.style, options.css)
+    // Append to parent
+    options.parent?.appendChild(elem)
+    return elem
+}
+
+function svgElementWD(name: string, options: {
+    svgAttributes?: Record<string, string|number>,
+    css?: Partial<CSSStyleDeclaration>,
+    parent?: SVGElement
+}): SVGElement
+{
+    // Create SVG Element
+    const elem = document.createElementNS(xmlns, name)
+    // Set SVG attributes
+    options.svgAttributes && Object.entries(options.svgAttributes).forEach(([key, value]) => {
+        elem.setAttribute(key, value.toString())
+    })
+    // Set CSS style
+    options.css && Object.assign(elem.style, options.css)
+    // Append to parent
+    options.parent?.appendChild(elem)
+    return elem
+}
  
 const minReverseHorizontalYOffset = 3
 
-export interface ITracePathAnchors
+export interface ITraceAnchors
 {
-    verticalX1?: number,
-    horizontalY?: number,
-    verticalX2?: number
+    vertical1?: number,
+    horizontal?: number,
+    vertical2?: number
 }
 
 export class TraceRoute
@@ -21,7 +59,7 @@ export class TraceRoute
     minSourceReach: number
     minDestReach: number
     points: Vec2[]
-    anchors: ITracePathAnchors
+    anchors: ITraceAnchors
     color: string
     polyline: SVGPolylineElement
     
@@ -33,7 +71,7 @@ export class TraceRoute
 export default class TraceLayer
 {
     addTrace(sourcePos: Vec2, destPos: Vec2, minSourceReach: number, minDestReach: number,
-        color: string, pathAnchors: ITracePathAnchors = {}): TraceRoute
+        color: string, pathAnchors: ITraceAnchors = {}): TraceRoute
     {
         const points = this.calculateRoutePoints(sourcePos, destPos, minSourceReach, minDestReach, pathAnchors)
         const polyline = this.createPolyline(points, color)        
@@ -42,9 +80,9 @@ export default class TraceLayer
             minDestReach,
             color,
             anchors: {
-                verticalX1:     points[1]?.x,
-                horizontalY:    points[2]?.y,
-                verticalX2:     points[3]?.x
+                vertical1:     points[1]?.x,
+                horizontal:    points[2]?.y,
+                vertical2:     points[3]?.x
             },
             points: points,
             polyline
@@ -59,9 +97,9 @@ export default class TraceLayer
         const deltaSource = Vec2.sub(sourcePos, trace.sourcePos)
         const deltaDest = Vec2.sub(destPos, trace.destPos)
         const diff = Vec2.sub(deltaSource, deltaDest).len()
-        const concurrentMovement = (diff < 0.001)
+        const concurrentMovement = (deltaSource.len() > 0 && diff < 0.001) 
 
-        let points = (concurrentMovement)
+        const points = (concurrentMovement)
             ? [sourcePos, ...trace.midPoints.map(point => Vec2.add(point, deltaSource)), destPos]
             : this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach, trace.anchors)
 
@@ -71,9 +109,9 @@ export default class TraceLayer
         }
 
         if (concurrentMovement) {
-            trace.anchors.verticalX1 &&= points[1].x
-            trace.anchors.horizontalY &&= points[2].y
-            trace.anchors.verticalX2 &&= points[3].x
+            trace.anchors.vertical1 &&= points[1].x
+            trace.anchors.horizontal &&= points[2].y
+            trace.anchors.vertical2 &&= points[3].x
         }
 
         trace.points = points
@@ -121,12 +159,13 @@ export default class TraceLayer
         } as Partial<CSSStyleDeclaration>)
         
         parent.appendChild(svg)
+        // this.createFilters()
     }
 
     protected calcCellOffset() {
-        const halfWidth = this.traceWidth / 2
-        const offsetX = Math.round(this.scale.x / 2)// - halfWidth
-        const offsetY = Math.round(this.scale.y / 2)// - halfWidth
+        const correction = (this.traceWidth % 2 == 1) ? -0.5 : 0
+        const offsetX = Math.round(this.scale.x / 2) + correction
+        const offsetY = Math.round(this.scale.y / 2) + correction
         this.cellOffset = vec2(offsetX, offsetY)
         console.log('cell offset:', this.cellOffset.toString())
         console.log('trace width', this.traceWidth)
@@ -143,9 +182,9 @@ export default class TraceLayer
     protected traces = new Set<TraceRoute>()
 
     protected calculateRoutePoints(sourcePos: Vec2, destPos: Vec2,
-        sourceMinReach: number, destMinReach: number, anchors: ITracePathAnchors): Vec2[]
+        sourceMinReach: number, destMinReach: number, anchors: ITraceAnchors): Vec2[]
     {
-        let { verticalX1, horizontalY, verticalX2 } = anchors
+        let { vertical1: verticalX1, horizontal: horizontalY, vertical2: verticalX2 } = anchors
                 
         const deltaX = destPos.x - sourcePos.x
         const deltaY = destPos.y - sourcePos.y
@@ -153,9 +192,9 @@ export default class TraceLayer
         // 1 line segment (2 points)
         if (deltaY == 0 && deltaX > 0) {
             
-            anchors.verticalX1 = undefined
-            anchors.horizontalY = undefined
-            anchors.verticalX2 = undefined
+            anchors.vertical1 = undefined
+            anchors.horizontal = undefined
+            anchors.vertical2 = undefined
 
             return [
                 vec2(sourcePos),
@@ -169,9 +208,9 @@ export default class TraceLayer
             if (verticalX1 < sourcePos.x + sourceMinReach) verticalX1 = Math.round(sourcePos.x + sourceMinReach)
             if (verticalX1 > destPos.x - destMinReach) verticalX1 = Math.round(destPos.x - destMinReach)
             
-            anchors.verticalX1 = verticalX1
-            anchors.horizontalY = undefined
-            anchors.verticalX2 = undefined
+            anchors.vertical1 = verticalX1
+            anchors.horizontal = undefined
+            anchors.vertical2 = undefined
 
             return [
                 vec2(sourcePos),
@@ -198,21 +237,21 @@ export default class TraceLayer
                     horizontalY = (deltaY > 0)
                         ? destPos.y + 4 
                         : destPos.y - 4
-                    if (verticalX1 < destPos.x + 5) Math.round(verticalX1 = destPos.x + 5)
+                    if (verticalX1 < destPos.x + 5) verticalX1 = Math.round(destPos.x + 5)
                 }
             }
 
-            anchors.verticalX1 = verticalX1
-            anchors.horizontalY = horizontalY
-            anchors.verticalX2 = verticalX2
+            anchors.vertical1 = verticalX1
+            anchors.horizontal = horizontalY
+            anchors.vertical2 = verticalX2
 
             return [
-                vec2(sourcePos),
-                vec2(verticalX1, sourcePos.y),
-                vec2(verticalX1, horizontalY),
-                vec2(verticalX2, horizontalY),
-                vec2(verticalX2, destPos.y),
-                vec2(destPos)
+                vec2(sourcePos),                    //  0
+                vec2(verticalX1, sourcePos.y),      //  1
+                vec2(verticalX1, horizontalY),      //  2
+                vec2(verticalX2, horizontalY),      //  3
+                vec2(verticalX2, destPos.y),        //  4
+                vec2(destPos)                       //  5
             ]
         }
     }
@@ -238,18 +277,40 @@ export default class TraceLayer
 
         const polyline = document.createElementNS(xmlns, 'polyline')
 
-        Object.assign(polyline.style, {
+        const style = {
             fill: 'none',
             stroke: color,
             strokeWidth: this.traceWidth,
-            pointerEvents: 'none'
-        })
+            pointerEvents: 'none',
+            // filter: 'url(#traceFilter)'
+        }
+        Object.assign(polyline.style, style)
+        // const styleString = Object.entries(style).map(([key, value]) => `${key}: ${value};`).join(' ')
+        //polyline.setAttribute('style', styleString)
 
-        polyline.setAttributeNS(null, 'points', svgPoints)
+        polyline.setAttribute('points', svgPoints)
 
         this.svg.appendChild(polyline)
 
         return polyline
     }
 
+    protected createFilters() {
+        const defs = svgElement('defs', { parent: this.svg })
+        const filter = svgElement('filter', {
+            svgAttributes: {
+                id: 'traceFilter',
+            },
+            parent: defs,
+        })
+        const shadowFilter = svgElementWD('feDropShadow', {
+            svgAttributes: {
+                dx: 1, dy: 1,
+                stdDeviation: 2,
+                'flood-color': 'black',
+                'flood-opacity': 2
+            },
+            parent: filter
+        })
+    }
 }

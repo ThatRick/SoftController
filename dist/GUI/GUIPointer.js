@@ -102,6 +102,7 @@ export default class GUIPointer {
         };
         // Pointer move
         view.DOMElement.onpointermove = ev => {
+            ev.preventDefault();
             this.latestMovementEvent = ev;
         };
         // Pointer up

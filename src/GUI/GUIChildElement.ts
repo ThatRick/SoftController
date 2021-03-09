@@ -4,7 +4,7 @@ import GUIContainer from './GUIContainer.js'
 import { IChildElementGUI, IContainerGUI, IRootViewGUI, Vec2, EventHandlerFn, IStyleGUI } from './GUITypes.js'
 
 export const enum GUIChildEventType {
-    Moved,
+    PositionChanged,
     Removed
 }
 
@@ -39,8 +39,8 @@ export class GUIChildElement implements IChildElementGUI
         style?: Partial<CSSStyleDeclaration>,
         hasChildren = false
     ) {
-        this._pos = pos
-        this._size = size
+        this._pos = vec2(pos)
+        this._size = vec2(size)
 
         if (typeof elem == 'object') {
             this.DOMElement = elem
@@ -52,7 +52,6 @@ export class GUIChildElement implements IChildElementGUI
             position: 'absolute'
         }
         Object.assign(this.DOMElement.style, defaultStyle, style)
-        
         
         this.parentContainer = parent
         this.parentContainer.attachChildElement(this)
@@ -72,7 +71,7 @@ export class GUIChildElement implements IChildElementGUI
         this._pos.set(p)
         this._posHasChanged = true
         this.requestUpdate()
-        this.events.emit(GUIChildEventType.Moved)
+        this.events.emit(GUIChildEventType.PositionChanged)
         this.children?.parentMoved()
     }
     get pos() { return this._pos.copy() }
@@ -108,21 +107,21 @@ export class GUIChildElement implements IChildElementGUI
         Object.assign(this.DOMElement.style, style)
     }
 
-    update(force?: boolean)
+    update(forceUpdate?: boolean)
     {
-        if (this._posHasChanged || force) {
+        if (this._posHasChanged || forceUpdate) {
             this._posHasChanged = false;
             this._posScaled = Vec2.mul(this._pos, this.gui.scale)
             this.DOMElement.style.left =    this._posScaled.x + 'px'
             this.DOMElement.style.top =     this._posScaled.y + 'px'
         }
-        if (this._size && this._sizeHasChanged || force) {
+        if (this._size && this._sizeHasChanged || forceUpdate) {
             this._sizeHasChanged = false;
             this._sizeScaled = Vec2.mul(this._size, this.gui.scale)
             this.DOMElement.style.width =   this._sizeScaled.x + 'px'
             this.DOMElement.style.height =  this._sizeScaled.y + 'px'
         }
-        this.onUpdate?.(force)
+        this.onUpdate?.(forceUpdate)
         return false
     }
 
@@ -137,7 +136,7 @@ export class GUIChildElement implements IChildElementGUI
     }
     parentMoved() {
         this.onParentMoved?.()
-        this.events.emit(GUIChildEventType.Moved)
+        this.events.emit(GUIChildEventType.PositionChanged)
         this.children?.parentMoved()
     }
 

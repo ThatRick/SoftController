@@ -1,45 +1,55 @@
 
+import { IOPin } from '../State/IOPin.js'
 import { Style } from './Common.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import IOPinView from './IOPinView.js'
+import { TraceAnchorHandle } from './TraceLine.js'
 
 export default class CircuitSelection
 {
-    type: 'Block' | 'Pin' | null = null
+    type: 'Block' | 'Pin' | 'Anchor' | null = null
 
     blocks = new Set<FunctionBlockView>()
     pin: IOPinView | null
+    anchor: TraceAnchorHandle | null
 
     get isMulti() { return this.blocks.size > 1 }
 
-    has(elem: FunctionBlockView | IOPinView) {
+    has(elem: FunctionBlockView | IOPinView | TraceAnchorHandle) {
         if (elem instanceof FunctionBlockView) {
             return this.blocks.has(elem)
-        } else {
+        } else if (elem instanceof IOPinView) {
             return (this.pin == elem)
-        }   
+        } else if (elem instanceof TraceAnchorHandle) {
+            return (this.anchor == elem)
+        }
     }
-    set(elem: FunctionBlockView | IOPinView) {
+    set(elem: FunctionBlockView | IOPinView | TraceAnchorHandle) {
         this.removeAll()
         if (elem instanceof FunctionBlockView) {
             this.selectBlock(elem)
-        } else {
+        } else if (elem instanceof IOPinView) {
             this.selectPin(elem)
+        } else if (elem instanceof TraceAnchorHandle) {
+            this.selectAnchor(elem)
         }
     }
     add(block: FunctionBlockView) {
         this.selectBlock(block)
     }
-    remove(elem: FunctionBlockView | IOPinView) {
+    remove(elem: FunctionBlockView | IOPinView | TraceAnchorHandle) {
         if (elem instanceof FunctionBlockView) {
             this.unselectBlock(elem)
-        } else {
+        } else if (elem instanceof IOPinView) {
             this.unselectPin()
+        } else if (elem instanceof TraceAnchorHandle) {
+            this.unselectAnchor()
         }
     }
     removeAll() {
         this.blocks.forEach(block => this.unselectBlock(block))
         if (this.pin) this.unselectPin()
+        if (this.anchor) this.unselectAnchor()
     }
 
     constructor(protected style: Style) {}
@@ -56,13 +66,21 @@ export default class CircuitSelection
         if (this.blocks.size == 0) this.type = null
     }
     protected selectPin(pin: IOPinView) {
-        pin.setStyle({ backgroundColor: this.style.colors.pinSelection })
+        pin.backgroundColor = this.style.colors.pinSelection
         this.pin = pin
         this.type = 'Pin'
     }
     protected unselectPin() {
-        this.pin.setStyle({ backgroundColor: 'transparent' })
+        this.pin.backgroundColor = 'transparent'
         this.pin = null
+        this.type = null
+    }
+    protected selectAnchor(anchor: TraceAnchorHandle) {
+        this.anchor = anchor
+        this.type = 'Anchor'
+    }
+    protected unselectAnchor() {
+        this.anchor = null
         this.type = null
     }
 }
