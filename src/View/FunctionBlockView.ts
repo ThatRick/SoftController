@@ -6,7 +6,6 @@ import { IContainerGUI } from '../GUI/GUITypes.js'
 import IOPinView from './IOPinView.js'
 import CircuitView from './CircuitView.js'
 import { IOPinInterface } from '../State/IOPin.js'
-import { EventEmitter } from '../Lib/Events.js'
 
 export default class FunctionBlockView extends GUIChildElement
 {
@@ -51,8 +50,8 @@ export default class FunctionBlockView extends GUIChildElement
     protected blockEventHandler(ev: BlockEvent) {
         switch (ev.type)
         {
-            case BlockEventType.InputCount:
-            case BlockEventType.OutputCount:
+            case BlockEventType.InputCountChanged:
+            case BlockEventType.OutputCountChanged:
                 this.setSize(FunctionBlockView.getBlockSize(this.block))
                 if (this.visualStyle == 'minimum') this.createSymbol()
                 else this.createIONames()
@@ -62,7 +61,7 @@ export default class FunctionBlockView extends GUIChildElement
                 this.delete()
                 break
             default:
-                console.error('FunctionBlockView: Unhandled block event!')
+                // console.log('FunctionBlockView: Unhandled block event!')
         }
     }
     protected onRescale() {

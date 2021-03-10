@@ -4,7 +4,7 @@ import Circuit from '../State/Circuit.js'
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import * as HTML from '../Lib/HTML.js'
 import { defaultStyle, Style } from './Common.js'
-import { BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionTypeDefinition } from '../State/FunctionBlock.js'
+import { BlockEvent, BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionTypeDefinition } from '../State/FunctionBlock.js'
 import { CircuitBlock } from '../State/FunctionLib.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import { EventEmitter } from '../Lib/Events.js'
@@ -106,7 +106,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         return this.circuit.blocks.map(block => this.blockViewsMap.get(block))
     }
 
-    ioSourceModified(event: IOPinEvent) {
+    ioSourceChangeHandler = (event: IOPinEvent) => {
         const io = event.source
         
         if (event.type == IOPinEventType.SourceChanged) {
@@ -126,6 +126,13 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
                 if (currentTrace && (currentTrace.sourcePinView.io != io.sourcePin)) currentTrace.delete()
                 this.createConnectionTrace(io)
             }
+        }
+    }
+
+    functionBlockIOAddHandler = (event: BlockEvent) => {
+        if (event.type == BlockEventType.InputAdded) {
+            const newInput = event.source.inputs[event.source.inputs.length-1]
+            newInput.events.subscribe(this.ioSourceChangeHandler, [IOPinEventType.SourceChanged])
         }
     }
 
@@ -159,8 +166,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     protected createFunctionBlockView(block: FunctionBlockInterface, pos: Vec2) {
         const blockView = new FunctionBlockView(block, pos, this.body.children)
         // subscribe for io connection events
-        block.inputs.forEach(input => input.events.subscribe(this.ioSourceModified.bind(this), [IOPinEventType.SourceChanged]))
-        
+        block.inputs.forEach(input => input.events.subscribe(this.ioSourceChangeHandler, [IOPinEventType.SourceChanged]))
+        block.events.subscribe(this.functionBlockIOAddHandler, [BlockEventType.InputAdded])
         this.blockViewsMap.set(block, blockView)
         return blockView
     }
@@ -200,7 +207,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
 
     protected createCircuitPinView(io: IOPinInterface, pos: Vec2) {
         const pin = new IOPinView(io, pos, this.body.children)
-        if (pin.direction == 'left') io.events.subscribe(this.ioSourceModified.bind(this), [IOPinEventType.SourceChanged])
+        if (pin.direction == 'left') io.events.subscribe(this.ioSourceChangeHandler.bind(this), [IOPinEventType.SourceChanged])
         return pin 
     }
 

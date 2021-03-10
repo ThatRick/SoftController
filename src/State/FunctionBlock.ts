@@ -38,10 +38,11 @@ interface VariableIOCountDefinition {
 }
 
 export const enum BlockEventType {
-    InputCount,
-    OutputCount,
+    InputCountChanged,
+    OutputCountChanged,
     Removed,
-    Test
+    InputAdded,
+    InputRemoved
 }
 
 export interface BlockEvent {
@@ -103,6 +104,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
             while (this.inputs.length > newLength) {
                 const input = this.inputs.pop()
                 input.remove()
+                this.events.emit(BlockEventType.InputRemoved)
             }
         }
         // Add inputs
@@ -119,10 +121,13 @@ export abstract class FunctionBlock implements FunctionBlockInterface
                 const newInputs = initialStruct.map(({name, value, dataType}) => {
                     return new IOPin('input', value, name+numbering, dataType, this, this.getIONum )
                 })
-                this.inputs.push(...newInputs)
+                newInputs.forEach(input => {
+                    this.inputs.push(input)
+                    this.events.emit(BlockEventType.InputAdded)
+                })
             }
         }
-        this.events.emit(BlockEventType.InputCount)
+        this.events.emit(BlockEventType.InputCountChanged)
     }
 
     setVariableOutputCount(n: number) { /* todo */ }

@@ -9,7 +9,7 @@ export class DropdownMenu {
         this.buttonName = name;
         this.items = options.items;
         this.button = new Button(name, this.DOMElement);
-        this.menu = new HTMLMenu(options.items, {
+        this.menu = new HTMLMenu(options.items.reduce((obj, name) => obj[name] = true, {}), {
             parent: this.DOMElement,
             menuStyle: { visibility: 'hidden' }
         });

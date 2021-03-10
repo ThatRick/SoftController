@@ -68,35 +68,6 @@ function testCircuit(view: CircuitView, terminal: ControllerTerminal) {
     const blocks = view.circuitBlock.circuit.blocks
 }
 
-function testzone(terminal: ControllerTerminal) {
-    const and = getFunctionBlock({typeName: 'AND'})
-    and.events.subscribe(ev => {
-        switch(ev.type)
-        {
-            case BlockEventType.InputCount:
-                console.log('Function block input count changed')
-                break
-            case BlockEventType.Test:
-                console.log('Got test event')
-                break
-        }
-    }, [BlockEventType.Test])
-
-    and.inputs[0].setValue(0)
-    and.update(1)
-    terminal.print(and.toString())
-    
-    and.inputs[0].setValue(1)
-    and.update(1)
-    terminal.print(and.toString())
-    
-    and.setVariableInputCount(3)
-    and.update(1)
-    terminal.print(and.toString())
-    and.events.emit(BlockEventType.Test)
-
-}
-
 async function app()
 {
     const mainMenubar = new Menubar(document.getElementById('mainMenubar'))

@@ -53,6 +53,7 @@ export class FunctionBlock {
             while (this.inputs.length > newLength) {
                 const input = this.inputs.pop();
                 input.remove();
+                this.events.emit(4 /* InputRemoved */);
             }
         }
         // Add inputs
@@ -69,10 +70,13 @@ export class FunctionBlock {
                 const newInputs = initialStruct.map(({ name, value, dataType }) => {
                     return new IOPin('input', value, name + numbering, dataType, this, this.getIONum);
                 });
-                this.inputs.push(...newInputs);
+                newInputs.forEach(input => {
+                    this.inputs.push(input);
+                    this.events.emit(3 /* InputAdded */);
+                });
             }
         }
-        this.events.emit(0 /* InputCount */);
+        this.events.emit(0 /* InputCountChanged */);
     }
     setVariableOutputCount(n) { }
     update(dt) {

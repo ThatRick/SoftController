@@ -29,8 +29,8 @@ export default class FunctionBlockView extends GUIChildElement {
     get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
     blockEventHandler(ev) {
         switch (ev.type) {
-            case 0 /* InputCount */:
-            case 1 /* OutputCount */:
+            case 0 /* InputCountChanged */:
+            case 1 /* OutputCountChanged */:
                 this.setSize(FunctionBlockView.getBlockSize(this.block));
                 if (this.visualStyle == 'minimum')
                     this.createSymbol();
@@ -42,7 +42,7 @@ export default class FunctionBlockView extends GUIChildElement {
                 this.delete();
                 break;
             default:
-                console.error('FunctionBlockView: Unhandled block event!');
+            // console.log('FunctionBlockView: Unhandled block event!')
         }
     }
     onRescale() {

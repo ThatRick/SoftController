@@ -48,7 +48,7 @@ export default function CircuitContextMenu(options: {
         },
         'Add block': () => { console.log('Add block clicked') },
     }
-    const menu = new HTMLMenu(Object.keys(items), {
+    const menu = new HTMLMenu(items, {
         parent: parentContainer,
         menuStyle: {
             left: pos.x + 'px',

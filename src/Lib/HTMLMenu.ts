@@ -1,24 +1,25 @@
 import { Button, domElement, Element } from './HTML.js'
 
 export default class HTMLMenu extends Element {
-    items: string[]
 
-    constructor(items: string[], options: {
+    constructor(items: Record<string, unknown>, options: {
         parent?: HTMLElement,
         menuStyle?: Partial<CSSStyleDeclaration>,
         itemStyle?: Partial<CSSStyleDeclaration>,
+        disabledItemStyle?: Partial<CSSStyleDeclaration>,
         onItemSelected?: (index: number, name: string) => void
     }) {
         super()
-        this.items = items
-        this.DOMElement = this.createMenu(items, options?.menuStyle, options?.itemStyle)
+        this.DOMElement = this.createMenu(items, options?.menuStyle, options?.itemStyle, options?.disabledItemStyle)
         options?.parent?.appendChild(this.DOMElement)
         this.onItemSelected = options?.onItemSelected
     }
 
     onItemSelected?: (index: number, name: string) => void
 
-    protected createMenu(items: string[], menuStyle?: Partial<CSSStyleDeclaration>, itemStyle?: Partial<CSSStyleDeclaration>) {
+    protected createMenu(items: Record<string, unknown>, menuStyle?: Partial<CSSStyleDeclaration>,
+        itemStyle?: Partial<CSSStyleDeclaration>, disabledItemStyle?: Partial<CSSStyleDeclaration>) {
+
         const menu = domElement(this.DOMElement, 'div', {
             position: 'absolute',
             display: 'block',
@@ -29,7 +30,10 @@ export default class HTMLMenu extends Element {
             minWidth: '40px',
             ...menuStyle
         })
-        this.items.forEach((name, i) => {
+        Object.entries(items).forEach(([name, action], i) => {
+            itemStyle ??= { color: '#FFF' }
+            disabledItemStyle ??= { color: '#888' }
+            const style = (action) ? itemStyle : disabledItemStyle
             const option = new Button(name, menu, {
                 border: 'none',
                 borderBottom: 'thin solid',
@@ -37,9 +41,9 @@ export default class HTMLMenu extends Element {
                 paddingLeft: '2px',
                 paddingRight: '4px',
                 borderRadius: '0',
-                ...itemStyle
+                ...style
             })
-            option.onUp = ev => this.onItemSelected?.(i, name)
+            option.onUp = (action) ? ev => this.onItemSelected?.(i, name): null
         })
         return menu
     }

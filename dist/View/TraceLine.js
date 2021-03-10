@@ -6,9 +6,6 @@ export class TraceAnchorHandle extends GUIChildElement {
         super(traceLine.circuitView.body.children, 'div', pos, size);
         this.name = name;
         this.traceLine = traceLine;
-        this.onClicked = () => {
-            console.log('Anchor:', this.name);
-        };
         this.onPointerEnter = () => this.setStyle({ backgroundColor: this.traceLine.circuitView.style.colors.pinHighlight });
         this.onPointerLeave = () => this.setStyle({ backgroundColor: 'transparent' });
         this.type = (name == 'horizontal') ? 'horizontal' : 'vertical';
@@ -49,7 +46,6 @@ export class TraceLine {
         this.instanceID = TraceLine.instanceCounter++;
     }
     update() {
-        console.log('Update TraceLine ID', this.instanceID);
         this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos);
         this.updateHandles();
     }

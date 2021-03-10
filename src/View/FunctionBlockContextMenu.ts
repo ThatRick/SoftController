@@ -15,7 +15,7 @@ export default function FunctionBlockContextMenu(options: {
     const {blockView, pos, parentContainer, destructor} = options
     
     const items = {
-        'Input count': () => {
+        'Input count': (blockView.block.variableInputs) ? () => {
             const input = new HTMLInput({
                 name: 'Input count',
                 value: blockView.block.inputs.length,
@@ -30,13 +30,13 @@ export default function FunctionBlockContextMenu(options: {
                     input.remove()
                 }
             })
-        },
-        'Insertion point': () => { console.log('Insertion point clicked') },
-        'Copy': () => { console.log('Copy clicked') },
-        'Replace': () => { console.log('Replace clicked') },
+        } : null,
+        'Insertion point': null,
+        'Copy': null,
+        'Replace': null,
         'Delete': () => { blockView.delete() },
     }
-    const menu = new HTMLMenu(Object.keys(items), {
+    const menu = new HTMLMenu(items, {
         parent: parentContainer,
         menuStyle: {
             left: pos.x + 'px',

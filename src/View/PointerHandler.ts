@@ -9,6 +9,8 @@ import IOPinView from './IOPinView.js'
 import FunctionBlockContextMenu from './FunctionBlockContextMenu.js'
 import CircuitContextMenu from './CircuitContextMenu.js'
 import { TraceAnchorHandle } from './TraceLine.js'
+import { IOPin } from '../State/IOPin.js'
+import IOPinContextMenu from './IOPinContextMenu.js'
 
 const enum PointerMode {
     DEFAULT,
@@ -129,6 +131,22 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                     menu.remove()
                     menu = null
                     pointerMode = PointerMode.DEFAULT
+                    selection.removeAll()
+                }
+            })
+        }
+        // Open IO pin context menu
+        else if (elem instanceof IOPinView) {
+            pointerMode = PointerMode.MODAL_MENU
+            menu = IOPinContextMenu({
+                ioPinView: elem,
+                parentContainer: circuit.DOMElement,
+                pos: pointer.screenDownPos.copy(),
+                destructor: () => {
+                    menu.remove()
+                    menu = null
+                    pointerMode = PointerMode.DEFAULT
+                    selection.removeAll()
                 }
             })
         }
@@ -222,6 +240,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     // -------------
     let connectionLine: HTML.SVGLine
     let connectionValid: boolean
+    let connectionDropTargetPin: IOPinView
 
     dragBehaviour.set(PointerMode.DRAG_IO_PIN,
     {
@@ -236,18 +255,27 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         },
         move(ev: PointerEvent) {
             connectionLine.setEndPos(pointer.screenPos)
+            if (pointer.targetElem instanceof IOPinView) {
+                connectionDropTargetPin = pointer.targetElem as IOPinView
+                connectionValid = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'right' ||
+                                   selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'left');
+                                   
+                connectionLine.setColor(connectionValid ? circuit.style.colors.connectionLineValid
+                                                        : circuit.style.colors.connectionLine)
+            }
+            else {
+                connectionValid = false
+                connectionDropTargetPin = null
+                connectionLine.setColor(circuit.style.colors.connectionLine)
+            }
         },
         end(ev: PointerEvent) {
-            if (pointer.targetElem instanceof IOPinView) {
-                const dropTargetPin = pointer.targetElem as IOPinView
-                if (selection.pin.direction == 'left' && dropTargetPin.direction == 'right') {
-                    selection.pin.io.setSource(dropTargetPin.io)
-                    selection.removeAll()
-                }
-                else if (selection.pin.direction == 'right' && dropTargetPin.direction == 'left') {
-                    dropTargetPin.io.setSource(selection.pin.io)
-                    selection.removeAll()
-                }
+            if (connectionValid) {
+                (selection.pin.direction == 'left')
+                    ? selection.pin.io.setSource(connectionDropTargetPin.io)
+                    : connectionDropTargetPin.io.setSource(selection.pin.io)
+                
+                selection.removeAll()
             }
             connectionLine.delete()
         }

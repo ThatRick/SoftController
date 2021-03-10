@@ -39,6 +39,36 @@ export default class CircuitView extends GUIView {
         });
         this.circuitViewEvents = new EventEmitter(this);
         this.selection = new CircuitSelection(this.style);
+        this.ioSourceChangeHandler = (event) => {
+            const io = event.source;
+            if (event.type == IOPinEventType.SourceChanged) {
+                // Get containing block view (or this as circuit view)
+                const blockView = (io.block == this.circuitBlock) ? this : this.blockViewsMap.get(io.block);
+                // Get IOPinView
+                const pinView = blockView?.getPinForIO(io);
+                if (!pinView) {
+                    console.error('Pin view not found for IO event:', event);
+                    return;
+                }
+                const currentTrace = this.traceLinesMap.get(io);
+                // If connection removed
+                if (!io.sourcePin) {
+                    currentTrace?.delete();
+                }
+                // If connection made
+                if (io.sourcePin) {
+                    if (currentTrace && (currentTrace.sourcePinView.io != io.sourcePin))
+                        currentTrace.delete();
+                    this.createConnectionTrace(io);
+                }
+            }
+        };
+        this.functionBlockIOAddHandler = (event) => {
+            if (event.type == 3 /* InputAdded */) {
+                const newInput = event.source.inputs[event.source.inputs.length - 1];
+                newInput.events.subscribe(this.ioSourceChangeHandler, [IOPinEventType.SourceChanged]);
+            }
+        };
         this.blockViewsMap = new WeakMap();
         this.traceLinesMap = new WeakMap();
         this.body = new CircuitBody(this);
@@ -69,30 +99,6 @@ export default class CircuitView extends GUIView {
     get blockViews() {
         return this.circuit.blocks.map(block => this.blockViewsMap.get(block));
     }
-    ioSourceModified(event) {
-        const io = event.source;
-        if (event.type == IOPinEventType.SourceChanged) {
-            // Get containing block view (or this as circuit view)
-            const blockView = (io.block == this.circuitBlock) ? this : this.blockViewsMap.get(io.block);
-            // Get IOPinView
-            const pinView = blockView?.getPinForIO(io);
-            if (!pinView) {
-                console.error('Pin view not found for IO event:', event);
-                return;
-            }
-            const currentTrace = this.traceLinesMap.get(io);
-            // If connection removed
-            if (!io.sourcePin) {
-                currentTrace?.delete();
-            }
-            // If connection made
-            if (io.sourcePin) {
-                if (currentTrace && (currentTrace.sourcePinView.io != io.sourcePin))
-                    currentTrace.delete();
-                this.createConnectionTrace(io);
-            }
-        }
-    }
     getPinForIO(io) {
         let foundPin;
         foundPin = this.inputPins.find(pin => pin.io == io);
@@ -102,7 +108,8 @@ export default class CircuitView extends GUIView {
     createFunctionBlockView(block, pos) {
         const blockView = new FunctionBlockView(block, pos, this.body.children);
         // subscribe for io connection events
-        block.inputs.forEach(input => input.events.subscribe(this.ioSourceModified.bind(this), [IOPinEventType.SourceChanged]));
+        block.inputs.forEach(input => input.events.subscribe(this.ioSourceChangeHandler, [IOPinEventType.SourceChanged]));
+        block.events.subscribe(this.functionBlockIOAddHandler, [3 /* InputAdded */]);
         this.blockViewsMap.set(block, blockView);
         return blockView;
     }
@@ -141,7 +148,7 @@ export default class CircuitView extends GUIView {
     createCircuitPinView(io, pos) {
         const pin = new IOPinView(io, pos, this.body.children);
         if (pin.direction == 'left')
-            io.events.subscribe(this.ioSourceModified.bind(this), [IOPinEventType.SourceChanged]);
+            io.events.subscribe(this.ioSourceChangeHandler.bind(this), [IOPinEventType.SourceChanged]);
         return pin;
     }
     onResize() {

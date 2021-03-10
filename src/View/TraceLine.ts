@@ -13,9 +13,6 @@ export class TraceAnchorHandle extends GUIChildElement {
         this.type = (name == 'horizontal') ? 'horizontal' : 'vertical'
         this.setStyle({cursor: (this.type == 'horizontal') ? 'n-resize' : 'e-resize'})
     }
-    onClicked = () => {
-        console.log('Anchor:', this.name)
-    }
     move(pos: Vec2) {
         const value = (this.type == 'horizontal') ? pos.y : pos.x
         this.traceLine.anchorHandleMoved(this.name, value)
@@ -28,7 +25,6 @@ export class TraceLine {
     route: TraceRoute
     
     update() {
-        console.log('Update TraceLine ID', this.instanceID)
         this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos)
         this.updateHandles()
     }
@@ -100,8 +96,6 @@ export class TraceLine {
         this.traceLayer.updateColor(this.route, this.sourcePinView.color)
     }
     
-
-
     protected updateHandles() {
         const handles = this.handles
         switch (this.route.points.length)

@@ -76,6 +76,7 @@ export default class IOPinView extends GUIChildElement
     protected updateStyle() {
         const pinStyle = (this.io.inverted) ? this.invertedPinStyle : this.pinStyle
         Object.assign(this.pin.style, pinStyle)
+        this.updatePinColor()
     }
 
     protected create() {
