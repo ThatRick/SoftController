@@ -9,7 +9,7 @@ export class TraceAnchorHandle extends GUIChildElement {
         this.onPointerEnter = () => this.setStyle({ backgroundColor: this.traceLine.circuitView.style.colors.pinHighlight });
         this.onPointerLeave = () => this.setStyle({ backgroundColor: 'transparent' });
         this.type = (name == 'horizontal') ? 'horizontal' : 'vertical';
-        this.setStyle({ cursor: (this.type == 'horizontal') ? 'n-resize' : 'e-resize' });
+        this.setStyle({ cursor: (this.type == 'horizontal') ? 'ns-resize' : 'ew-resize' });
     }
     move(pos) {
         const value = (this.type == 'horizontal') ? pos.y : pos.x;

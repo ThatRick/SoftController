@@ -11,7 +11,7 @@ export class TraceAnchorHandle extends GUIChildElement {
     constructor(readonly name: keyof ITraceAnchors, readonly traceLine: TraceLine, pos: Vec2, size: Vec2) {
         super(traceLine.circuitView.body.children, 'div', pos, size)
         this.type = (name == 'horizontal') ? 'horizontal' : 'vertical'
-        this.setStyle({cursor: (this.type == 'horizontal') ? 'n-resize' : 'e-resize'})
+        this.setStyle({cursor: (this.type == 'horizontal') ? 'ns-resize' : 'ew-resize'})
     }
     move(pos: Vec2) {
         const value = (this.type == 'horizontal') ? pos.y : pos.x

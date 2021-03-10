@@ -19,6 +19,31 @@ export default class Grid<Cell extends Object>
         }
     }
 
+    fillRect(pos: Vec2, size: Vec2, value: Cell) {
+        for (let y=pos.y; y < pos.y + size.y; y++) {
+            this.cells[y] ??= []
+            for (let x=pos.x; x < pos.x + size.x; x++) {
+                this.cells[y][x] = value
+            }
+        }
+    }
+
+    fillVerticalLine(a: Vec2, b: Vec2, value: Cell) {
+        const [top, bottom] = (a.y < b.y) ? [a.y, b.y] : [b.y, a.y]
+        for (let y=top; y<bottom; y++) {
+            this.cells[y] ??= []
+            this.cells[y][a.x] = value
+        }
+    }
+    fillHorizontalLine(a: Vec2, b: Vec2, value: Cell) {
+        const [left, right] = (a.x < b.x) ? [a.x, b.x] : [b.x, a.x]
+        for (let x=left; x<right; x++) {
+            this.cells[a.y] ??= []
+            this.cells[a.y][x] = value
+        }
+    }
+    
+
     getCell(pos: Vec2) {
         return this.cells[pos.y]?.[pos.x]
     }
@@ -48,7 +73,7 @@ export default class Grid<Cell extends Object>
                 if (this.cells[y][x] != undefined) return true
             }
         }
-        return true
+        return false
     }
 
     rectHasProps(props: Array<keyof Cell>, pos: Vec2, size?: Vec2) {
@@ -62,7 +87,7 @@ export default class Grid<Cell extends Object>
                 if (hasProps(this.cells[y][x])) return true
             }
         }
-        return true
+        return false
     }
 
     deleteCell(pos: Vec2) {

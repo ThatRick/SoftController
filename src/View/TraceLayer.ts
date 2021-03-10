@@ -90,12 +90,13 @@ export default class TraceLayer
         trace = null
     }
 
+    
     get size() {
         return vec2(this.svg.clientWidth, this.svg.clientHeight)
     }
-
+    
     cellCenterScreenPos(pos: Vec2) { return Vec2.mul(pos, this.scale).add(this.cellOffset) }
-
+    
     rescale(scale: Vec2) {
         this.scale = scale
         this.calcCellOffset()
@@ -104,8 +105,10 @@ export default class TraceLayer
             trace.polyline.style.strokeWidth = this.traceWidth+'px'
         })
     }
-
+    
     svg: SVGSVGElement
+
+    readonly traces = new Set<TraceRoute>()
     
     //  Constructor
     // -------------
@@ -144,8 +147,6 @@ export default class TraceLayer
     protected style: Style
 
     protected cellOffset: Vec2
-
-    protected traces = new Set<TraceRoute>()
 
     protected calculateRoutePoints(sourcePos: Vec2, destPos: Vec2,
         sourceMinReach: number, destMinReach: number, anchors: ITraceAnchors): Vec2[]
