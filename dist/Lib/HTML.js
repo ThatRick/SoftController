@@ -1,3 +1,4 @@
+export { svgElement, svgElementWD, SVGLine } from './SVGElement.js';
 export const defaultStyle = {
     colors: {
         base: '#445',

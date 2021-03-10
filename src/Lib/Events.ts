@@ -7,12 +7,13 @@ interface Event {
 
 export class EventEmitter<T extends Event>
 {
-    subscribe(fn: Subscriber<T>, eventTypes?: number[]): void {
-        const typeMask = eventTypes ? eventTypes.reduce((mask, type) => mask += (1 << type), 0) : null
+    subscribe(fn: Subscriber<T>, eventMask?: number[]): void {
+        const typeMask = eventMask ? eventMask.reduce((mask, type) => mask += (1 << type), 0) : null
         this.subscribers.set(fn, typeMask)
     }
     unsubscribe(fn: Subscriber<T>): void {
-        this.subscribers.delete(fn)
+        const successful = this.subscribers.delete(fn)
+        if (!successful) console.error('Could not unsubscribe event listener', fn, [...this.subscribers.keys()])
     }
 
     emit(type: number) {

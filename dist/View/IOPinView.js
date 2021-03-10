@@ -29,11 +29,11 @@ export default class IOPinView extends GUIChildElement {
     }
     ioEventHandler(ev) {
         switch (ev.type) {
-            case IOPinEventType.Value:
+            case IOPinEventType.ValueChanged:
                 break;
-            case IOPinEventType.Source:
+            case IOPinEventType.SourceChanged:
                 break;
-            case IOPinEventType.Inverted:
+            case IOPinEventType.InvertionChanged:
                 this.updateStyle();
                 break;
             case IOPinEventType.Removed:

@@ -1,45 +1,8 @@
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import { Style } from './Common.js'
+import { svgElement, svgElementWD } from '../Lib/HTML.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
-
-function svgElement<K extends keyof SVGElementTagNameMap>(name: K, options: {
-    svgAttributes?: Record<string, string | number>,
-    css?: Partial<CSSStyleDeclaration>,
-    parent?: SVGElement
-}): SVGElementTagNameMap[K]
-{
-    // Create SVG Element
-    const elem = document.createElementNS(xmlns, name)
-    // Set SVG attributes
-    options.svgAttributes && Object.entries(options.svgAttributes).forEach(([key, value]) => {
-        elem.setAttribute(key, value.toString())
-    })
-    // Set CSS style
-    options.css && Object.assign(elem.style, options.css)
-    // Append to parent
-    options.parent?.appendChild(elem)
-    return elem
-}
-
-function svgElementWD(name: string, options: {
-    svgAttributes?: Record<string, string|number>,
-    css?: Partial<CSSStyleDeclaration>,
-    parent?: SVGElement
-}): SVGElement
-{
-    // Create SVG Element
-    const elem = document.createElementNS(xmlns, name)
-    // Set SVG attributes
-    options.svgAttributes && Object.entries(options.svgAttributes).forEach(([key, value]) => {
-        elem.setAttribute(key, value.toString())
-    })
-    // Set CSS style
-    options.css && Object.assign(elem.style, options.css)
-    // Append to parent
-    options.parent?.appendChild(elem)
-    return elem
-}
  
 const minReverseHorizontalYOffset = 3
 
@@ -131,6 +94,8 @@ export default class TraceLayer
         return vec2(this.svg.clientWidth, this.svg.clientHeight)
     }
 
+    cellCenterScreenPos(pos: Vec2) { return Vec2.mul(pos, this.scale).add(this.cellOffset) }
+
     rescale(scale: Vec2) {
         this.scale = scale
         this.calcCellOffset()
@@ -139,6 +104,8 @@ export default class TraceLayer
             trace.polyline.style.strokeWidth = this.traceWidth+'px'
         })
     }
+
+    svg: SVGSVGElement
     
     //  Constructor
     // -------------
@@ -153,8 +120,8 @@ export default class TraceLayer
         Object.assign(svg.style,
         {
             position: 'absolute',
-            top: '0px', left: '0px',
-            width: '100%', height: '100%',
+            top: '0px',     left: '0px',
+            width: '100%',  height: '100%',
             pointerEvents: 'none'
         } as Partial<CSSStyleDeclaration>)
         
@@ -173,7 +140,6 @@ export default class TraceLayer
 
     protected get traceWidth() { return Math.round(this.style.traceWidth * this.scale.y) }
 
-    protected svg: SVGSVGElement
     protected scale: Vec2
     protected style: Style
 
@@ -284,10 +250,12 @@ export default class TraceLayer
             pointerEvents: 'none',
             // filter: 'url(#traceFilter)'
         }
-        Object.assign(polyline.style, style)
+        // Line shadow. Does not work on straight horizontal line because effect bounds is relative to element size (def. -10%...120%)
         // const styleString = Object.entries(style).map(([key, value]) => `${key}: ${value};`).join(' ')
-        //polyline.setAttribute('style', styleString)
-
+        // polyline.setAttribute('style', styleString)
+        
+        Object.assign(polyline.style, style)
+        
         polyline.setAttribute('points', svgPoints)
 
         this.svg.appendChild(polyline)

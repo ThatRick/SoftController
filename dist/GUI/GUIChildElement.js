@@ -97,5 +97,6 @@ export class GUIChildElement {
     delete() {
         this.parentContainer.removeChildElement(this);
         this.children?.delete();
+        this.events.emit(1 /* Removed */);
     }
 }

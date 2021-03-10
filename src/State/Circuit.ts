@@ -2,6 +2,7 @@ import { FunctionBlock, FunctionBlockInterface, FunctionInstanceDefinition } fro
 import { IOPinInterface } from './IOPin.js';
 import { FunctionTypeName, getFunctionBlock } from './FunctionLib.js'
 import { Subscriber } from "./CommonTypes.js";
+import { EventEmitter } from "../Lib/Events.js";
 
 ///////////////////////////////
 //          Circuit
@@ -17,8 +18,8 @@ export const enum CircuitEventType
 }
 
 interface CircuitEvent {
-    target: CircuitInterface
     type: CircuitEventType
+    source: CircuitInterface
 }
 
 export interface CircuitDefinition
@@ -34,9 +35,6 @@ export interface CircuitInterface
     connect(inputPin: IOPinInterface, outputPin: IOPinInterface, inverted?: boolean)
     disconnect(inputPin: IOPinInterface)
     update(dt: number)
-
-    subscribe(obj: Subscriber<CircuitEvent>): void
-    unsubscribe(obj: Subscriber<CircuitEvent>): void
 
     remove(): void
 }
@@ -56,21 +54,16 @@ export default class Circuit implements CircuitInterface
 
     disconnect(inputPin: IOPinInterface) {}
 
-    subscribe(obj: Subscriber<CircuitEvent>) {
-        this.subscribers.add(obj)
-    }
-    unsubscribe(obj: Subscriber<CircuitEvent>) {
-        this.subscribers.delete(obj)
-    }
-
     update(dt: number) {
         this._blocks.forEach(block => block.update(dt))
     }
 
     remove() {
-        this.emitEvent(CircuitEventType.Removed)
-        this.subscribers.clear()
+        this.events.emit(CircuitEventType.Removed)
+        this.events.clear()
     }
+
+    events = new EventEmitter<CircuitEvent>(this)
 
     constructor(def: CircuitDefinition, circBlock: FunctionBlock)
     {
@@ -104,10 +97,4 @@ export default class Circuit implements CircuitInterface
 
     protected _blocks: Set<FunctionBlock>
 
-    protected subscribers = new Set<Subscriber<CircuitEvent>>()
-    
-    protected emitEvent(type: CircuitEventType) {
-        const event = { type, target: this }
-        this.subscribers.forEach(fn => fn(event))
-    }
 }

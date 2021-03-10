@@ -15,8 +15,7 @@ const enum PointerMode {
     DRAG_SCROLL_VIEW,
     DRAG_SELECTION_BOX,
     DRAG_BLOCK,
-    DRAG_INPUT_PIN,
-    DRAG_OUTPUT_PIN,
+    DRAG_IO_PIN,
     DRAG_TRACE_ANCHOR,
     INSERT_NEW_BLOCK,
     MODAL_MENU,
@@ -38,7 +37,6 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 {
     const pointer = circuit.pointer
     const selection = circuit.selection
-    const body = circuit.body
 
     let menu: HTMLMenu
 
@@ -47,32 +45,51 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     const onPointerDown = (ev: PointerEvent) => {
         const elem = pointer.targetElem
         if (ev.altKey) console.log('Target', elem, pointer.screenPos)
+        
         // Discard modal menu
         if (menu) {
             menu.remove()
             menu = null
         }
-        // Set selection to unselected block (to enable instant dragging of unselected)
-        if (!ev.shiftKey && elem instanceof FunctionBlockView && !selection.has(elem)) {
-            selection.set(elem)
-        }
-        // Select Pin or Anchor
-        else if (elem instanceof IOPinView || elem instanceof TraceAnchorHandle) {
-            selection.set(elem)
-        }
-        else if (elem == body) {
+        // Unselect all
+        if (elem == circuit.body) {
             selection.removeAll()
+        }
+        // Set selection to unselected block (to enable instant dragging of unselected block)
+        else if (elem instanceof FunctionBlockView && !ev.shiftKey && !selection.has(elem)) {
+            selection.set(elem)
+        }
+        // Anchor
+        else if (elem instanceof TraceAnchorHandle) {
+            selection.set(elem)
+        }
+        // IO Pin
+        else if (elem instanceof IOPinView) {
+            const clickedPin = elem as IOPinView
+            if (selection.type == 'Pin') {
+                if (selection.pin.direction == 'left' && clickedPin.direction == 'right') {
+                    // Make connection
+                    selection.pin.io.setSource(clickedPin.io)
+                    // Unselect
+                    selection.removeAll()
+                }
+                else if (selection.pin.direction == 'right' && clickedPin.direction == 'left') {
+                    // Make connection
+                    clickedPin.io.setSource(selection.pin.io)
+                    // Unselect if not shift key down
+                    if (!ev.shiftKey) selection.removeAll()
+                }
+                else selection.set(elem)
+            }
+            else selection.set(elem)
         }
     }
 
     const onClicked = (ev: PointerEvent) => {
         const elem = pointer.targetElem
-        // Deselect all
-        if (elem == body) {
-            selection.removeAll()
-        }
+
         // Set selection to block (no shift key)
-        else if (!ev.shiftKey && elem instanceof FunctionBlockView) {
+        if (!ev.shiftKey && elem instanceof FunctionBlockView) {
             selection.set(elem)
         }
         // Add or remove selection (with shift key)
@@ -87,7 +104,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         const elem = pointer.targetElem
         
         // Open circuit context menu
-        if (elem == body) {
+        if (elem == circuit.body) {
             selection.removeAll()
             pointerMode = PointerMode.MODAL_MENU
             menu = CircuitContextMenu({
@@ -119,8 +136,8 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 
     const dragBehaviour = new Map<PointerMode, IDragBehaviour>()
 
-    //  Darg to scroll view
-    // ---------------------
+    //  Scroll view
+    // -------------
     let scrollStartPos: Vec2
 
     dragBehaviour.set(PointerMode.DRAG_SCROLL_VIEW,
@@ -138,8 +155,8 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         }
     })
     
-    //  Drag to draw selection box
-    // ----------------------------
+    //  Draw selection box
+    // --------------------
     let selectionBoxStartPos: Vec2
     let selectionBox: HTMLElement
 
@@ -201,15 +218,38 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         }
     })
 
-    //  Drag input pin
-    // ----------------
-    dragBehaviour.set(PointerMode.DRAG_INPUT_PIN,
+    //  Drag IO pin
+    // -------------
+    let connectionLine: HTML.SVGLine
+    let connectionValid: boolean
+
+    dragBehaviour.set(PointerMode.DRAG_IO_PIN,
     {
         start(ev: PointerEvent) {
+            const startPos = circuit.traceLayer.cellCenterScreenPos(selection.pin.absPos)
+            const endPos = pointer.screenPos
+            connectionLine = new HTML.SVGLine(startPos, endPos, {
+                parent: circuit.traceLayer.svg,
+                color: 'rgba(255, 255, 255, 0.5)',
+                dashArray: '3, 3'
+            })
         },
         move(ev: PointerEvent) {
+            connectionLine.setEndPos(pointer.screenPos)
         },
         end(ev: PointerEvent) {
+            if (pointer.targetElem instanceof IOPinView) {
+                const dropTargetPin = pointer.targetElem as IOPinView
+                if (selection.pin.direction == 'left' && dropTargetPin.direction == 'right') {
+                    selection.pin.io.setSource(dropTargetPin.io)
+                    selection.removeAll()
+                }
+                else if (selection.pin.direction == 'right' && dropTargetPin.direction == 'left') {
+                    dropTargetPin.io.setSource(selection.pin.io)
+                    selection.removeAll()
+                }
+            }
+            connectionLine.delete()
         }
     })
     
@@ -240,20 +280,17 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     {
         ev.preventDefault()
         if (pointerMode == PointerMode.MODAL_MENU) return
-        else if (pointer.downTargetElem == body && ev.buttons == MouseButton.RIGHT) {
+        else if (pointer.downTargetElem == circuit.body && ev.buttons == MouseButton.RIGHT) {
             pointerMode = PointerMode.DRAG_SCROLL_VIEW
         }
-        else if (pointer.downTargetElem == body && ev.buttons == MouseButton.LEFT) {
+        else if (pointer.downTargetElem == circuit.body && ev.buttons == MouseButton.LEFT) {
             pointerMode = PointerMode.DRAG_SELECTION_BOX
         }
         else if (selection.type == 'Block') {
             pointerMode = PointerMode.DRAG_BLOCK
         }
-        else if (selection.type == 'Pin' && selection.pin.type == 'input') {
-            pointerMode = PointerMode.DRAG_INPUT_PIN
-        }
-        else if (selection.type == 'Pin' && selection.pin.type == 'output') {
-            pointerMode = PointerMode.DRAG_OUTPUT_PIN
+        else if (selection.type == 'Pin') {
+            pointerMode = PointerMode.DRAG_IO_PIN
         }
         else if (selection.type == 'Anchor') {
             pointerMode = PointerMode.DRAG_TRACE_ANCHOR

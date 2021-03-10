@@ -1,7 +1,8 @@
 import { getFunctionBlock } from './FunctionLib.js';
+import { EventEmitter } from "../Lib/Events.js";
 export default class Circuit {
     constructor(def, circBlock) {
-        this.subscribers = new Set();
+        this.events = new EventEmitter(this);
         this.circBlock = circBlock;
         // Create blocks
         const blocks = def.blocks.map(funcDef => getFunctionBlock(funcDef));
@@ -36,21 +37,11 @@ export default class Circuit {
     removeBlock(block) { }
     connect(inputPin, outputPin, inverted) { }
     disconnect(inputPin) { }
-    subscribe(obj) {
-        this.subscribers.add(obj);
-    }
-    unsubscribe(obj) {
-        this.subscribers.delete(obj);
-    }
     update(dt) {
         this._blocks.forEach(block => block.update(dt));
     }
     remove() {
-        this.emitEvent(4 /* Removed */);
-        this.subscribers.clear();
-    }
-    emitEvent(type) {
-        const event = { type, target: this };
-        this.subscribers.forEach(fn => fn(event));
+        this.events.emit(4 /* Removed */);
+        this.events.clear();
     }
 }

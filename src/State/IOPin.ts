@@ -29,11 +29,11 @@ export interface IOPinInstanceDefinition
 
 export enum IOPinEventType
 {
-    Value,
-    Name,
-    Datatype,
-    Source,
-    Inverted,
+    ValueChanged,
+    NameChanged,
+    DatatypeChanged,
+    SourceChanged,
+    InvertionChanged,
     Removed
 }
 
@@ -78,31 +78,31 @@ export class IOPin implements IOPinInterface
     setValue(value: number) {
         if (this._value != value) {
             this._value = value
-            this.events.emit(IOPinEventType.Value)
+            this.events.emit(IOPinEventType.ValueChanged)
         }
     }
     setName(name: string) {
         if (this._name != name) {
             this._name = name
-            this.events.emit(IOPinEventType.Name)
+            this.events.emit(IOPinEventType.NameChanged)
         }
     }
     setDatatype(datatype: IODataType) {
         if (this._datatype != datatype) {
             this._datatype = datatype
-            this.events.emit(IOPinEventType.Datatype)
+            this.events.emit(IOPinEventType.DatatypeChanged)
         }
     }
     setSource(source: IOPinInterface) {
         if (this._sourcePin != source) {
             this._sourcePin = source
-            this.events.emit(IOPinEventType.Source)
+            this.events.emit(IOPinEventType.SourceChanged)
         }
     }
     setInverted(inverted: boolean) {
         if (this._inverted != inverted) {
             this._inverted = inverted
-            this.events.emit(IOPinEventType.Inverted)
+            this.events.emit(IOPinEventType.InvertionChanged)
         }
     }
 

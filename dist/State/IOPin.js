@@ -1,11 +1,11 @@
 import { EventEmitter } from "../Lib/Events.js";
 export var IOPinEventType;
 (function (IOPinEventType) {
-    IOPinEventType[IOPinEventType["Value"] = 0] = "Value";
-    IOPinEventType[IOPinEventType["Name"] = 1] = "Name";
-    IOPinEventType[IOPinEventType["Datatype"] = 2] = "Datatype";
-    IOPinEventType[IOPinEventType["Source"] = 3] = "Source";
-    IOPinEventType[IOPinEventType["Inverted"] = 4] = "Inverted";
+    IOPinEventType[IOPinEventType["ValueChanged"] = 0] = "ValueChanged";
+    IOPinEventType[IOPinEventType["NameChanged"] = 1] = "NameChanged";
+    IOPinEventType[IOPinEventType["DatatypeChanged"] = 2] = "DatatypeChanged";
+    IOPinEventType[IOPinEventType["SourceChanged"] = 3] = "SourceChanged";
+    IOPinEventType[IOPinEventType["InvertionChanged"] = 4] = "InvertionChanged";
     IOPinEventType[IOPinEventType["Removed"] = 5] = "Removed";
 })(IOPinEventType || (IOPinEventType = {}));
 export class IOPin {
@@ -29,31 +29,31 @@ export class IOPin {
     setValue(value) {
         if (this._value != value) {
             this._value = value;
-            this.events.emit(IOPinEventType.Value);
+            this.events.emit(IOPinEventType.ValueChanged);
         }
     }
     setName(name) {
         if (this._name != name) {
             this._name = name;
-            this.events.emit(IOPinEventType.Name);
+            this.events.emit(IOPinEventType.NameChanged);
         }
     }
     setDatatype(datatype) {
         if (this._datatype != datatype) {
             this._datatype = datatype;
-            this.events.emit(IOPinEventType.Datatype);
+            this.events.emit(IOPinEventType.DatatypeChanged);
         }
     }
     setSource(source) {
         if (this._sourcePin != source) {
             this._sourcePin = source;
-            this.events.emit(IOPinEventType.Source);
+            this.events.emit(IOPinEventType.SourceChanged);
         }
     }
     setInverted(inverted) {
         if (this._inverted != inverted) {
             this._inverted = inverted;
-            this.events.emit(IOPinEventType.Inverted);
+            this.events.emit(IOPinEventType.InvertionChanged);
         }
     }
     remove() {

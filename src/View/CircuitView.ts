@@ -14,7 +14,7 @@ import CircuitPointerHandler from './PointerHandler.js'
 import TraceLayer from './TraceLayer.js'
 import { TraceLine } from './TraceLine.js'
 import IOPinView from './IOPinView.js'
-import { IOPinInterface } from '../State/IOPin.js'
+import { IOPinEvent, IOPinEventType, IOPinInterface } from '../State/IOPin.js'
 
 export interface CircuitViewDefinition
 {
@@ -52,7 +52,7 @@ class CircuitBody extends GUIChildElement
         }, true)
         this.onRestyle()
 
-        circuitView.events.subscribe((ev: GUIEvent) => {this.setSize(this.circuitView.size)}, [GUIEventType.Resized])
+        circuitView.events.subscribe(() => { this.setSize(this.circuitView.size) }, [GUIEventType.Resized])
     }
     onRestyle() {
         this.setStyle({
@@ -76,26 +76,16 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         // Create block views
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index]
-            const blockView = new FunctionBlockView(block, vec2(pos), this.body.children)
-            this.blockViewsMap.set(block, blockView)
+            this.createFunctionBlockView(block, vec2(pos))
         })
 
         // Create circuit IO pins
-        this.createPins(circuitViewDefinition)
+        this.createCircuitPinViews(circuitViewDefinition)
         
         // Create connection lines
         this.circuit.blocks.forEach((destBlock) => {
-            destBlock.inputs?.forEach(input => {
-                if (input.sourcePin) {
-                    const destPin = this.blockViewsMap.get(destBlock)?.getPinForIO(input)
-                    const sourceBlock = input.sourcePin.block
-                    const sourcePin = (sourceBlock == this.circuitBlock)
-                        ? this.inputPins.find(pin => pin.io == input.sourcePin)
-                        : this.blockViewsMap.get(sourceBlock)?.getPinForIO(input.sourcePin)
-                    
-                    const traceLine = new TraceLine(this, sourcePin, destPin)
-                    this.traceLinesMap.set(input, traceLine)
-                }
+            destBlock.inputs?.forEach(destIO => {
+                if (destIO.sourcePin) this.createConnectionTrace(destIO)
             })
         })
 
@@ -114,6 +104,36 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
 
     get blockViews() {
         return this.circuit.blocks.map(block => this.blockViewsMap.get(block))
+    }
+
+    ioSourceModified(event: IOPinEvent) {
+        const io = event.source
+        
+        if (event.type == IOPinEventType.SourceChanged) {
+            // Get containing block view (or this as circuit view)
+            const blockView = (io.block == this.circuitBlock) ? this : this.blockViewsMap.get(io.block)
+            // Get IOPinView
+            const pinView = blockView?.getPinForIO(io)
+            if (!pinView) { console.error('Pin view not found for IO event:', event); return }
+
+            const currentTrace = this.traceLinesMap.get(io)
+            // If connection removed
+            if (!io.sourcePin) {
+                currentTrace?.delete()
+            }
+            // If connection made
+            if (io.sourcePin) {
+                if (currentTrace && (currentTrace.sourcePinView.io != io.sourcePin)) currentTrace.delete()
+                this.createConnectionTrace(io)
+            }
+        }
+    }
+
+    getPinForIO(io: IOPinInterface) { 
+        let foundPin: IOPinView
+        foundPin = this.inputPins.find(pin => pin.io == io)
+        foundPin ??= this.outputPins.find(pin => pin.io == io)
+        return foundPin
     }
 
     constructor(parent: HTMLElement, size: Vec2, scale: Vec2, style: Readonly<Style> = defaultStyle)
@@ -136,17 +156,52 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     protected blockViewsMap = new WeakMap<FunctionBlockInterface, FunctionBlockView>()
     protected traceLinesMap = new WeakMap<IOPinInterface, TraceLine>()
 
-    protected createPins(def: CircuitViewDefinition) {
+    protected createFunctionBlockView(block: FunctionBlockInterface, pos: Vec2) {
+        const blockView = new FunctionBlockView(block, pos, this.body.children)
+        // subscribe for io connection events
+        block.inputs.forEach(input => input.events.subscribe(this.ioSourceModified.bind(this), [IOPinEventType.SourceChanged]))
+        
+        this.blockViewsMap.set(block, blockView)
+        return blockView
+    }
+
+    protected createConnectionTrace(destIO: IOPinInterface) {
+        if (destIO.sourcePin) {
+            const destBlock = destIO.block
+            const destPin = (destBlock == this.circuitBlock)
+                ? this.getPinForIO(destIO)
+                : this.blockViewsMap.get(destBlock)?.getPinForIO(destIO)
+            const sourceBlock = destIO.sourcePin.block
+            const sourcePin = (sourceBlock == this.circuitBlock)
+                ? this.getPinForIO(destIO.sourcePin)
+                : this.blockViewsMap.get(sourceBlock)?.getPinForIO(destIO.sourcePin)
+            
+            if (destPin && sourcePin) {
+                const traceLine = new TraceLine(this, sourcePin, destPin)
+                this.traceLinesMap.set(destIO, traceLine)
+            }
+            else if (!destPin) console.error('Trace failed. Destination IO pin view not found', destIO)
+            else if (!sourcePin) console.error('Trace failed. Source IO pin view not found', destIO.sourcePin)
+        }
+        else console.error('Trace failed. Destionation IO has no source', destIO)
+    }
+
+    protected createCircuitPinViews(def: CircuitViewDefinition)
+    {
         this.inputPins ??= this.circuitBlock.inputs.map((input, index) => {
             const posY = def.positions?.inputs?.[index] || index
-            const pin = new IOPinView(input, vec2(0, posY), this.body.children)
-            return pin
+            return this.createCircuitPinView(input, vec2(0, posY))
         })
         this.outputPins ??= this.circuitBlock.outputs.map((output, index) => {
             const posY = def.positions?.outputs?.[index] || index
-            const pin = new IOPinView(output, vec2(this.body.size.x-1, posY), this.body.children)
-            return pin
+            return this.createCircuitPinView(output, vec2(this.body.size.x-1, posY))
         })
+    }
+
+    protected createCircuitPinView(io: IOPinInterface, pos: Vec2) {
+        const pin = new IOPinView(io, pos, this.body.children)
+        if (pin.direction == 'left') io.events.subscribe(this.ioSourceModified.bind(this), [IOPinEventType.SourceChanged])
+        return pin 
     }
 
     protected onResize() {

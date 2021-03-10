@@ -3,12 +3,14 @@ export class EventEmitter {
         this.eventSource = eventSource;
         this.subscribers = new Map();
     }
-    subscribe(fn, eventTypes) {
-        const typeMask = eventTypes ? eventTypes.reduce((mask, type) => mask += (1 << type), 0) : null;
+    subscribe(fn, eventMask) {
+        const typeMask = eventMask ? eventMask.reduce((mask, type) => mask += (1 << type), 0) : null;
         this.subscribers.set(fn, typeMask);
     }
     unsubscribe(fn) {
-        this.subscribers.delete(fn);
+        const successful = this.subscribers.delete(fn);
+        if (!successful)
+            console.error('Could not unsubscribe event listener', fn, [...this.subscribers.keys()]);
     }
     emit(type) {
         if (this.subscribers.size == 0)

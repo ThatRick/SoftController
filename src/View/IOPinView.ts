@@ -5,6 +5,8 @@ import { IOPinEvent, IOPinEventType, IOPinInterface } from '../State/IOPin.js'
 import * as HTML from '../Lib/HTML.js'
 import CircuitView from './CircuitView.js'
 
+
+
 export default class IOPinView extends GUIChildElement
 {
     get type() { return this.io.type }
@@ -48,11 +50,11 @@ export default class IOPinView extends GUIChildElement
     protected ioEventHandler(ev: IOPinEvent) {
         switch (ev.type)
         {
-            case IOPinEventType.Value:
+            case IOPinEventType.ValueChanged:
                 break
-            case IOPinEventType.Source:
+            case IOPinEventType.SourceChanged:
                 break
-            case IOPinEventType.Inverted:
+            case IOPinEventType.InvertionChanged:
                 this.updateStyle()
                 break
             case IOPinEventType.Removed:

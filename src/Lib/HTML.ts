@@ -1,5 +1,7 @@
 import Vec2 from './Vector2.js'
 
+export { svgElement, svgElementWD, SVGLine } from './SVGElement.js'
+
 export const defaultStyle =
 {
     colors: {

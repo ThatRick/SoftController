@@ -20,45 +20,56 @@ export class TraceAnchorHandle extends GUIChildElement {
     }
 }
 export class TraceLine {
-    constructor(circuitView, sourcePin, destPin) {
+    constructor(circuitView, sourcePinView, destPinView) {
         this.circuitView = circuitView;
-        this.sourcePin = sourcePin;
-        this.destPin = destPin;
+        this.sourcePinView = sourcePinView;
+        this.destPinView = destPinView;
+        this.pinViewEventHandler = (event) => {
+            switch (event.type) {
+                case 0 /* PositionChanged */:
+                    this.circuitView.requestUpdate(this);
+                    break;
+                case 1 /* Removed */:
+                    this.delete();
+                    break;
+            }
+        };
         this.handles = {
             vertical1: undefined,
             horizontal: undefined,
             vertical2: undefined
         };
         this.traceLayer = circuitView.traceLayer;
-        const sourceMinReach = sourcePin.io.datatype == 'BINARY' ? 1 : 3;
-        const destMinReach = destPin.io.datatype == 'BINARY' ? 1 : 3;
-        this.route = this.traceLayer.addTrace(sourcePin.absPos, destPin.absPos, sourceMinReach, destMinReach, this.getColor());
+        const sourceMinReach = sourcePinView.io.datatype == 'BINARY' ? 1 : 3;
+        const destMinReach = destPinView.io.datatype == 'BINARY' ? 1 : 3;
+        this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor());
         this.updateHandles();
-        this.sourcePin.events.subscribe(this.updateRoute.bind(this), [0 /* PositionChanged */]);
-        this.destPin.events.subscribe(this.updateRoute.bind(this), [0 /* PositionChanged */]);
+        this.sourcePinView.events.subscribe(this.pinViewEventHandler);
+        this.destPinView.events.subscribe(this.pinViewEventHandler);
+        this.instanceID = TraceLine.instanceCounter++;
     }
     update() {
-        this.traceLayer.updateTraceRoute(this.route, this.sourcePin.absPos, this.destPin.absPos);
+        console.log('Update TraceLine ID', this.instanceID);
+        this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos);
         this.updateHandles();
     }
     delete() {
         this.traceLayer.deleteTrace(this.route);
-        this.route = null;
-        this.sourcePin.events.unsubscribe(this.updateRoute);
-        this.destPin.events.unsubscribe(this.updateRoute);
+        this.sourcePinView.events.unsubscribe(this.pinViewEventHandler);
+        this.destPinView.events.unsubscribe(this.pinViewEventHandler);
+        this.handles.vertical1?.delete();
+        this.handles.horizontal?.delete();
+        this.handles.vertical2?.delete();
     }
     anchorHandleMoved(name, value) {
         this.route.anchors[name] = value;
-        this.updateRoute();
+        this.circuitView.requestUpdate(this);
     }
     getColor() {
         return '#AAA';
     }
     updateColor() {
-        this.traceLayer.updateColor(this.route, this.sourcePin.color);
-    }
-    updateRoute() {
-        this.circuitView.requestUpdate(this);
+        this.traceLayer.updateColor(this.route, this.sourcePinView.color);
     }
     updateHandles() {
         const handles = this.handles;
@@ -131,3 +142,4 @@ export class TraceLine {
         }
     }
 }
+TraceLine.instanceCounter = 1;

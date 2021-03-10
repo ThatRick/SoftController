@@ -1,31 +1,6 @@
 import Vec2, { vec2 } from '../Lib/Vector2.js';
+import { svgElement, svgElementWD } from '../Lib/HTML.js';
 const xmlns = 'http://www.w3.org/2000/svg';
-function svgElement(name, options) {
-    // Create SVG Element
-    const elem = document.createElementNS(xmlns, name);
-    // Set SVG attributes
-    options.svgAttributes && Object.entries(options.svgAttributes).forEach(([key, value]) => {
-        elem.setAttribute(key, value.toString());
-    });
-    // Set CSS style
-    options.css && Object.assign(elem.style, options.css);
-    // Append to parent
-    options.parent?.appendChild(elem);
-    return elem;
-}
-function svgElementWD(name, options) {
-    // Create SVG Element
-    const elem = document.createElementNS(xmlns, name);
-    // Set SVG attributes
-    options.svgAttributes && Object.entries(options.svgAttributes).forEach(([key, value]) => {
-        elem.setAttribute(key, value.toString());
-    });
-    // Set CSS style
-    options.css && Object.assign(elem.style, options.css);
-    // Append to parent
-    options.parent?.appendChild(elem);
-    return elem;
-}
 const minReverseHorizontalYOffset = 3;
 export class TraceRoute {
     constructor(params) {
@@ -102,6 +77,7 @@ export default class TraceLayer {
     get size() {
         return vec2(this.svg.clientWidth, this.svg.clientHeight);
     }
+    cellCenterScreenPos(pos) { return Vec2.mul(pos, this.scale).add(this.cellOffset); }
     rescale(scale) {
         this.scale = scale;
         this.calcCellOffset();
@@ -204,9 +180,10 @@ export default class TraceLayer {
             strokeWidth: this.traceWidth,
             pointerEvents: 'none',
         };
-        Object.assign(polyline.style, style);
+        // Line shadow. Does not work on straight horizontal line because effect bounds is relative to element size (def. -10%...120%)
         // const styleString = Object.entries(style).map(([key, value]) => `${key}: ${value};`).join(' ')
-        //polyline.setAttribute('style', styleString)
+        // polyline.setAttribute('style', styleString)
+        Object.assign(polyline.style, style);
         polyline.setAttribute('points', svgPoints);
         this.svg.appendChild(polyline);
         return polyline;

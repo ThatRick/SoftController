@@ -28,33 +28,60 @@ export class TraceLine {
     route: TraceRoute
     
     update() {
-        this.traceLayer.updateTraceRoute(this.route, this.sourcePin.absPos, this.destPin.absPos)
+        console.log('Update TraceLine ID', this.instanceID)
+        this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos)
         this.updateHandles()
     }
 
     delete() {
         this.traceLayer.deleteTrace(this.route)
-        this.route = null
-        this.sourcePin.events.unsubscribe(this.updateRoute)
-        this.destPin.events.unsubscribe(this.updateRoute)
+        this.sourcePinView.events.unsubscribe(this.pinViewEventHandler)
+        this.destPinView.events.unsubscribe(this.pinViewEventHandler)
+        this.handles.vertical1?.delete()
+        this.handles.horizontal?.delete()
+        this.handles.vertical2?.delete()
     }
+
+    anchorHandleMoved(name: keyof ITraceAnchors, value: number) {
+        this.route.anchors[name] = value
+        this.circuitView.requestUpdate(this)
+    }
+
+    static instanceCounter = 1
 
     constructor (
         public circuitView: CircuitView,
-        public sourcePin: IOPinView,
-        public destPin: IOPinView,
+        public sourcePinView: IOPinView,
+        public destPinView: IOPinView,
     ) {
         this.traceLayer = circuitView.traceLayer
 
-        const sourceMinReach = sourcePin.io.datatype == 'BINARY' ? 1 : 3
-        const destMinReach = destPin.io.datatype == 'BINARY' ? 1 : 3
+        const sourceMinReach = sourcePinView.io.datatype == 'BINARY' ? 1 : 3
+        const destMinReach = destPinView.io.datatype == 'BINARY' ? 1 : 3
 
-        this.route = this.traceLayer.addTrace(sourcePin.absPos, destPin.absPos, sourceMinReach, destMinReach, this.getColor())
+        this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor())
         this.updateHandles()
 
-        this.sourcePin.events.subscribe(this.updateRoute.bind(this), [GUIChildEventType.PositionChanged])
-        this.destPin.events.subscribe(this.updateRoute.bind(this), [GUIChildEventType.PositionChanged])
+        this.sourcePinView.events.subscribe(this.pinViewEventHandler)
+        this.destPinView.events.subscribe(this.pinViewEventHandler)
+
+        this.instanceID = TraceLine.instanceCounter++
     }
+
+    protected pinViewEventHandler = (event: GUIChildEvent) => {
+        switch (event.type)
+        {
+            case GUIChildEventType.PositionChanged:
+                this.circuitView.requestUpdate(this)
+                break
+
+            case GUIChildEventType.Removed:
+                this.delete()
+                break
+        }
+    }
+
+    protected instanceID: number
 
     protected traceLayer: TraceLayer
 
@@ -65,22 +92,15 @@ export class TraceLine {
         vertical2:    undefined
     }
 
-    anchorHandleMoved(name: keyof ITraceAnchors, value: number) {
-        this.route.anchors[name] = value
-        this.updateRoute()
-    }
-
     protected getColor(): string {
         return '#AAA'
     }
 
     protected updateColor() {
-        this.traceLayer.updateColor(this.route, this.sourcePin.color)
+        this.traceLayer.updateColor(this.route, this.sourcePinView.color)
     }
     
-    protected updateRoute() {
-        this.circuitView.requestUpdate(this)
-    }
+
 
     protected updateHandles() {
         const handles = this.handles

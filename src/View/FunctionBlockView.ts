@@ -8,7 +8,6 @@ import CircuitView from './CircuitView.js'
 import { IOPinInterface } from '../State/IOPin.js'
 import { EventEmitter } from '../Lib/Events.js'
 
-
 export default class FunctionBlockView extends GUIChildElement
 {
     readonly block: FunctionBlockInterface
