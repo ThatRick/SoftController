@@ -1,7 +1,7 @@
 import Grid from '../Lib/Grid.js';
 import { vec2 } from '../Lib/Vector2.js';
 import * as HTML from '../Lib/HTML.js';
-const DEBUG = true;
+const DEBUG = false;
 export default class CircuitGrid {
     constructor(circuit) {
         this.circuit = circuit;
@@ -88,8 +88,12 @@ export default class CircuitGrid {
                 const results = this.mapVerticalLine(points[i - 1], points[i], cell, i);
                 traceLine.route.collisions.push(...results);
             }
+            // Sort collisions by point number
+            traceLine.route.collisions.sort((a, b) => a.point - b.point);
+            traceLine.route.collisions.map;
         });
         this.visualize();
+        this.circuit.traceLayer.update();
     }
     mapHorizontalLine(a, b, cell, pointNum) {
         const collisions = [];

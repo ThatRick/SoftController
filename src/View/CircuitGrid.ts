@@ -6,7 +6,7 @@ import FunctionBlockView from './FunctionBlockView.js'
 import { TraceLine } from './TraceLine.js'
 import * as HTML from '../Lib/HTML.js'
 
-const DEBUG = true
+const DEBUG = false
 
 export const enum CellType
 {
@@ -149,9 +149,14 @@ export default class CircuitGrid
                 const results = this.mapVerticalLine(points[i-1], points[i], cell, i)
                 traceLine.route.collisions.push(...results)
             }
+
+            // Sort collisions by point number
+            traceLine.route.collisions.sort((a, b) => a.point - b.point)
+            traceLine.route.collisions.map
         })
         
         this.visualize()
+        this.circuit.traceLayer.update()
     }
 
     protected mapHorizontalLine(a: Vec2, b: Vec2, cell: TraceCell, pointNum: number) {

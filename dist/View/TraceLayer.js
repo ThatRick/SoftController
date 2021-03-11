@@ -47,6 +47,11 @@ export default class TraceLayer {
         this.traces.add(trace);
         return trace;
     }
+    update() {
+        this.traces.forEach(trace => {
+            this.updatePolylinePoints(trace, trace.points);
+        });
+    }
     updateTraceRoute(trace, sourcePos, destPos) {
         const deltaSource = Vec2.sub(sourcePos, trace.sourcePos);
         const deltaDest = Vec2.sub(destPos, trace.destPos);
@@ -161,15 +166,32 @@ export default class TraceLayer {
             ];
         }
     }
-    generatePolylineSVGPointsList(points) {
-        const scaledPoints = points.map(pos => Vec2.mul(pos, this.scale).add(this.cellOffset));
-        const pointStrings = scaledPoints.map(pos => pos.x + ',' + pos.y);
-        const svgPoints = pointStrings.join(' ');
-        return [svgPoints];
+    generatePolylineSVGPointsList(path, collisionList = []) {
+        let points = [...path];
+        let collisions = [...collisionList];
+        const joint = collisions.find(col => col.type == 'joint');
+        if (joint) {
+            console.log(collisions);
+            points = points.slice(0, joint.point + 1);
+            points[joint.point] = (joint.point % 2 == 0)
+                ? vec2(points[joint.point].x, joint.pos.y)
+                : vec2(joint.pos.x, points[joint.point].y);
+            collisions = collisions.filter(col => col.point < points.length);
+        }
+        const crossings = collisions.filter(col => col.type == 'cross');
+        const sections = (crossings)
+            ? [points]
+            : [points];
+        const svgPointList = sections.map(section => {
+            const scaledPoints = section.map(pos => Vec2.mul(pos, this.scale).add(this.cellOffset));
+            const pointStrings = scaledPoints.map(pos => pos.x + ',' + pos.y);
+            return pointStrings.join(' ');
+        });
+        return svgPointList;
     }
     updatePolylinePoints(trace, points) {
         const polylines = trace.polylines;
-        const svgPointsList = this.generatePolylineSVGPointsList(points);
+        const svgPointsList = this.generatePolylineSVGPointsList(points, trace.collisions);
         // Update or create trace polylines
         svgPointsList.forEach((svgPoints, i) => {
             if (polylines[i])
@@ -199,8 +221,8 @@ export default class TraceLayer {
         this.svg.appendChild(polyline);
         return polyline;
     }
-    createPolylines(points, color) {
-        const svgPointsList = this.generatePolylineSVGPointsList(points);
+    createPolylines(points, color, collisions = []) {
+        const svgPointsList = this.generatePolylineSVGPointsList(points, collisions);
         const polylines = svgPointsList.map(svgPoints => this.createNewPolyline(color, svgPoints));
         return polylines;
     }
