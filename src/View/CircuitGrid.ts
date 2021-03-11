@@ -32,9 +32,11 @@ export type Cell =
     | TraceCell
 
 
+type CollisionType = 'crossing' | 'joint' | 'overlap trace' | 'overlap block'
+
 export type Collision =
 {
-    type: 'cross' | 'joint' | 'overlap trace'
+    type: 'crossing' | 'joint' | 'overlap trace'
     target: TraceLine
     point: number
     pos: Vec2
@@ -79,7 +81,7 @@ export default class CircuitGrid
         }
         const blockColor =  '#404'
         const collisionColors = {
-            'cross':            '#000',
+            'crossing':            '#000',
             'joint':            '#880',
             'overlap trace':    '#800',
             'overlap block':    '#622',
@@ -117,16 +119,41 @@ export default class CircuitGrid
         this.circuit.blockViews.forEach(block => {
             this.grid.fillRect(block.pos, block.size, { type: CellType.Block, elem: block })
         })
-        // Map horizontal line segments
+
+        // Find trace joints to trim traces
         this.circuit.traceLines.forEach(traceLine => {
             traceLine.route.collisions = []
             const points = traceLine.route.points
+            
+            const horizontalCell: Cell = { type: CellType.Trace, elem: traceLine, direction: 'horizontal' }
+            const verticalCell: Cell = { type: CellType.Trace, elem: traceLine, direction: 'vertical' }
+
+            traceLine.route.trimmedPoints = [...points]
+            // Odd: horizontal, Even: vertical
+            for (let i = 1; i < points.length; i++) {
+                const [jointCollision] = (i % 2 == 0)
+                    ? this.mapVerticalLine(points[i-1], points[i], verticalCell, i, ['joint'])
+                    : this.mapHorizontalLine(points[i-1], points[i], horizontalCell, i, ['joint'])
+                
+                // If joint found
+                if (jointCollision?.type == 'joint') {
+                    traceLine.route.collisions.push()
+                    traceLine.route.trimmedPoints = [...points.slice(0, jointCollision.point), vec2(jointCollision.pos)]
+                    break
+                }
+            }
+        })
+
+        // Map horizontal line segments
+        this.circuit.traceLines.forEach(traceLine => {
+            traceLine.route.collisions = []
+            const points = traceLine.route.trimmedPoints
             const cell: Cell = { type: CellType.Trace, elem: traceLine, direction: 'horizontal' }
     
             for (let i = 1; i < points.length; i += 2)
             {
                 // Map horizontal line
-                const results = this.mapHorizontalLine(points[i-1], points[i], cell, i)
+                const results = this.mapHorizontalLine(points[i-1], points[i], cell, i, ['crossing', 'overlap trace', 'overlap block'])
                 
                 // If no collision, mark corners
                 if (results.length == 0 && (i == 3 || i == 5)) {
@@ -140,13 +167,13 @@ export default class CircuitGrid
         })
         // Map vertical line segments
         this.circuit.traceLines.forEach(traceLine => {
-            const points = traceLine.route.points
+            const points = traceLine.route.trimmedPoints
             const cell: Cell = { type: CellType.Trace, elem: traceLine, direction: 'vertical' }
     
             for (let i = 2; i < points.length-1; i += 2)
             {
                 // Map vertical line
-                const results = this.mapVerticalLine(points[i-1], points[i], cell, i)
+                const results = this.mapVerticalLine(points[i-1], points[i], cell, i, ['crossing', 'overlap trace', 'overlap block'])
                 traceLine.route.collisions.push(...results)
             }
 
@@ -159,41 +186,50 @@ export default class CircuitGrid
         this.circuit.traceLayer.update()
     }
 
-    protected mapHorizontalLine(a: Vec2, b: Vec2, cell: TraceCell, pointNum: number) {
+    protected mapHorizontalLine(a: Vec2, b: Vec2, cell: TraceCell, pointNum: number, detect: CollisionType[]) {
         const collisions: Collision[] = []
         console.assert(a.y == b.y, 'Invalid points for horizontal line:', a, b)
         const y = a.y
         this.grid.cells[y] ??= []
         if (a.x < b.x) {
             for (let x = a.x; x <= b.x; x++) {
-                const collision = this.mapHorizontalLineCell(x, y, cell, pointNum)
-                if (collision) collisions.push(collision)
+                const collision = this.mapHorizontalLineCell(x, y, cell, pointNum, detect)
+                if (collision) {
+                    collisions.push(collision)
+                    if (collision.type == 'joint' && detect.includes('joint')) break
+                }
             }
         }
         else {
             for (let x = a.x; x >= b.x; x--) {
-                const collision = this.mapHorizontalLineCell(x, y, cell, pointNum)
-                if (collision) collisions.push(collision)
+                const collision = this.mapHorizontalLineCell(x, y, cell, pointNum, detect)
+                if (collision) {
+                    collisions.push(collision)
+                    if (collision.type == 'joint' && detect.includes('joint')) break
+                }
             }            
         }
         return collisions
     }
-    protected mapHorizontalLineCell(x: number, y: number, cell: TraceCell, pointNum: number): Collision {
+    protected mapHorizontalLineCell(x: number, y: number, cell: TraceCell, pointNum: number, detect: CollisionType[]): Collision {
         DEBUG && console.info('map horizontal line cell', x, y)
         const target = this.grid.cells[y][x]
         // Collide with another line
         if (target?.type == CellType.Trace)
         {
-            const targetHasCommonSource = (target.elem.sourcePinView == cell.elem.sourcePinView)
-            return {
-                type: (targetHasCommonSource) ? 'joint' : 'overlap trace',
+            const type = (target.elem.sourcePinView == cell.elem.sourcePinView) ? 'joint'
+                       : (target.direction == 'vertical') ? 'crossing'
+                       : 'overlap trace'
+            
+            if (detect.includes(type)) return {
+                type: type,
                 target: target.elem,
                 point: pointNum,
                 pos: vec2(x, y),
             }
         }
         // Collide with block
-        else if (target?.type == CellType.Block) {
+        else if (target?.type == CellType.Block && detect.includes('overlap block')) {
             return {
                 type: 'overlap block',
                 target: target.elem,
@@ -201,10 +237,10 @@ export default class CircuitGrid
                 pos: vec2(x, y),
             }
         }
-        else this.grid.cells[y][x] = cell
+        this.grid.cells[y][x] = cell
     }
 
-    protected mapVerticalLine(a: Vec2, b: Vec2, cell: TraceCell, pointNum: number) {
+    protected mapVerticalLine(a: Vec2, b: Vec2, cell: TraceCell, pointNum: number, detect: CollisionType[]) {
         const collisions: Collision[] = []
         console.assert(a.x == b.x, 'Invalid points for vertical line:', a, b)
         const x = a.x
@@ -212,31 +248,36 @@ export default class CircuitGrid
         if (a.y < b.y) {
             for (let y = a.y + 1; y < b.y; y++) {
                 this.grid.cells[y] ??= []
-                const collision = this.mapVerticalLineCell(x, y, cell, pointNum)
-                if (collision) collisions.push(collision)
+                const collision = this.mapVerticalLineCell(x, y, cell, pointNum, detect)
+                if (collision) {
+                    collisions.push(collision)
+                    if (collision.type == 'joint' && detect.includes('joint')) break
+                }
             }
         } else {
             for (let y = a.y - 1; y > b.y; y--) {
                 this.grid.cells[y] ??= []
-                const collision = this.mapVerticalLineCell(x, y, cell, pointNum)
-                if (collision) collisions.push(collision)
+                const collision = this.mapVerticalLineCell(x, y, cell, pointNum, detect)
+                if (collision) {
+                    collisions.push(collision)
+                    if (collision.type == 'joint' && detect.includes('joint')) break
+                }
             }
         }
         return collisions
     }
 
-    protected mapVerticalLineCell(x: number, y: number, cell: TraceCell, pointNum: number): Collision {
+    protected mapVerticalLineCell(x: number, y: number, cell: TraceCell, pointNum: number, detect: CollisionType[]): Collision {
         DEBUG && console.info('map vertical line cell', x, y)
         const target = this.grid.cells[y][x]
         // Collide with another line
         if (target?.type == CellType.Trace)
         {
-            const targetHasCommonSource = (target.elem.sourcePinView == cell.elem.sourcePinView)
-            const targetIsHorizontal = (target.direction == 'horizontal')
-            const type = (targetHasCommonSource) ? 'joint'
-                       : (targetIsHorizontal) ? 'cross'
+            const type = (target.elem.sourcePinView == cell.elem.sourcePinView) ? 'joint'
+                       : (target.direction == 'horizontal') ? 'crossing'
                        : 'overlap trace'
-            return {
+            
+            if (detect.includes(type)) return {
                 type,
                 target: target.elem,
                 point: pointNum,
@@ -244,7 +285,7 @@ export default class CircuitGrid
             }
         }
         // Collide with block
-        else if (target?.type == CellType.Block) {
+        else if (target?.type == CellType.Block && detect.includes('overlap block')) {
             return {
                 type: 'overlap block',
                 target: target.elem,
@@ -252,6 +293,6 @@ export default class CircuitGrid
                 pos: vec2(x, y),
             }
         }
-        else this.grid.cells[y][x] = cell
+        this.grid.cells[y][x] = cell
     }
 }

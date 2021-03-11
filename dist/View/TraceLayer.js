@@ -48,8 +48,9 @@ export default class TraceLayer {
         return trace;
     }
     update() {
+        console.log('TraceLayer update()');
         this.traces.forEach(trace => {
-            this.updatePolylinePoints(trace, trace.points);
+            this.updatePolylinePoints(trace, trace.trimmedPoints);
         });
     }
     updateTraceRoute(trace, sourcePos, destPos) {
@@ -172,13 +173,8 @@ export default class TraceLayer {
         const joint = collisions.find(col => col.type == 'joint');
         if (joint) {
             console.log(collisions);
-            points = points.slice(0, joint.point + 1);
-            points[joint.point] = (joint.point % 2 == 0)
-                ? vec2(points[joint.point].x, joint.pos.y)
-                : vec2(joint.pos.x, points[joint.point].y);
-            collisions = collisions.filter(col => col.point < points.length);
         }
-        const crossings = collisions.filter(col => col.type == 'cross');
+        const crossings = collisions.filter(col => col.type == 'crossing');
         const sections = (crossings)
             ? [points]
             : [points];
@@ -190,9 +186,9 @@ export default class TraceLayer {
         return svgPointList;
     }
     updatePolylinePoints(trace, points) {
-        const polylines = trace.polylines;
         const svgPointsList = this.generatePolylineSVGPointsList(points, trace.collisions);
         // Update or create trace polylines
+        const polylines = trace.polylines;
         svgPointsList.forEach((svgPoints, i) => {
             if (polylines[i])
                 polylines[i].setAttributeNS(null, 'points', svgPoints);

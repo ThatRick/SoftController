@@ -26,7 +26,9 @@ export class TraceRoute
     anchors: ITraceAnchors
     color: string
     polylines: SVGPolylineElement[]
+    trimmedPoints: Vec2[]
     collisions: Collision[]
+    joint: SVGCircleElement
     
     constructor(params: Partial<TraceRoute>) {
         Object.assign(this, params)
@@ -59,8 +61,9 @@ export default class TraceLayer
     }
 
     update() {
+        console.log('TraceLayer update()')
         this.traces.forEach(trace => {
-            this.updatePolylinePoints(trace, trace.points)
+            this.updatePolylinePoints(trace, trace.trimmedPoints)
         })
     }
 
@@ -239,17 +242,9 @@ export default class TraceLayer
         const joint = collisions.find(col => col.type == 'joint')
         if (joint) {
             console.log(collisions)
-
-            points = points.slice(0, joint.point + 1);
-
-            points[joint.point] = (joint.point % 2 == 0)
-                ? vec2(points[joint.point].x, joint.pos.y)
-                : vec2(joint.pos.x, points[joint.point].y)
-                
-            collisions = collisions.filter(col => col.point < points.length)
         }
         
-        const crossings = collisions.filter(col => col.type == 'cross')
+        const crossings = collisions.filter(col => col.type == 'crossing')
         const sections = (crossings)
             ? [points]
             : [points]
@@ -265,9 +260,9 @@ export default class TraceLayer
 
     protected updatePolylinePoints(trace: TraceRoute, points: Vec2[])
     {
-        const polylines = trace.polylines
         const svgPointsList = this.generatePolylineSVGPointsList(points, trace.collisions)
         // Update or create trace polylines
+        const polylines = trace.polylines
         svgPointsList.forEach((svgPoints, i) => {
             if (polylines[i]) polylines[i].setAttributeNS(null, 'points', svgPoints)
             else polylines[i] = this.createNewPolyline(trace.color, svgPoints)
