@@ -24,7 +24,7 @@ export default function FunctionBlockContextMenu(options) {
         'Insertion point': null,
         'Copy': null,
         'Replace': null,
-        'Delete': () => { blockView.delete(); },
+        'Delete': () => { blockView.block.remove(); },
     };
     const menu = new HTMLMenu(items, {
         parent: parentContainer,

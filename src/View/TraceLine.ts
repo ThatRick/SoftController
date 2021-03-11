@@ -30,6 +30,8 @@ export class TraceLine {
     }
 
     delete() {
+        const deletedFromMap = this.circuitView.traceLines.delete(this.destPinView.io)
+        console.assert(deletedFromMap, 'Failed to delete trace line from circuit view traceLinesMap')
         this.traceLayer.deleteTrace(this.route)
         this.sourcePinView.events.unsubscribe(this.pinViewEventHandler)
         this.destPinView.events.unsubscribe(this.pinViewEventHandler)
@@ -145,7 +147,7 @@ export class TraceLine {
                 const [ha, hb] = this.route.points.slice(2, 4)
 
                 const horiPos = Vec2.add((ha.x < hb.x) ? ha : hb, vec2(1, 0))
-                const horiSize = vec2(Math.abs(ha.x - hb.x - 1), 1)
+                const horiSize = vec2(Math.abs(hb.x - ha.x - 1), 1)
                 
                 if (handles.horizontal) {
                     handles.horizontal.setPos(horiPos)

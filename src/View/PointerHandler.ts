@@ -232,6 +232,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                 const startPos = selectedBlocksStartDragPos.get(block)
                 block.setPos(Vec2.add(startPos, pointer.scaledDragOffset).round())
                 block.onDragEnded?.(ev, circuit.pointer)
+                circuit.requestUpdate(circuit.grid)
             })
         }
     })
@@ -297,7 +298,8 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         end(ev: PointerEvent) {
             const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset).round()
             selection.anchor.move(newPos)
-            selection.removeAll()            
+            selection.removeAll()
+            circuit.requestUpdate(circuit.grid)
         }
     })
 

@@ -17,6 +17,28 @@ export default class Grid {
             }
         }
     }
+    fillRect(pos, size, value) {
+        for (let y = pos.y; y < pos.y + size.y; y++) {
+            this.cells[y] ??= [];
+            for (let x = pos.x; x < pos.x + size.x; x++) {
+                this.cells[y][x] = value;
+            }
+        }
+    }
+    fillVerticalLine(a, b, value) {
+        const [top, bottom] = (a.y < b.y) ? [a.y, b.y] : [b.y, a.y];
+        for (let y = top; y < bottom; y++) {
+            this.cells[y] ??= [];
+            this.cells[y][a.x] = value;
+        }
+    }
+    fillHorizontalLine(a, b, value) {
+        const [left, right] = (a.x < b.x) ? [a.x, b.x] : [b.x, a.x];
+        for (let x = left; x < right; x++) {
+            this.cells[a.y] ??= [];
+            this.cells[a.y][x] = value;
+        }
+    }
     getCell(pos) {
         return this.cells[pos.y]?.[pos.x];
     }
@@ -47,7 +69,7 @@ export default class Grid {
                     return true;
             }
         }
-        return true;
+        return false;
     }
     rectHasProps(props, pos, size) {
         const hasProps = (cell) => cell && props.some(prop => cell.hasOwnProperty(prop));
@@ -61,7 +83,7 @@ export default class Grid {
                     return true;
             }
         }
-        return true;
+        return false;
     }
     deleteCell(pos) {
         if (this.hasCell(pos))

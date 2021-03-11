@@ -6,8 +6,8 @@ export class TraceRoute {
     constructor(params) {
         Object.assign(this, params);
     }
-    get sourcePos() { return this.points[0]; }
-    get destPos() { return this.points[this.points.length - 1]; }
+    get destPos() { return this.points[0]; }
+    get sourcePos() { return this.points[this.points.length - 1]; }
     get midPoints() { return this.points.slice(1, this.points.length - 1); }
 }
 export default class TraceLayer {
@@ -31,7 +31,7 @@ export default class TraceLayer {
     }
     addTrace(sourcePos, destPos, minSourceReach, minDestReach, color, pathAnchors = {}) {
         const points = this.calculateRoutePoints(sourcePos, destPos, minSourceReach, minDestReach, pathAnchors);
-        const polyline = this.createPolyline(points, color);
+        const polylines = this.createPolylines(points, color);
         const trace = new TraceRoute({
             minSourceReach,
             minDestReach,
@@ -42,7 +42,7 @@ export default class TraceLayer {
                 vertical2: points[3]?.x
             },
             points: points,
-            polyline
+            polylines
         });
         this.traces.add(trace);
         return trace;
@@ -53,11 +53,11 @@ export default class TraceLayer {
         const diff = Vec2.sub(deltaSource, deltaDest).len();
         const concurrentMovement = (deltaSource.len() > 0 && diff < 0.001);
         const points = (concurrentMovement)
-            ? [sourcePos, ...trace.midPoints.map(point => Vec2.add(point, deltaSource)), destPos]
+            ? [destPos, ...trace.midPoints.map(point => Vec2.add(point, deltaSource)), sourcePos]
             : this.calculateRoutePoints(sourcePos, destPos, trace.minSourceReach, trace.minDestReach, trace.anchors);
         // If route points has changed, update polyline
         if (trace.points.some((current, index) => !current.equal(points[index]))) {
-            this.updatePolylinePoints(trace.polyline, points);
+            this.updatePolylinePoints(trace, points);
         }
         if (concurrentMovement) {
             trace.anchors.vertical1 &&= points[1].x;
@@ -67,10 +67,10 @@ export default class TraceLayer {
         trace.points = points;
     }
     updateColor(trace, color) {
-        trace.polyline.style.stroke = color;
+        trace.polylines.forEach(polyline => polyline.style.stroke = color);
     }
     deleteTrace(trace) {
-        this.svg.removeChild(trace.polyline);
+        trace.polylines.forEach(polyline => this.svg.removeChild(polyline));
         this.traces.delete(trace);
         trace = null;
     }
@@ -82,8 +82,8 @@ export default class TraceLayer {
         this.scale = scale;
         this.calcCellOffset();
         this.traces.forEach(trace => {
-            this.updatePolylinePoints(trace.polyline, trace.points);
-            trace.polyline.style.strokeWidth = this.traceWidth + 'px';
+            this.updatePolylinePoints(trace, trace.points);
+            trace.polylines.forEach(polyline => polyline.style.strokeWidth = this.traceWidth + 'px');
         });
     }
     calcCellOffset() {
@@ -105,8 +105,8 @@ export default class TraceLayer {
             anchors.horizontal = undefined;
             anchors.vertical2 = undefined;
             return [
+                vec2(destPos),
                 vec2(sourcePos),
-                vec2(destPos)
             ];
         }
         // 3 line segments (4 points)
@@ -120,20 +120,20 @@ export default class TraceLayer {
             anchors.horizontal = undefined;
             anchors.vertical2 = undefined;
             return [
-                vec2(sourcePos),
-                vec2(verticalX1, sourcePos.y),
+                vec2(destPos),
                 vec2(verticalX1, destPos.y),
-                vec2(destPos)
+                vec2(verticalX1, sourcePos.y),
+                vec2(sourcePos),
             ];
         }
         // 5 line segments (6 points)
         else {
-            verticalX1 ??= Math.round(sourcePos.x + sourceMinReach);
-            if (verticalX1 < sourcePos.x + sourceMinReach)
-                verticalX1 = Math.round(sourcePos.x + sourceMinReach);
-            verticalX2 ??= Math.round(destPos.x - destMinReach);
-            if (verticalX2 > destPos.x - destMinReach)
-                verticalX2 = Math.round(destPos.x - destMinReach);
+            verticalX2 ??= Math.round(sourcePos.x + sourceMinReach);
+            if (verticalX2 < sourcePos.x + sourceMinReach)
+                verticalX2 = Math.round(sourcePos.x + sourceMinReach);
+            verticalX1 ??= Math.round(destPos.x - destMinReach);
+            if (verticalX1 > destPos.x - destMinReach)
+                verticalX1 = Math.round(destPos.x - destMinReach);
             if (horizontalY == undefined) {
                 if (Math.abs(deltaY / 2) >= minReverseHorizontalYOffset) {
                     // Reverse line between source Y and dest Y
@@ -144,35 +144,46 @@ export default class TraceLayer {
                     horizontalY = (deltaY > 0)
                         ? destPos.y + 4
                         : destPos.y - 4;
-                    if (verticalX1 < destPos.x + 5)
-                        verticalX1 = Math.round(destPos.x + 5);
+                    if (verticalX2 < destPos.x + 5)
+                        verticalX2 = Math.round(destPos.x + 5);
                 }
             }
             anchors.vertical1 = verticalX1;
             anchors.horizontal = horizontalY;
             anchors.vertical2 = verticalX2;
             return [
-                vec2(sourcePos),
-                vec2(verticalX1, sourcePos.y),
+                vec2(destPos),
+                vec2(verticalX1, destPos.y),
                 vec2(verticalX1, horizontalY),
                 vec2(verticalX2, horizontalY),
-                vec2(verticalX2, destPos.y),
-                vec2(destPos) //  5
+                vec2(verticalX2, sourcePos.y),
+                vec2(sourcePos),
             ];
         }
     }
-    polylinePoints(points) {
+    generatePolylineSVGPointsList(points) {
         const scaledPoints = points.map(pos => Vec2.mul(pos, this.scale).add(this.cellOffset));
         const pointStrings = scaledPoints.map(pos => pos.x + ',' + pos.y);
         const svgPoints = pointStrings.join(' ');
-        return svgPoints;
+        return [svgPoints];
     }
-    updatePolylinePoints(polyline, points) {
-        const svgPoints = this.polylinePoints(points);
-        polyline.setAttributeNS(null, 'points', svgPoints);
+    updatePolylinePoints(trace, points) {
+        const polylines = trace.polylines;
+        const svgPointsList = this.generatePolylineSVGPointsList(points);
+        // Update or create trace polylines
+        svgPointsList.forEach((svgPoints, i) => {
+            if (polylines[i])
+                polylines[i].setAttributeNS(null, 'points', svgPoints);
+            else
+                polylines[i] = this.createNewPolyline(trace.color, svgPoints);
+        });
+        // Trim excess polylines
+        while (polylines.length > svgPointsList.length) {
+            const polyline = polylines.pop();
+            this.svg.removeChild(polyline);
+        }
     }
-    createPolyline(points, color) {
-        const svgPoints = this.polylinePoints(points);
+    createNewPolyline(color, svgPoints) {
         const polyline = document.createElementNS(xmlns, 'polyline');
         const style = {
             fill: 'none',
@@ -183,10 +194,15 @@ export default class TraceLayer {
         // Line shadow. Does not work on straight horizontal line because effect bounds is relative to element size (def. -10%...120%)
         // const styleString = Object.entries(style).map(([key, value]) => `${key}: ${value};`).join(' ')
         // polyline.setAttribute('style', styleString)
-        Object.assign(polyline.style, style);
         polyline.setAttribute('points', svgPoints);
+        Object.assign(polyline.style, style);
         this.svg.appendChild(polyline);
         return polyline;
+    }
+    createPolylines(points, color) {
+        const svgPointsList = this.generatePolylineSVGPointsList(points);
+        const polylines = svgPointsList.map(svgPoints => this.createNewPolyline(color, svgPoints));
+        return polylines;
     }
     createFilters() {
         const defs = svgElement('defs', { parent: this.svg });
