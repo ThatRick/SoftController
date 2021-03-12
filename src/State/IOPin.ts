@@ -96,6 +96,7 @@ export class IOPin implements IOPinInterface
     setSource(source: IOPinInterface) {
         if (this._sourcePin != source) {
             this._sourcePin = source
+            if (!source) this.setInverted(false)
             this.events.emit(IOPinEventType.SourceChanged)
         }
     }

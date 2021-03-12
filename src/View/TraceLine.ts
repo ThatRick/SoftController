@@ -91,7 +91,7 @@ export class TraceLine {
     }
 
     protected getColor(): string {
-        return '#AAA'
+        return this.sourcePinView.color
     }
 
     protected updateColor() {

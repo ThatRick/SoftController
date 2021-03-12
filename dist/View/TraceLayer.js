@@ -107,7 +107,7 @@ export default class TraceLayer {
         const deltaX = destPos.x - sourcePos.x;
         const deltaY = destPos.y - sourcePos.y;
         // 1 line segment (2 points)
-        if (deltaY == 0 && deltaX > 0) {
+        if (Math.round(deltaY) == 0 && deltaX > 0) {
             anchors.vertical1 = undefined;
             anchors.horizontal = undefined;
             anchors.vertical2 = undefined;

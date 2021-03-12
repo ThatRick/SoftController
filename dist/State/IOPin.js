@@ -47,6 +47,8 @@ export class IOPin {
     setSource(source) {
         if (this._sourcePin != source) {
             this._sourcePin = source;
+            if (!source)
+                this.setInverted(false);
             this.events.emit(IOPinEventType.SourceChanged);
         }
     }
