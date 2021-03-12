@@ -37,8 +37,8 @@ export class TraceLine {
             vertical2: undefined
         };
         this.traceLayer = circuitView.traceLayer;
-        const sourceMinReach = sourcePinView.io.datatype == 'BINARY' ? 1 : 3;
-        const destMinReach = destPinView.io.datatype == 'BINARY' ? 1 : 3;
+        const sourceMinReach = 1;
+        const destMinReach = 1;
         this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor());
         this.updateHandles();
         this.sourcePinView.events.subscribe(this.pinViewEventHandler);
@@ -72,6 +72,7 @@ export class TraceLine {
     updateHandles() {
         const handles = this.handles;
         switch (this.route.points.length) {
+            case 1:
             case 2: {
                 handles.vertical1?.delete();
                 handles.vertical1 = null;
@@ -81,7 +82,9 @@ export class TraceLine {
                 handles.vertical2 = null;
                 break;
             }
+            case 3:
             case 4: {
+                // Vertical 1 handle
                 const [v1a, v1b] = this.route.points.slice(1, 3);
                 const vert1pos = (v1a.y < v1b.y) ? v1a : v1b;
                 const vert1size = vec2(1, Math.abs(v1a.y - v1b.y) + 1);
@@ -98,6 +101,7 @@ export class TraceLine {
                 handles.vertical2 = null;
                 break;
             }
+            case 5:
             case 6: {
                 // Vertical 1 handle
                 const [v1a, v1b] = this.route.points.slice(1, 3);

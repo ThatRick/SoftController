@@ -1,4 +1,4 @@
-export { svgElement, svgElementWD, SVGLine } from './SVGElement.js';
+export { svgElement, svgElementWD, setSVGAttributes, SVGLine } from './SVGElement.js';
 export const defaultStyle = {
     colors: {
         base: '#445',
@@ -51,7 +51,7 @@ export class Button extends Element {
             paddingRight: '2px',
             marginLeft: '1px',
             marginRight: '1px',
-            backgroundColor: this.backgroundColor,
+            backgroundColor: this.style.colors.base,
             border: '1px solid ' + this.style.colors.light,
             borderRadius: '2px',
             textAlign: 'center',
@@ -96,12 +96,19 @@ export class ToggleButton extends Button {
     constructor(text, toggle, initState = false, parent) {
         super(text, parent);
         this.state = initState;
+        this.updateStyle();
         this.onClick = () => {
             this.state = toggle(!this.state);
-            this.backgroundColor = this.state ? this.style.colors.light : this.style.colors.base;
-            this.DOMElement.style.borderColor = this.state ? 'white' : this.style.colors.light;
+            this.updateStyle();
             this.flash(this.style.colors.active);
         };
+    }
+    updateStyle() {
+        this.backgroundColor = this.state ? this.style.colors.light : this.style.colors.base;
+        this.setCSS({
+            backgroundColor: this.backgroundColor,
+            borderColor: this.state ? 'white' : this.style.colors.light
+        });
     }
 }
 export class Table extends Element {

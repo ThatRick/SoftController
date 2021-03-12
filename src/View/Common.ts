@@ -22,7 +22,8 @@ export const defaultStyle =
         connectionLineValid: 'rgba(128, 255, 128, 0.8)',
     },
     fontSize: 0.8,
-    traceWidth: 0.125
+    traceWidth: 0.125,
+    crossingGap: 0.2
 }
 
 export type Style = typeof defaultStyle

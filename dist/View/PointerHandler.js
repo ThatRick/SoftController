@@ -175,6 +175,7 @@ export default function CircuitPointerHandler(circuit) {
                 selectedBlocksStartDragPos.set(block, block.pos.copy());
                 block.onDragStarted?.(ev, circuit.pointer);
             });
+            circuit.traceLayer.resetCollisions();
         },
         move(ev) {
             selection.blocks.forEach(block => {
@@ -239,6 +240,7 @@ export default function CircuitPointerHandler(circuit) {
     dragBehaviour.set(5 /* DRAG_TRACE_ANCHOR */, {
         start(ev) {
             selectedAnchorStartDragPos = selection.anchor.pos;
+            selection.anchor.traceLine.route.collisions = [];
         },
         move(ev) {
             const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset);

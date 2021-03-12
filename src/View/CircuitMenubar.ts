@@ -64,7 +64,12 @@ export class CircuitMenuBar
             action: () => this.view.rescale(Vec2.add(this.view.scale, vec2(1))),
             style: { width: this.menu.parentHeight+'px'}
         })
-        return [title, decBtn, incBtn]
+        const toggleGridMap = new HTML.ToggleButton('Grid map', state => {
+            this.view.grid.visible = state
+            return state
+        }, this.view.grid.visible )
+
+        return [title, decBtn, incBtn, toggleGridMap]
     }
 
 }

@@ -1,5 +1,5 @@
 const xmlns = 'http://www.w3.org/2000/svg';
-export function svgElement(name, options) {
+export function svgElement(name, options = {}) {
     // Create SVG Element
     const elem = document.createElementNS(xmlns, name);
     // Set SVG attributes
@@ -12,7 +12,12 @@ export function svgElement(name, options) {
     options.parent?.appendChild(elem);
     return elem;
 }
-export function svgElementWD(name, options) {
+export function setSVGAttributes(elem, attributes) {
+    Object.entries(attributes).forEach(([key, value]) => {
+        elem.setAttribute(key, value.toString());
+    });
+}
+export function svgElementWD(name, options = {}) {
     // Create SVG Element
     const elem = document.createElementNS(xmlns, name);
     // Set SVG attributes

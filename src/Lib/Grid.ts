@@ -65,6 +65,10 @@ export default class Grid<Cell extends Object>
         }
     }
 
+    clear() {
+        this.cells = []
+    }
+
     rectHasCell(pos: Vec2, size?: Vec2) {
         if (size == undefined) return (this.cells[pos.y][pos.x] != undefined)
         for (let y = pos.y; y < pos.y + size.y; y++) {

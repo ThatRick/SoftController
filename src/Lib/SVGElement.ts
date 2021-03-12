@@ -6,7 +6,7 @@ export function svgElement<K extends keyof SVGElementTagNameMap>(name: K, option
     svgAttributes?: Record<string, string | number>,
     css?: Partial<CSSStyleDeclaration>,
     parent?: SVGElement
-}): SVGElementTagNameMap[K]
+} = {}): SVGElementTagNameMap[K]
 {
     // Create SVG Element
     const elem = document.createElementNS(xmlns, name)
@@ -21,11 +21,17 @@ export function svgElement<K extends keyof SVGElementTagNameMap>(name: K, option
     return elem
 }
 
+export function setSVGAttributes(elem: SVGElement, attributes: Record<string, string | number>) {
+    Object.entries(attributes).forEach(([key, value]) => {
+        elem.setAttribute(key, value.toString())
+    })
+}
+
 export function svgElementWD(name: string, options: {
     svgAttributes?: Record<string, string|number>,
     css?: Partial<CSSStyleDeclaration>,
     parent?: SVGElement
-}): SVGElement
+} = {}): SVGElement
 {
     // Create SVG Element
     const elem = document.createElementNS(xmlns, name)

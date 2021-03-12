@@ -58,6 +58,9 @@ export default class Grid {
             }
         }
     }
+    clear() {
+        this.cells = [];
+    }
     rectHasCell(pos, size) {
         if (size == undefined)
             return (this.cells[pos.y][pos.x] != undefined);

@@ -1,5 +1,5 @@
 import Vec2, { vec2 } from '../Lib/Vector2.js';
-import { svgElement, svgElementWD } from '../Lib/HTML.js';
+import { svgElement, svgElementWD, setSVGAttributes } from '../Lib/HTML.js';
 const xmlns = 'http://www.w3.org/2000/svg';
 const minReverseHorizontalYOffset = 3;
 export class TraceRoute {
@@ -53,6 +53,9 @@ export default class TraceLayer {
             this.updatePolylinePoints(trace, trace.trimmedPoints);
         });
     }
+    resetCollisions() {
+        this.traces.forEach(trace => trace.collisions = []);
+    }
     updateTraceRoute(trace, sourcePos, destPos) {
         const deltaSource = Vec2.sub(sourcePos, trace.sourcePos);
         const deltaDest = Vec2.sub(destPos, trace.destPos);
@@ -97,8 +100,6 @@ export default class TraceLayer {
         const offsetX = Math.round(this.scale.x / 2) + correction;
         const offsetY = Math.round(this.scale.y / 2) + correction;
         this.cellOffset = vec2(offsetX, offsetY);
-        console.log('cell offset:', this.cellOffset.toString());
-        console.log('trace width', this.traceWidth);
     }
     get traceWidth() { return Math.round(this.style.traceWidth * this.scale.y); }
     calculateRoutePoints(sourcePos, destPos, sourceMinReach, destMinReach, anchors) {
@@ -170,20 +171,61 @@ export default class TraceLayer {
     generatePolylineSVGPointsList(path, collisionList = []) {
         let points = [...path];
         let collisions = [...collisionList];
-        const joint = collisions.find(col => col.type == 'joint');
-        if (joint) {
-            console.log(collisions);
-        }
         const crossings = collisions.filter(col => col.type == 'crossing');
-        const sections = (crossings)
-            ? [points]
-            : [points];
-        const svgPointList = sections.map(section => {
+        let sections = [points];
+        if (crossings.length > 0) {
+            let lastCutIndex;
+            let lastCutPos;
+            sections = crossings.map(crossing => {
+                // debugger
+                const targetPos = points[crossing.pointIndex];
+                const prevPos = points[crossing.pointIndex - 1];
+                console.assert(targetPos.x == prevPos.x, 'Crossing is not on a vertical line segment');
+                const cutPos = crossing.pos;
+                const startIndex = lastCutIndex || 0;
+                const section = (lastCutPos)
+                    ? [lastCutPos, ...points.slice(startIndex, crossing.pointIndex), cutPos]
+                    : [...points.slice(startIndex, crossing.pointIndex), cutPos];
+                lastCutIndex = crossing.pointIndex;
+                lastCutPos = crossing.pos;
+                return section;
+            });
+            const lastIndex = points.length - 1;
+            sections.push([lastCutPos, ...points.slice(lastCutIndex, lastIndex + 1)]);
+            console.log('Crossings:', crossings);
+            console.log('Crossing sections:', sections);
+        }
+        const crossingGap = this.style.crossingGap * this.scale.y;
+        const svgPointList = sections.map((section, i) => {
             const scaledPoints = section.map(pos => Vec2.mul(pos, this.scale).add(this.cellOffset));
+            // Shift start point y on all but first section
+            if (sections.length > 1 && i > 0) {
+                const dirY = Math.sign(scaledPoints[1].y - scaledPoints[0].y);
+                scaledPoints[0] = vec2(scaledPoints[0].x, scaledPoints[0].y + dirY * crossingGap);
+            }
+            // Shift end point y on all but last section
+            const lastIndex = section.length - 1;
+            if (sections.length > 1 && i < section.length) {
+                const dirY = Math.sign(scaledPoints[lastIndex].y - scaledPoints[lastIndex - 1].y);
+                scaledPoints[lastIndex] = vec2(scaledPoints[lastIndex].x, scaledPoints[lastIndex].y - dirY * crossingGap);
+            }
             const pointStrings = scaledPoints.map(pos => pos.x + ',' + pos.y);
             return pointStrings.join(' ');
         });
         return svgPointList;
+    }
+    updateJointDot(trace, joint) {
+        const screenPos = this.cellCenterScreenPos(joint.pos);
+        const dot = trace.jointDot ?? svgElement('circle');
+        setSVGAttributes(dot, {
+            cx: screenPos.x,
+            cy: screenPos.y,
+            r: this.traceWidth * 2
+        });
+        Object.assign(dot.style, {
+            fill: trace.color
+        });
+        trace.jointDot = dot;
     }
     updatePolylinePoints(trace, points) {
         const svgPointsList = this.generatePolylineSVGPointsList(points, trace.collisions);
@@ -199,6 +241,17 @@ export default class TraceLayer {
         while (polylines.length > svgPointsList.length) {
             const polyline = polylines.pop();
             this.svg.removeChild(polyline);
+        }
+        // Draw dot
+        const joint = trace.collisions.find(col => col.type == 'joint');
+        if (joint) {
+            console.log('Draw dot');
+            this.updateJointDot(trace, joint);
+            this.svg.appendChild(trace.jointDot);
+        }
+        else if (trace.jointDot) {
+            this.svg.removeChild(trace.jointDot);
+            trace.jointDot = null;
         }
     }
     createNewPolyline(color, svgPoints) {

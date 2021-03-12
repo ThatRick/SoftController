@@ -218,6 +218,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                 selectedBlocksStartDragPos.set(block, block.pos.copy())
                 block.onDragStarted?.(ev, circuit.pointer)
             })
+            circuit.traceLayer.resetCollisions()
         },
         move(ev: PointerEvent) {
             selection.blocks.forEach(block => {
@@ -290,6 +291,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     {
         start(ev: PointerEvent) {
             selectedAnchorStartDragPos = selection.anchor.pos
+            selection.anchor.traceLine.route.collisions = []
         },
         move(ev: PointerEvent) {
             const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset)
