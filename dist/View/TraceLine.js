@@ -66,7 +66,7 @@ export class TraceLine {
         this.circuitView.requestUpdate(this);
     }
     getColor() {
-        return '#AAA';
+        return this.sourcePinView.color;
     }
     updateColor() {
         this.traceLayer.updateColor(this.route, this.sourcePinView.color);
