@@ -59,6 +59,8 @@ export class TraceLine {
         this.handles.horizontal?.delete();
         this.handles.vertical2?.delete();
     }
+    onSelected() { this.traceLayer.setSelected(this.route); }
+    onUnselected() { this.traceLayer.setUnselected(this.route); }
     anchorHandleMoved(name, value) {
         this.route.anchors[name] = value;
         this.circuitView.requestUpdate(this);

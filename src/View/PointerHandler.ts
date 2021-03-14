@@ -100,6 +100,9 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                 ? selection.remove(elem)
                 : selection.add(elem)
         }
+        else if (elem instanceof TraceAnchorHandle) {
+            selection.anchor.traceLine.onSelected()
+        }
     }
 
     const onRightClicked = (ev: PointerEvent) => {
@@ -241,8 +244,10 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     //  Drag IO pin
     // -------------
     let connectionLine: HTML.SVGLine
-    let connectionValid: boolean
     let connectionDropTargetPin: IOPinView
+    let connectionCreateValid: boolean
+    let connectionMoveInput: boolean
+    let connectionMoveOutput: boolean
 
     dragBehaviour.set(PointerMode.DRAG_IO_PIN,
     {
@@ -259,26 +264,46 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             connectionLine.setEndPos(pointer.screenPos)
             if (pointer.targetElem instanceof IOPinView) {
                 connectionDropTargetPin = pointer.targetElem as IOPinView
-                connectionValid = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'right' ||
-                                   selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'left');
-                                   
-                connectionLine.setColor(connectionValid ? circuit.style.colors.connectionLineValid
-                                                        : circuit.style.colors.connectionLine)
+
+                connectionCreateValid = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'right'
+                                      || selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'left');
+
+                connectionMoveInput = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'left'
+                                      && selection.pin.io.sourcePin != null);
+
+                connectionMoveOutput = (selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'right'
+                                      && ([...circuit.traceLines.values()].find(trace => trace.sourcePinView.io == selection.pin.io) != null))
+
+                connectionLine.setColor((connectionCreateValid || connectionMoveInput || connectionMoveOutput)
+                    ? circuit.style.colors.connectionLineValid
+                    : circuit.style.colors.connectionLine)
             }
             else {
-                connectionValid = false
+                connectionCreateValid = false
+                connectionMoveInput = false
+                connectionMoveOutput = false
                 connectionDropTargetPin = null
                 connectionLine.setColor(circuit.style.colors.connectionLine)
             }
         },
         end(ev: PointerEvent) {
-            if (connectionValid) {
+            if (connectionCreateValid) {
                 (selection.pin.direction == 'left')
                     ? selection.pin.io.setSource(connectionDropTargetPin.io)
                     : connectionDropTargetPin.io.setSource(selection.pin.io)
-                
-                selection.removeAll()
             }
+            if (connectionMoveInput) {
+                connectionDropTargetPin.io.setSource(selection.pin.io.sourcePin)
+                selection.pin.io.setSource(null)
+            }
+
+            if (connectionMoveOutput) {
+                ([...circuit.traceLines.values()]
+                .filter(trace => trace.sourcePinView.io == selection.pin.io)
+                .forEach(trace => trace.destPinView.io.setSource(connectionDropTargetPin.io)))
+            }
+            selection.removeAll()
+
             connectionLine.delete()
         }
     })

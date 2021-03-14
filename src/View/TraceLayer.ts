@@ -2,6 +2,7 @@ import Vec2, {vec2} from '../Lib/Vector2.js'
 import { Style } from './Common.js'
 import { svgElement, svgElementWD, setSVGAttributes } from '../Lib/HTML.js'
 import { Collision } from './CircuitGrid.js'
+import { TraceLine } from './TraceLine.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
  
@@ -71,6 +72,18 @@ export default class TraceLayer
         this.traces.forEach(trace => trace.collisions = [])
     }
 
+    setSelected(trace: TraceRoute) {
+        this.updateColor(trace, this.style.colors.selection)
+        const jointCollision = trace.collisions.find(col => col.type == 'joint')
+        if (jointCollision?.type == 'joint') this.setSelected(jointCollision.target.route)
+    }
+
+    setUnselected(trace: TraceRoute) {
+        this.updateColor(trace, trace.color)
+        const jointCollision = trace.collisions.find(col => col.type == 'joint')
+        if (jointCollision?.type == 'joint') this.setUnselected(jointCollision.target.route)
+    }
+
     updateTraceRoute(trace: TraceRoute, sourcePos: Vec2, destPos: Vec2) {
         const deltaSource = Vec2.sub(sourcePos, trace.sourcePos)
         const deltaDest = Vec2.sub(destPos, trace.destPos)
@@ -97,10 +110,12 @@ export default class TraceLayer
 
     updateColor(trace: TraceRoute, color: string) {
         trace.polylines.forEach(polyline => polyline.style.stroke = color)
+        if (trace.jointDot) trace.jointDot.style.fill = color
     }
 
     deleteTrace(trace: TraceRoute) {
         trace.polylines.forEach(polyline => this.svg.removeChild(polyline))
+        trace.jointDot && this.svg.removeChild(trace.jointDot)
         this.traces.delete(trace)
         trace = null
     }

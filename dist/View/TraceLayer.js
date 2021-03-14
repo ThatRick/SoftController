@@ -56,6 +56,18 @@ export default class TraceLayer {
     resetCollisions() {
         this.traces.forEach(trace => trace.collisions = []);
     }
+    setSelected(trace) {
+        this.updateColor(trace, this.style.colors.selection);
+        const jointCollision = trace.collisions.find(col => col.type == 'joint');
+        if (jointCollision?.type == 'joint')
+            this.setSelected(jointCollision.target.route);
+    }
+    setUnselected(trace) {
+        this.updateColor(trace, trace.color);
+        const jointCollision = trace.collisions.find(col => col.type == 'joint');
+        if (jointCollision?.type == 'joint')
+            this.setUnselected(jointCollision.target.route);
+    }
     updateTraceRoute(trace, sourcePos, destPos) {
         const deltaSource = Vec2.sub(sourcePos, trace.sourcePos);
         const deltaDest = Vec2.sub(destPos, trace.destPos);
@@ -77,9 +89,12 @@ export default class TraceLayer {
     }
     updateColor(trace, color) {
         trace.polylines.forEach(polyline => polyline.style.stroke = color);
+        if (trace.jointDot)
+            trace.jointDot.style.fill = color;
     }
     deleteTrace(trace) {
         trace.polylines.forEach(polyline => this.svg.removeChild(polyline));
+        trace.jointDot && this.svg.removeChild(trace.jointDot);
         this.traces.delete(trace);
         trace = null;
     }

@@ -21,5 +21,5 @@ export const defaultStyle = {
     },
     fontSize: 0.8,
     traceWidth: 0.125,
-    crossingGap: 0.2
+    crossingGap: 0.25
 };
