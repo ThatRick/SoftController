@@ -64,6 +64,35 @@ class CircuitBody extends GUIChildElement
     }
 }
 
+class CircuitIOArea extends GUIChildElement
+{
+    constructor(readonly circuitView: CircuitView, readonly type: 'inputs' | 'outputs') {
+        super(circuitView.children, 'div', (type == 'inputs')
+            ? vec2(0, 0) : vec2(circuitView.size.x - CircuitView.IO_AREA_WIDTH),
+            vec2(CircuitView.IO_AREA_WIDTH, circuitView.size.y), {
+                cursor: 'auto'
+            }, true)
+        this.onRestyle()
+
+        if (this.type == 'outputs') {
+            circuitView.events.subscribe(() => this.handleCircuitResize, [GUIEventType.Resized])
+        }
+    }
+
+    handleCircuitResize = () => {
+        this.setPos(vec2(this.circuitView.size.x - CircuitView.IO_AREA_WIDTH))
+    }
+
+    onRestyle() {
+        this.setStyle({
+            ...HTML.backgroundLinesStyle(this.circuitView.scale, this.circuitView.style.colors.gridLines),
+        })
+    }
+    onRescale() {
+        this.onRestyle()
+    }
+}
+
 export default class CircuitView extends GUIView<GUIChildElement, Style>
 {
     static readonly IO_AREA_WIDTH = 5
@@ -152,8 +181,10 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
 
     circuitViewEvents = new EventEmitter<CircuitViewEvent>(this)
 
-    body: GUIChildElement
-
+    body: CircuitBody
+    inputArea: CircuitIOArea
+    outputArea: CircuitIOArea
+    
     grid: CircuitGrid
     traceLayer: TraceLayer
 
@@ -171,6 +202,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         
         this.grid = new CircuitGrid(this)
         this.body = new CircuitBody(this)
+        this.inputArea = new CircuitIOArea(this, 'inputs')
+        this.outputArea = new CircuitIOArea(this, 'outputs')
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale, this.style)
         
         this.pointer.attachEventHandler(CircuitPointerHandler(this))
