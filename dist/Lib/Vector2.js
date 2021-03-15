@@ -65,6 +65,13 @@ export default class Vec2 {
         this.scale(1 / this.len());
         return this;
     }
+    limit(min, max) {
+        this.x = Math.max(this.x, min.x);
+        this.x = Math.min(this.x, max.x);
+        this.y = Math.max(this.y, min.y);
+        this.y = Math.min(this.y, max.y);
+        return this;
+    }
     len() {
         return Math.sqrt(this.x * this.x + this.y * this.y);
     }
@@ -108,6 +115,13 @@ export default class Vec2 {
     }
     static len(a) {
         return Math.sqrt(a.x * a.x + a.y * a.y);
+    }
+    static limit(v, min, max) {
+        v.x = Math.max(v.x, min.x);
+        v.x = Math.min(v.x, max.x);
+        v.y = Math.max(v.y, min.y);
+        v.y = Math.min(v.y, max.y);
+        return v;
     }
     static normalize(a) {
         const l = Vec2.len(a);

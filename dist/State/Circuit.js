@@ -33,8 +33,11 @@ export default class Circuit {
     addBlock(def) {
         const block = getFunctionBlock(def);
         this._blocks.add(block);
+        return block;
     }
-    removeBlock(block) { }
+    removeBlock(block) {
+        this._blocks.delete(block);
+    }
     connect(inputPin, outputPin, inverted) { }
     disconnect(inputPin) { }
     update(dt) {

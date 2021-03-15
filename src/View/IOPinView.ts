@@ -4,8 +4,17 @@ import Vec2, { vec2 } from '../Lib/Vector2.js'
 import { IOPinEvent, IOPinEventType, IOPinInterface } from '../State/IOPin.js'
 import * as HTML from '../Lib/HTML.js'
 import CircuitView from './CircuitView.js'
+import { formatValue } from './Common.js'
+import { EventEmitter } from '../Lib/Events.js'
 
+export const enum IOPinViewEventType {
+    ColorChanged,
+}
 
+export interface IOPinViewEvent {
+    type:   IOPinViewEventType
+    source: IOPinView
+}
 
 export default class IOPinView extends GUIChildElement
 {
@@ -26,6 +35,8 @@ export default class IOPinView extends GUIChildElement
         this.setStyle({ backgroundColor: color })
     }
 
+    ioPinViewEvents = new EventEmitter<IOPinViewEvent>(this)
+
     //////////////////////////////////////////////
     //              Constructor
     //////////////////////////////////////////////
@@ -37,20 +48,63 @@ export default class IOPinView extends GUIChildElement
         this.io = io
         this.isCircuitIO = (io.block.circuit != null)
         this.direction = ((this.type == 'input' && !this.isCircuitIO) || (this.type == 'output' && this.isCircuitIO)) ? 'left' : 'right'
-        io.events.subscribe(this.ioEventHandler.bind(this))
-        this.create()
+        io.events.subscribe(this.ioEventHandler)
+        this.init()
     }
 
     //////////////////////////////////////////////
     //               Protected
     //////////////////////////////////////////////
 
+    protected init() {
+        this.createPin()
+        if (this.gui.style.showBinaryValue || this.io.datatype != 'BINARY') this.createValueField()
+        this.updatePinColor()
+        this.update()
+    }
+
+    protected createPin() {
+        const pinStyle = (this.io.inverted) ? this.invertedPinStyle : this.pinStyle
+        this.pin = HTML.domElement(this.DOMElement, 'div', pinStyle)
+    }
+
+    protected createValueField() {
+        this.valueField = HTML.domElement(this.DOMElement, 'div', this.valueFieldStyle())
+    }
+
+    protected valueFieldStyle() {
+        const {scale, style} = this.gui
+        
+        const scaledYOffset = style.valueFieldyOffset * scale.y
+        const scaledXOffset = style.valueFieldxOffset * scale.x
+        const scaledHeight = style.valueFieldHeight * scale.y
+        const textAlign = (this.direction == 'left') ? 'right' : 'left'
+
+        return {
+            position:       'absolute',
+            [textAlign]:    scaledXOffset + 'px',
+            top:            scaledYOffset + 'px',
+            height:         scaledHeight + 'px',
+            lineHeight:     scaledHeight + 'px',
+            paddingLeft:    '2px',
+            paddingRight:   '2px',
+            textAlign,
+            pointerEvents:  'none',
+        }
+    }
+
     protected _backgroundColor = 'transparent'
 
-    protected ioEventHandler(ev: IOPinEvent) {
+    protected pin: HTMLDivElement
+    protected valueField: HTMLDivElement
+
+    protected pinColor: string
+
+    protected ioEventHandler = (ev: IOPinEvent) => {
         switch (ev.type)
         {
             case IOPinEventType.ValueChanged:
+                this.requestUpdate()
                 break
             case IOPinEventType.SourceChanged:
                 break
@@ -65,9 +119,11 @@ export default class IOPinView extends GUIChildElement
         }
     }
 
-    protected pin: HTMLElement
-
-    protected pinColor: string
+    protected onUpdate() {
+        if (this.valueField) this.valueField.textContent = formatValue(this.io.value)
+        if (this.io.datatype == 'BINARY') this.updatePinColor()
+        return false
+    }
 
     protected onRescale() {
         this.updateStyle()
@@ -76,12 +132,7 @@ export default class IOPinView extends GUIChildElement
     protected updateStyle() {
         const pinStyle = (this.io.inverted) ? this.invertedPinStyle : this.pinStyle
         Object.assign(this.pin.style, pinStyle)
-        this.updatePinColor()
-    }
-
-    protected create() {
-        const pinStyle = (this.io.inverted) ? this.invertedPinStyle : this.pinStyle
-        this.pin = HTML.domElement(this.DOMElement, 'div', pinStyle)
+        if (this.valueField) Object.assign(this.valueField.style, this.valueFieldStyle())
         this.updatePinColor()
     }
 
@@ -90,7 +141,7 @@ export default class IOPinView extends GUIChildElement
         let color: string
 
         switch (this.io.datatype) {
-            case 'BINARY':   color = style.colors.binaryOff; break // (this.io.value == 0) ? style.colors.binaryOff : style.colors.binaryOn; break
+            case 'BINARY':   color = (this.io.value == 0) ? style.colors.binaryOff : style.colors.binaryOn; break
             case 'INTEGER':  color = style.colors.integer; break
             case 'FLOAT':    color = style.colors.float; break
         }
@@ -99,9 +150,11 @@ export default class IOPinView extends GUIChildElement
             ? this.pin.style.borderColor = color
             : this.pin.style.backgroundColor = color
         
+        if (this.pinColor != color) this.ioPinViewEvents.emit(IOPinViewEventType.ColorChanged)
+
         this.pinColor = color
 
-        // this.valueField.style.color = this.color
+        if (this.valueField) this.valueField.style.color = this.color
     }
 
     protected get pinStyle() {
@@ -149,4 +202,5 @@ export default class IOPinView extends GUIChildElement
 
     onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.pinHighlight })
     onPointerLeave = () => this.setStyle({ backgroundColor: this._backgroundColor })
+
 }

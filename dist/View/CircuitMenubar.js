@@ -29,8 +29,21 @@ export class CircuitMenuBar {
         view.circuitViewEvents.subscribe(this.handleCircuitViewEvent.bind(this));
         const menu = this.menu;
         menu.addItems([
-            ...this.scaleControls()
+            ...this.scaleControls(),
+            this.toggleGridMap(),
+            this.stepController()
         ]);
+    }
+    stepController() {
+        return new HTML.ActionButton('Step', {
+            action: () => this.view.circuitBlock.update(100)
+        });
+    }
+    toggleGridMap() {
+        return new HTML.ToggleButton('Grid map', state => {
+            this.view.grid.visible = state;
+            return state;
+        }, this.view.grid.visible);
     }
     scaleControls() {
         const title = new HTML.Text('Scale: ' + this.view.scale.y, {
@@ -45,10 +58,6 @@ export class CircuitMenuBar {
             action: () => this.view.rescale(Vec2.add(this.view.scale, vec2(1))),
             style: { width: this.menu.parentHeight + 'px' }
         });
-        const toggleGridMap = new HTML.ToggleButton('Grid map', state => {
-            this.view.grid.visible = state;
-            return state;
-        }, this.view.grid.visible);
-        return [title, decBtn, incBtn, toggleGridMap];
+        return [title, decBtn, incBtn];
     }
 }

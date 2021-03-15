@@ -147,7 +147,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     remove() {
         this.inputs.forEach(input => input.remove())
         this.outputs.forEach(output => output.remove())
-        console.log('block emitting removed event')
+        this.circuit?.removeBlock(this)
         this.events.emit(BlockEventType.Removed)
         this.events.clear()
     }

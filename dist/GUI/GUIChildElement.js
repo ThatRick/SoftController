@@ -9,6 +9,7 @@ export class GUIChildElement {
     constructor(parent, elem, pos, size, style, hasChildren = false) {
         this.events = new EventEmitter(this);
         this._posHasChanged = false;
+        this._initUpdate = true;
         this._sizeHasChanged = false;
         this._pos = vec2(pos);
         this._size = vec2(size);
@@ -74,7 +75,10 @@ export class GUIChildElement {
             this.DOMElement.style.width = this._sizeScaled.x + 'px';
             this.DOMElement.style.height = this._sizeScaled.y + 'px';
         }
-        this.onUpdate?.(forceUpdate);
+        if (this._initUpdate)
+            this._initUpdate = false;
+        else
+            this.onUpdate?.(forceUpdate);
         return false;
     }
     rescale(scale) {

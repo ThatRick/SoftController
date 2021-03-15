@@ -9,14 +9,15 @@ import IOPinView from './IOPinView.js'
 import FunctionBlockContextMenu from './FunctionBlockContextMenu.js'
 import CircuitContextMenu from './CircuitContextMenu.js'
 import { TraceAnchorHandle } from './TraceLine.js'
-import { IOPin } from '../State/IOPin.js'
 import IOPinContextMenu from './IOPinContextMenu.js'
+import CircuitIOView from './CircuitIOView.js'
 
 const enum PointerMode {
     DEFAULT,
     DRAG_SCROLL_VIEW,
     DRAG_SELECTION_BOX,
     DRAG_BLOCK,
+    DRAG_CIRCUIT_IO,
     DRAG_IO_PIN,
     DRAG_TRACE_ANCHOR,
     INSERT_NEW_BLOCK,
@@ -55,10 +56,14 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         }
         // Unselect all
         if (elem == circuit.body) {
-            selection.removeAll()
+            selection.unselectAll()
         }
-        // Set selection to unselected block (to enable instant dragging of unselected block)
+        // Function Block
         else if (elem instanceof FunctionBlockView && !ev.shiftKey && !selection.has(elem)) {
+            selection.set(elem)
+        }
+        // Circuit IO
+        else if (elem instanceof CircuitIOView) {
             selection.set(elem)
         }
         // Anchor
@@ -73,18 +78,19 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                     // Make connection
                     selection.pin.io.setSource(clickedPin.io)
                     // Unselect
-                    selection.removeAll()
+                    selection.unselectAll()
                 }
                 else if (selection.pin.direction == 'right' && clickedPin.direction == 'left') {
                     // Make connection
                     clickedPin.io.setSource(selection.pin.io)
-                    // Unselect if not shift key down
-                    if (!ev.shiftKey) selection.removeAll()
+                    // Unselect source if shift key not down
+                    if (!ev.shiftKey) selection.unselectAll()
                 }
                 else selection.set(elem)
             }
             else selection.set(elem)
         }
+
     }
 
     const onClicked = (ev: PointerEvent) => {
@@ -97,7 +103,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         // Add or remove selection (with shift key)
         else if (ev.shiftKey && elem instanceof FunctionBlockView) {
             selection.has(elem)
-                ? selection.remove(elem)
+                ? selection.unselect(elem)
                 : selection.add(elem)
         }
         else if (elem instanceof TraceAnchorHandle) {
@@ -110,7 +116,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         
         // Open circuit context menu
         if (elem == circuit.body) {
-            selection.removeAll()
+            selection.unselectAll()
             pointerMode = PointerMode.MODAL_MENU
             menu = CircuitContextMenu({
                 circuitView: circuit,
@@ -127,14 +133,14 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         else if (elem instanceof FunctionBlockView) {
             pointerMode = PointerMode.MODAL_MENU
             menu = FunctionBlockContextMenu({
-                blockView: elem,
+                selection,
                 parentContainer: circuit.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove()
                     menu = null
                     pointerMode = PointerMode.DEFAULT
-                    selection.removeAll()
+                    selection.unselectAll()
                 }
             })
         }
@@ -149,7 +155,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                     menu.remove()
                     menu = null
                     pointerMode = PointerMode.DEFAULT
-                    selection.removeAll()
+                    selection.unselectAll()
                 }
             })
         }
@@ -197,7 +203,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             Object.assign(selectionBox.style, getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset))
         },
         end(ev: PointerEvent) {
-            if (!ev.shiftKey) selection.removeAll()
+            if (!ev.shiftKey) selection.unselectAll()
             circuit.blockViews.forEach(block => {
                 const pos = Vec2.div(selectionBoxStartPos, circuit.scale)
                 const size = Vec2.div(circuit.pointer.screenDragOffset, circuit.scale)
@@ -226,18 +232,44 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         move(ev: PointerEvent) {
             selection.blocks.forEach(block => {
                 const startPos = selectedBlocksStartDragPos.get(block)
-                block.setPos(Vec2.add(startPos, pointer.scaledDragOffset))
+                const newPos = Vec2.add(startPos, pointer.scaledDragOffset)
+                                   .limit(vec2(CircuitView.IO_AREA_WIDTH + 3, 1),
+                                          vec2(circuit.size.x - CircuitView.IO_AREA_WIDTH - block.size.x - 3, circuit.size.y - block.size.y - 1))
+                block.setPos(newPos)
                 block.onDragging?.(ev, circuit.pointer)
             })
         },
         end(ev: PointerEvent) {
             pointer.downTargetElem?.setStyle({cursor: 'grab'})
             selection.blocks.forEach(block => {
-                const startPos = selectedBlocksStartDragPos.get(block)
-                block.setPos(Vec2.add(startPos, pointer.scaledDragOffset).round())
+                block.setPos(Vec2.round(block.pos))
                 block.onDragEnded?.(ev, circuit.pointer)
                 circuit.requestUpdate(circuit.grid)
             })
+        }
+    })
+
+    //  Drag a circuit IO view
+    // --------------
+    let circuitIODragStartPos: Vec2
+
+    dragBehaviour.set(PointerMode.DRAG_CIRCUIT_IO,
+    {
+        start(ev: PointerEvent) {
+            selection.circuitIO.setStyle({cursor: 'grabbing'})
+            circuitIODragStartPos = selection.circuitIO.pos
+        },
+        move(ev: PointerEvent) {
+            const newPos = Vec2.add(circuitIODragStartPos, vec2(0, pointer.scaledDragOffset.y))
+                           .limit(vec2(0, 0), vec2(0, circuit.size.y))
+            selection.circuitIO.setPos(newPos)
+            selection.circuitIO.onDragging?.(ev, circuit.pointer)
+        },
+        end(ev: PointerEvent) {
+            selection.circuitIO.setPos(Vec2.round(selection.circuitIO.pos))
+            selection.circuitIO.onDragEnded?.(ev, circuit.pointer)
+            
+            circuit.requestUpdate(circuit.grid)
         }
     })
 
@@ -302,7 +334,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                 .filter(trace => trace.sourcePinView.io == selection.pin.io)
                 .forEach(trace => trace.destPinView.io.setSource(connectionDropTargetPin.io)))
             }
-            selection.removeAll()
+            selection.unselectAll()
 
             connectionLine.delete()
         }
@@ -325,7 +357,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         end(ev: PointerEvent) {
             const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset).round()
             selection.anchor.move(newPos)
-            selection.removeAll()
+            selection.unselectAll()
             circuit.requestUpdate(circuit.grid)
         }
     })
@@ -345,6 +377,9 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         }
         else if (selection.type == 'Block') {
             pointerMode = PointerMode.DRAG_BLOCK
+        }
+        else if (selection.type == 'CircuitIO') {
+            pointerMode = PointerMode.DRAG_CIRCUIT_IO
         }
         else if (selection.type == 'Pin') {
             pointerMode = PointerMode.DRAG_IO_PIN

@@ -1,11 +1,13 @@
 import * as HTML from '../Lib/HTML.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
+import CircuitView from './CircuitView.js';
 import FunctionBlockView from './FunctionBlockView.js';
 import IOPinView from './IOPinView.js';
 import FunctionBlockContextMenu from './FunctionBlockContextMenu.js';
 import CircuitContextMenu from './CircuitContextMenu.js';
 import { TraceAnchorHandle } from './TraceLine.js';
 import IOPinContextMenu from './IOPinContextMenu.js';
+import CircuitIOView from './CircuitIOView.js';
 export default function CircuitPointerHandler(circuit) {
     const pointer = circuit.pointer;
     const selection = circuit.selection;
@@ -22,10 +24,14 @@ export default function CircuitPointerHandler(circuit) {
         }
         // Unselect all
         if (elem == circuit.body) {
-            selection.removeAll();
+            selection.unselectAll();
         }
-        // Set selection to unselected block (to enable instant dragging of unselected block)
+        // Function Block
         else if (elem instanceof FunctionBlockView && !ev.shiftKey && !selection.has(elem)) {
+            selection.set(elem);
+        }
+        // Circuit IO
+        else if (elem instanceof CircuitIOView) {
             selection.set(elem);
         }
         // Anchor
@@ -40,14 +46,14 @@ export default function CircuitPointerHandler(circuit) {
                     // Make connection
                     selection.pin.io.setSource(clickedPin.io);
                     // Unselect
-                    selection.removeAll();
+                    selection.unselectAll();
                 }
                 else if (selection.pin.direction == 'right' && clickedPin.direction == 'left') {
                     // Make connection
                     clickedPin.io.setSource(selection.pin.io);
-                    // Unselect if not shift key down
+                    // Unselect source if shift key not down
                     if (!ev.shiftKey)
-                        selection.removeAll();
+                        selection.unselectAll();
                 }
                 else
                     selection.set(elem);
@@ -65,7 +71,7 @@ export default function CircuitPointerHandler(circuit) {
         // Add or remove selection (with shift key)
         else if (ev.shiftKey && elem instanceof FunctionBlockView) {
             selection.has(elem)
-                ? selection.remove(elem)
+                ? selection.unselect(elem)
                 : selection.add(elem);
         }
         else if (elem instanceof TraceAnchorHandle) {
@@ -76,8 +82,8 @@ export default function CircuitPointerHandler(circuit) {
         const elem = pointer.targetElem;
         // Open circuit context menu
         if (elem == circuit.body) {
-            selection.removeAll();
-            pointerMode = 7 /* MODAL_MENU */;
+            selection.unselectAll();
+            pointerMode = 8 /* MODAL_MENU */;
             menu = CircuitContextMenu({
                 circuitView: circuit,
                 parentContainer: circuit.DOMElement,
@@ -91,22 +97,22 @@ export default function CircuitPointerHandler(circuit) {
         }
         // Open function block context menu
         else if (elem instanceof FunctionBlockView) {
-            pointerMode = 7 /* MODAL_MENU */;
+            pointerMode = 8 /* MODAL_MENU */;
             menu = FunctionBlockContextMenu({
-                blockView: elem,
+                selection,
                 parentContainer: circuit.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove();
                     menu = null;
                     pointerMode = 0 /* DEFAULT */;
-                    selection.removeAll();
+                    selection.unselectAll();
                 }
             });
         }
         // Open IO pin context menu
         else if (elem instanceof IOPinView) {
-            pointerMode = 7 /* MODAL_MENU */;
+            pointerMode = 8 /* MODAL_MENU */;
             menu = IOPinContextMenu({
                 ioPinView: elem,
                 parentContainer: circuit.DOMElement,
@@ -115,7 +121,7 @@ export default function CircuitPointerHandler(circuit) {
                     menu.remove();
                     menu = null;
                     pointerMode = 0 /* DEFAULT */;
-                    selection.removeAll();
+                    selection.unselectAll();
                 }
             });
         }
@@ -157,7 +163,7 @@ export default function CircuitPointerHandler(circuit) {
         },
         end(ev) {
             if (!ev.shiftKey)
-                selection.removeAll();
+                selection.unselectAll();
             circuit.blockViews.forEach(block => {
                 const pos = Vec2.div(selectionBoxStartPos, circuit.scale);
                 const size = Vec2.div(circuit.pointer.screenDragOffset, circuit.scale);
@@ -183,18 +189,39 @@ export default function CircuitPointerHandler(circuit) {
         move(ev) {
             selection.blocks.forEach(block => {
                 const startPos = selectedBlocksStartDragPos.get(block);
-                block.setPos(Vec2.add(startPos, pointer.scaledDragOffset));
+                const newPos = Vec2.add(startPos, pointer.scaledDragOffset)
+                    .limit(vec2(CircuitView.IO_AREA_WIDTH + 3, 1), vec2(circuit.size.x - CircuitView.IO_AREA_WIDTH - block.size.x - 3, circuit.size.y - block.size.y - 1));
+                block.setPos(newPos);
                 block.onDragging?.(ev, circuit.pointer);
             });
         },
         end(ev) {
             pointer.downTargetElem?.setStyle({ cursor: 'grab' });
             selection.blocks.forEach(block => {
-                const startPos = selectedBlocksStartDragPos.get(block);
-                block.setPos(Vec2.add(startPos, pointer.scaledDragOffset).round());
+                block.setPos(Vec2.round(block.pos));
                 block.onDragEnded?.(ev, circuit.pointer);
                 circuit.requestUpdate(circuit.grid);
             });
+        }
+    });
+    //  Drag a circuit IO view
+    // --------------
+    let circuitIODragStartPos;
+    dragBehaviour.set(4 /* DRAG_CIRCUIT_IO */, {
+        start(ev) {
+            selection.circuitIO.setStyle({ cursor: 'grabbing' });
+            circuitIODragStartPos = selection.circuitIO.pos;
+        },
+        move(ev) {
+            const newPos = Vec2.add(circuitIODragStartPos, vec2(0, pointer.scaledDragOffset.y))
+                .limit(vec2(0, 0), vec2(0, circuit.size.y));
+            selection.circuitIO.setPos(newPos);
+            selection.circuitIO.onDragging?.(ev, circuit.pointer);
+        },
+        end(ev) {
+            selection.circuitIO.setPos(Vec2.round(selection.circuitIO.pos));
+            selection.circuitIO.onDragEnded?.(ev, circuit.pointer);
+            circuit.requestUpdate(circuit.grid);
         }
     });
     //  Drag IO pin
@@ -204,7 +231,7 @@ export default function CircuitPointerHandler(circuit) {
     let connectionCreateValid;
     let connectionMoveInput;
     let connectionMoveOutput;
-    dragBehaviour.set(4 /* DRAG_IO_PIN */, {
+    dragBehaviour.set(5 /* DRAG_IO_PIN */, {
         start(ev) {
             const startPos = circuit.traceLayer.cellCenterScreenPos(selection.pin.absPos);
             const endPos = pointer.screenPos;
@@ -251,14 +278,14 @@ export default function CircuitPointerHandler(circuit) {
                     .filter(trace => trace.sourcePinView.io == selection.pin.io)
                     .forEach(trace => trace.destPinView.io.setSource(connectionDropTargetPin.io)));
             }
-            selection.removeAll();
+            selection.unselectAll();
             connectionLine.delete();
         }
     });
     //  Drag trace anchor
     // -------------------
     let selectedAnchorStartDragPos;
-    dragBehaviour.set(5 /* DRAG_TRACE_ANCHOR */, {
+    dragBehaviour.set(6 /* DRAG_TRACE_ANCHOR */, {
         start(ev) {
             selectedAnchorStartDragPos = selection.anchor.pos;
             selection.anchor.traceLine.route.collisions = [];
@@ -270,7 +297,7 @@ export default function CircuitPointerHandler(circuit) {
         end(ev) {
             const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset).round();
             selection.anchor.move(newPos);
-            selection.removeAll();
+            selection.unselectAll();
             circuit.requestUpdate(circuit.grid);
         }
     });
@@ -279,7 +306,7 @@ export default function CircuitPointerHandler(circuit) {
     // =======================
     const onDragStarted = (ev) => {
         ev.preventDefault();
-        if (pointerMode == 7 /* MODAL_MENU */)
+        if (pointerMode == 8 /* MODAL_MENU */)
             return;
         else if (pointer.downTargetElem == circuit.body && ev.buttons == 2 /* RIGHT */) {
             pointerMode = 1 /* DRAG_SCROLL_VIEW */;
@@ -290,11 +317,14 @@ export default function CircuitPointerHandler(circuit) {
         else if (selection.type == 'Block') {
             pointerMode = 3 /* DRAG_BLOCK */;
         }
+        else if (selection.type == 'CircuitIO') {
+            pointerMode = 4 /* DRAG_CIRCUIT_IO */;
+        }
         else if (selection.type == 'Pin') {
-            pointerMode = 4 /* DRAG_IO_PIN */;
+            pointerMode = 5 /* DRAG_IO_PIN */;
         }
         else if (selection.type == 'Anchor') {
-            pointerMode = 5 /* DRAG_TRACE_ANCHOR */;
+            pointerMode = 6 /* DRAG_TRACE_ANCHOR */;
         }
         console.log('onDragStarted:', pointerMode);
         dragBehaviour.get(pointerMode)?.start(ev);

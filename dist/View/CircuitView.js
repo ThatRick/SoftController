@@ -1,4 +1,4 @@
-import { vec2 } from '../Lib/Vector2.js';
+import Vec2, { vec2 } from '../Lib/Vector2.js';
 import GUIView from '../GUI/GUIView.js';
 import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import * as HTML from '../Lib/HTML.js';
@@ -10,9 +10,9 @@ import CircuitSelection from './Selection.js';
 import CircuitPointerHandler from './PointerHandler.js';
 import TraceLayer from './TraceLayer.js';
 import { TraceLine } from './TraceLine.js';
-import IOPinView from './IOPinView.js';
 import { IOPinEventType } from '../State/IOPin.js';
 import CircuitGrid from './CircuitGrid.js';
+import CircuitIOView from './CircuitIOView.js';
 class CircuitBody extends GUIChildElement {
     constructor(circuitView) {
         super(circuitView.children, 'div', vec2(0, 0), vec2(circuitView.size), {
@@ -69,7 +69,7 @@ export default class CircuitView extends GUIView {
             const io = event.source;
             switch (event.type) {
                 case IOPinEventType.SourceChanged:
-                    // Get containing block view (or this as circuit view)
+                    // Get containing function block view (or this as circuit view)
                     const blockView = (io.block == this.circuitBlock) ? this : this.blockViews.get(io.block);
                     // Get IOPinView
                     const pinView = blockView?.getPinForIO(io);
@@ -101,15 +101,15 @@ export default class CircuitView extends GUIView {
             }
         };
         this.functionBlockEventHandler = (event) => {
+            const block = event.source;
             switch (event.type) {
                 case 3 /* InputAdded */:
-                    const newInput = event.source.inputs[event.source.inputs.length - 1];
+                    const newInput = block.inputs[block.inputs.length - 1];
                     newInput.events.subscribe(this.ioEventHandler, [IOPinEventType.SourceChanged]);
                     break;
                 case 2 /* Removed */:
-                    this.blockViews.delete(event.source);
+                    this.blockViews.delete(block);
                     this.requestUpdate(this.grid);
-                    console.log('block removed event received');
                     break;
             }
         };
@@ -128,13 +128,13 @@ export default class CircuitView extends GUIView {
         const { definition, positions, size } = circuitViewDefinition;
         this.resize(vec2(size));
         this._circuitBlock = new CircuitBlock(definition);
-        // Create block views
+        // Create circuit IO views
+        this.createCircuitIOViews(circuitViewDefinition);
+        // Create function block views
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index];
             this.createFunctionBlockView(block, vec2(pos));
         });
-        // Create circuit IO pins
-        this.createCircuitPinViews(circuitViewDefinition);
         // Create connection lines
         this.circuit.blocks.forEach((destBlock) => {
             destBlock.inputs?.forEach(destIO => {
@@ -146,9 +146,13 @@ export default class CircuitView extends GUIView {
     }
     getPinForIO(io) {
         let foundPin;
-        foundPin = this.inputPins.find(pin => pin.io == io);
-        foundPin ??= this.outputPins.find(pin => pin.io == io);
+        foundPin = this.inputPins.find(ioView => ioView.pin.io == io)?.pin;
+        foundPin ??= this.outputPins.find(ioView => ioView.pin.io == io)?.pin;
         return foundPin;
+    }
+    addFunctionBlock(name, pos) {
+        const block = this.circuit.addBlock({ typeName: name });
+        this.createFunctionBlockView(block, Vec2.round(pos));
     }
     get circuitBlock() { return this._circuitBlock; }
     createFunctionBlockView(block, pos) {
@@ -181,25 +185,24 @@ export default class CircuitView extends GUIView {
                 console.error('Trace failed. Source IO pin view not found', destIO.sourcePin);
         }
         else
-            console.error('Trace failed. Destionation IO has no source', destIO);
+            console.error('Trace failed. IO has no source', destIO);
     }
-    createCircuitPinViews(def) {
+    createCircuitIOViews(def) {
         this.inputPins ??= this.circuitBlock.inputs.map((input, index) => {
             const posY = def.positions?.inputs?.[index] || index;
-            return this.createCircuitPinView(input, posY);
+            return this.createCircuitIOView(input, posY);
         });
         this.outputPins ??= this.circuitBlock.outputs.map((output, index) => {
             const posY = def.positions?.outputs?.[index] || index;
-            return this.createCircuitPinView(output, posY);
+            return this.createCircuitIOView(output, posY);
         });
     }
-    createCircuitPinView(io, posY) {
+    createCircuitIOView(io, posY) {
         const parentContainer = (io.type == 'input') ? this.inputArea : this.outputArea;
-        const posX = (io.type == 'input') ? CircuitView.IO_AREA_WIDTH : -1;
-        const pin = new IOPinView(io, vec2(posX, posY), parentContainer.children);
-        if (pin.direction == 'left')
+        const ioView = new CircuitIOView(io, posY, parentContainer.children);
+        if (ioView.pin.direction == 'left')
             io.events.subscribe(this.ioEventHandler.bind(this), [IOPinEventType.SourceChanged]);
-        return pin;
+        return ioView;
     }
     onResize() {
         this.grid.resize();

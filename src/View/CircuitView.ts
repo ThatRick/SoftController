@@ -4,7 +4,7 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import * as HTML from '../Lib/HTML.js'
 import { defaultStyle, Style } from './Common.js'
 import { BlockEvent, BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionTypeDefinition } from '../State/FunctionBlock.js'
-import { CircuitBlock } from '../State/FunctionLib.js'
+import { CircuitBlock, FunctionTypeName } from '../State/FunctionLib.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import { EventEmitter } from '../Lib/Events.js'
 import { IRootViewGUI } from '../GUI/GUITypes.js'
@@ -15,6 +15,7 @@ import { TraceLine } from './TraceLine.js'
 import IOPinView from './IOPinView.js'
 import { IOPinEvent, IOPinEventType, IOPinInterface } from '../State/IOPin.js'
 import CircuitGrid from './CircuitGrid.js'
+import CircuitIOView from './CircuitIOView.js'
 
 export interface CircuitViewDefinition
 {
@@ -104,14 +105,14 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.resize(vec2(size))
         this._circuitBlock = new CircuitBlock(definition)
         
-        // Create block views
+        // Create circuit IO views
+        this.createCircuitIOViews(circuitViewDefinition)
+
+        // Create function block views
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index]
             this.createFunctionBlockView(block, vec2(pos))
         })
-
-        // Create circuit IO pins
-        this.createCircuitPinViews(circuitViewDefinition)
         
         // Create connection lines
         this.circuit.blocks.forEach((destBlock) => {
@@ -128,7 +129,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         switch (event.type)
         {
             case IOPinEventType.SourceChanged:
-                // Get containing block view (or this as circuit view)
+                // Get containing function block view (or this as circuit view)
                 const blockView = (io.block == this.circuitBlock) ? this : this.blockViews.get(io.block)
                 // Get IOPinView
                 const pinView = blockView?.getPinForIO(io)
@@ -159,26 +160,31 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     }
 
     functionBlockEventHandler = (event: BlockEvent) => {
+        const block = event.source
         switch (event.type)
         {
             case BlockEventType.InputAdded:
-                const newInput = event.source.inputs[event.source.inputs.length-1]
+                const newInput = block.inputs[block.inputs.length-1]
                 newInput.events.subscribe(this.ioEventHandler, [IOPinEventType.SourceChanged])
                 break
 
             case BlockEventType.Removed:
-                this.blockViews.delete(event.source)
+                this.blockViews.delete(block)
                 this.requestUpdate(this.grid)
-                console.log('block removed event received')
                 break
         }
     }
 
     getPinForIO(io: IOPinInterface) { 
         let foundPin: IOPinView
-        foundPin = this.inputPins.find(pin => pin.io == io)
-        foundPin ??= this.outputPins.find(pin => pin.io == io)
+        foundPin = this.inputPins.find(ioView => ioView.pin.io == io)?.pin
+        foundPin ??= this.outputPins.find(ioView => ioView.pin.io == io)?.pin
         return foundPin
+    }
+
+    addFunctionBlock(name: FunctionTypeName, pos: Vec2) {
+        const block = this.circuit.addBlock({typeName: name})
+        this.createFunctionBlockView(block, Vec2.round(pos))
     }
 
     circuitViewEvents = new EventEmitter<CircuitViewEvent>(this)
@@ -211,8 +217,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.pointer.attachEventHandler(CircuitPointerHandler(this))
     }
 
-    protected inputPins: IOPinView[]
-    protected outputPins: IOPinView[]
+    protected inputPins: CircuitIOView[]
+    protected outputPins: CircuitIOView[]
     
     blockViews = new Map<FunctionBlockInterface, FunctionBlockView>()
     traceLines = new Map<IOPinInterface, TraceLine>()
@@ -248,27 +254,26 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
             else if (!destPin) console.error('Trace failed. Destination IO pin view not found', destIO)
             else if (!sourcePin) console.error('Trace failed. Source IO pin view not found', destIO.sourcePin)
         }
-        else console.error('Trace failed. Destionation IO has no source', destIO)
+        else console.error('Trace failed. IO has no source', destIO)
     }
 
-    protected createCircuitPinViews(def: CircuitViewDefinition)
+    protected createCircuitIOViews(def: CircuitViewDefinition)
     {
         this.inputPins ??= this.circuitBlock.inputs.map((input, index) => {
             const posY = def.positions?.inputs?.[index] || index
-            return this.createCircuitPinView(input, posY)
+            return this.createCircuitIOView(input, posY)
         })
         this.outputPins ??= this.circuitBlock.outputs.map((output, index) => {
             const posY = def.positions?.outputs?.[index] || index
-            return this.createCircuitPinView(output, posY)
+            return this.createCircuitIOView(output, posY)
         })
     }
 
-    protected createCircuitPinView(io: IOPinInterface, posY: number) {
+    protected createCircuitIOView(io: IOPinInterface, posY: number) {
         const parentContainer = (io.type == 'input') ? this.inputArea : this.outputArea
-        const posX = (io.type == 'input') ? CircuitView.IO_AREA_WIDTH : -1
-        const pin = new IOPinView(io, vec2(posX, posY), parentContainer.children)
-        if (pin.direction == 'left') io.events.subscribe(this.ioEventHandler.bind(this), [IOPinEventType.SourceChanged])
-        return pin 
+        const ioView = new CircuitIOView(io, posY, parentContainer.children)
+        if (ioView.pin.direction == 'left') io.events.subscribe(this.ioEventHandler.bind(this), [IOPinEventType.SourceChanged])
+        return ioView 
     }
 
     protected onResize() {

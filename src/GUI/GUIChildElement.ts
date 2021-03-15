@@ -65,6 +65,7 @@ export class GUIChildElement implements IChildElementGUI
     protected _pos: Vec2
     protected _posScaled: Vec2
     protected _posHasChanged = false
+    private _initUpdate = true
 
     setPos(p: Vec2) {
         if (this._pos.equal(p)) return
@@ -121,7 +122,9 @@ export class GUIChildElement implements IChildElementGUI
             this.DOMElement.style.width =   this._sizeScaled.x + 'px'
             this.DOMElement.style.height =  this._sizeScaled.y + 'px'
         }
-        this.onUpdate?.(forceUpdate)
+        if (this._initUpdate) this._initUpdate = false
+        else this.onUpdate?.(forceUpdate)
+
         return false
     }
 

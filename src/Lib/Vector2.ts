@@ -89,6 +89,14 @@ export default class Vec2 implements IVec2
     this.scale(1/this.len())
     return this
   }
+
+  limit(min: Vec2, max: Vec2) {
+    this.x = Math.max(this.x, min.x)
+    this.x = Math.min(this.x, max.x)
+    this.y = Math.max(this.y, min.y)
+    this.y = Math.min(this.y, max.y)
+    return this
+  }
   
   len(): number {
     return Math.sqrt(this.x * this.x + this.y * this.y)
@@ -146,6 +154,14 @@ export default class Vec2 implements IVec2
   
   static len(a: Vec2): number {
     return Math.sqrt(a.x * a.x + a.y * a.y)
+  }
+
+  static limit(v: Vec2, min: Vec2, max: Vec2) {
+    v.x = Math.max(v.x, min.x)
+    v.x = Math.min(v.x, max.x)
+    v.y = Math.max(v.y, min.y)
+    v.y = Math.min(v.y, max.y)
+    return v
   }
   
   static normalize(a: Vec2): Vec2 {

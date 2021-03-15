@@ -88,6 +88,7 @@ export default class TraceLayer {
         trace.points = points;
     }
     updateColor(trace, color) {
+        trace.color = color;
         trace.polylines.forEach(polyline => polyline.style.stroke = color);
         if (trace.jointDot)
             trace.jointDot.style.fill = color;
@@ -210,7 +211,7 @@ export default class TraceLayer {
             console.log('Crossings:', crossings);
             console.log('Crossing sections:', sections);
         }
-        const crossingGap = this.style.crossingGap * this.scale.y;
+        const crossingGap = this.style.traceCrossingGap * this.scale.y;
         const svgPointList = sections.map((section, i) => {
             const scaledPoints = section.map(pos => Vec2.mul(pos, this.scale).add(this.cellOffset));
             // Shift start point y on all but first section
@@ -235,7 +236,7 @@ export default class TraceLayer {
         setSVGAttributes(dot, {
             cx: screenPos.x,
             cy: screenPos.y,
-            r: this.traceWidth * 2
+            r: this.style.traceDotSize * this.scale.y
         });
         Object.assign(dot.style, {
             fill: trace.color

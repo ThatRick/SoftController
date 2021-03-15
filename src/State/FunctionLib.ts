@@ -5,7 +5,7 @@ export type BlockVisualStyle =
     | 'no title'
     | 'no title min'
     | 'name on first row'
-    | 'minimum'
+    | 'minimal'
 
 
 function createFunctionCollection <T extends {[name: string]: FunctionTypeDefinition }>(def: T) { return def }
@@ -37,7 +37,7 @@ export const FunctionDefinitions = createFunctionCollection(
     AND: {
         name: 'AND',
         symbol: '&',
-        visualStyle: 'minimum',
+        visualStyle: 'minimal',
         description: 'Logical AND function',
         inputs: {
             0: { value: 1, dataType: 'BINARY' },
@@ -54,7 +54,7 @@ export const FunctionDefinitions = createFunctionCollection(
     OR: {
         name: 'OR',
         symbol: '≥1',
-        visualStyle: 'minimum',
+        visualStyle: 'minimal',
         description: 'Logical OR function',
         inputs: {
             0: { value: 0, dataType: 'BINARY' },
@@ -84,7 +84,7 @@ export const FunctionDefinitions = createFunctionCollection(
     RisingEdge: {
         name: 'Rising edge',
         symbol: '_|‾',
-        visualStyle: 'minimum',
+        visualStyle: 'minimal',
         description: 'Rising signal edge detector (0 -> 1)',
         inputs: {
             input: { value: 0, dataType: 'BINARY' }

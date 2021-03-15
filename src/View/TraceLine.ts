@@ -1,9 +1,11 @@
 import CircuitView from './CircuitView.js'
 import { GUIChildElement, GUIChildEvent, GUIChildEventType } from '../GUI/GUIChildElement.js'
 import { IContainerGUI, Vec2 } from '../GUI/GUITypes.js'
-import IOPinView from './IOPinView.js'
+import IOPinView, { IOPinViewEvent } from './IOPinView.js'
 import TraceLayer, { TraceRoute, ITraceAnchors } from './TraceLayer.js'
 import { vec2 } from '../Lib/Vector2.js'
+import { IOPinEvent } from '../State/IOPin.js'
+
 
 export class TraceAnchorHandle extends GUIChildElement {
     readonly type: 'vertical' | 'horizontal'
@@ -21,20 +23,21 @@ export class TraceAnchorHandle extends GUIChildElement {
     onPointerLeave = () => this.setStyle({ backgroundColor: 'transparent' })
 }
 
+
 export class TraceLine {
     route: TraceRoute
     
     update() {
-        this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos)
-        this.updateHandles()
+        if (this.updateColorPending) this.updateColor()
+        if (this.updatePositionPending) this.updatePosition()        
     }
 
     delete() {
         const deletedFromMap = this.circuitView.traceLines.delete(this.destPinView.io)
         console.assert(deletedFromMap, 'Failed to delete trace line from circuit view traceLinesMap')
         this.traceLayer.deleteTrace(this.route)
-        this.sourcePinView.events.unsubscribe(this.pinViewEventHandler)
-        this.destPinView.events.unsubscribe(this.pinViewEventHandler)
+        this.sourcePinView.events.unsubscribe(this.pinViewGUIChildEventHandler)
+        this.destPinView.events.unsubscribe(this.pinViewGUIChildEventHandler)
         this.handles.vertical1?.delete()
         this.handles.horizontal?.delete()
         this.handles.vertical2?.delete()
@@ -45,6 +48,7 @@ export class TraceLine {
 
     anchorHandleMoved(name: keyof ITraceAnchors, value: number) {
         this.route.anchors[name] = value
+        this.updatePositionPending = true
         this.circuitView.requestUpdate(this)
     }
 
@@ -63,16 +67,35 @@ export class TraceLine {
         this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor())
         this.updateHandles()
 
-        this.sourcePinView.events.subscribe(this.pinViewEventHandler)
-        this.destPinView.events.subscribe(this.pinViewEventHandler)
-
+        this.sourcePinView.events.subscribe(this.pinViewGUIChildEventHandler)
+        this.destPinView.events.subscribe(this.pinViewGUIChildEventHandler)
+        
+        this.sourcePinView.ioPinViewEvents.subscribe(this.pinViewEventHandler)
+        
         this.instanceID = TraceLine.instanceCounter++
     }
 
-    protected pinViewEventHandler = (event: GUIChildEvent) => {
+    protected updateColorPending = false
+    protected updatePositionPending = false
+    
+    protected updateColor() {
+        if (this.route.color != this.sourcePinView.color) {
+            this.traceLayer.updateColor(this.route, this.sourcePinView.color)
+        }
+        this.updateColorPending = false
+    }
+
+    protected updatePosition() {
+        this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos)
+        this.updateHandles()
+        this.updatePositionPending = false
+    }
+
+    protected pinViewGUIChildEventHandler = (event: GUIChildEvent) => {
         switch (event.type)
         {
             case GUIChildEventType.PositionChanged:
+                this.updatePositionPending = true
                 this.circuitView.requestUpdate(this)
                 break
 
@@ -80,6 +103,11 @@ export class TraceLine {
                 this.delete()
                 break
         }
+    }
+
+    protected pinViewEventHandler = (event: IOPinViewEvent) => {
+        this.updateColorPending = true
+        this.circuitView.requestUpdate(this)
     }
 
     protected instanceID: number
@@ -97,10 +125,6 @@ export class TraceLine {
         return this.sourcePinView.color
     }
 
-    protected updateColor() {
-        this.traceLayer.updateColor(this.route, this.sourcePinView.color)
-    }
-    
     protected updateHandles() {
         const handles = this.handles
         switch (this.route.points.length)

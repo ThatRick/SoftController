@@ -46,9 +46,12 @@ export default class Circuit implements CircuitInterface
     addBlock(def: FunctionInstanceDefinition) {
         const block = getFunctionBlock(def)
         this._blocks.add(block)
+        return block
     }
 
-    removeBlock(block: FunctionBlockInterface) {}
+    removeBlock(block: FunctionBlock) {
+        this._blocks.delete(block)
+    }
 
     connect(inputPin: IOPinInterface, outputPin: IOPinInterface, inverted?: boolean) {}
 

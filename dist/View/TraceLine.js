@@ -21,15 +21,22 @@ export class TraceLine {
         this.circuitView = circuitView;
         this.sourcePinView = sourcePinView;
         this.destPinView = destPinView;
-        this.pinViewEventHandler = (event) => {
+        this.updateColorPending = false;
+        this.updatePositionPending = false;
+        this.pinViewGUIChildEventHandler = (event) => {
             switch (event.type) {
                 case 0 /* PositionChanged */:
+                    this.updatePositionPending = true;
                     this.circuitView.requestUpdate(this);
                     break;
                 case 1 /* Removed */:
                     this.delete();
                     break;
             }
+        };
+        this.pinViewEventHandler = (event) => {
+            this.updateColorPending = true;
+            this.circuitView.requestUpdate(this);
         };
         this.handles = {
             vertical1: undefined,
@@ -41,20 +48,23 @@ export class TraceLine {
         const destMinReach = 1;
         this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor());
         this.updateHandles();
-        this.sourcePinView.events.subscribe(this.pinViewEventHandler);
-        this.destPinView.events.subscribe(this.pinViewEventHandler);
+        this.sourcePinView.events.subscribe(this.pinViewGUIChildEventHandler);
+        this.destPinView.events.subscribe(this.pinViewGUIChildEventHandler);
+        this.sourcePinView.ioPinViewEvents.subscribe(this.pinViewEventHandler);
         this.instanceID = TraceLine.instanceCounter++;
     }
     update() {
-        this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos);
-        this.updateHandles();
+        if (this.updateColorPending)
+            this.updateColor();
+        if (this.updatePositionPending)
+            this.updatePosition();
     }
     delete() {
         const deletedFromMap = this.circuitView.traceLines.delete(this.destPinView.io);
         console.assert(deletedFromMap, 'Failed to delete trace line from circuit view traceLinesMap');
         this.traceLayer.deleteTrace(this.route);
-        this.sourcePinView.events.unsubscribe(this.pinViewEventHandler);
-        this.destPinView.events.unsubscribe(this.pinViewEventHandler);
+        this.sourcePinView.events.unsubscribe(this.pinViewGUIChildEventHandler);
+        this.destPinView.events.unsubscribe(this.pinViewGUIChildEventHandler);
         this.handles.vertical1?.delete();
         this.handles.horizontal?.delete();
         this.handles.vertical2?.delete();
@@ -63,13 +73,22 @@ export class TraceLine {
     onUnselected() { this.traceLayer.setUnselected(this.route); }
     anchorHandleMoved(name, value) {
         this.route.anchors[name] = value;
+        this.updatePositionPending = true;
         this.circuitView.requestUpdate(this);
+    }
+    updateColor() {
+        if (this.route.color != this.sourcePinView.color) {
+            this.traceLayer.updateColor(this.route, this.sourcePinView.color);
+        }
+        this.updateColorPending = false;
+    }
+    updatePosition() {
+        this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos);
+        this.updateHandles();
+        this.updatePositionPending = false;
     }
     getColor() {
         return this.sourcePinView.color;
-    }
-    updateColor() {
-        this.traceLayer.updateColor(this.route, this.sourcePinView.color);
     }
     updateHandles() {
         const handles = this.handles;

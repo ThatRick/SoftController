@@ -6,6 +6,10 @@ export default class HTMLMenu extends Element {
         options?.parent?.appendChild(this.DOMElement);
         this.onItemSelected = options?.onItemSelected;
     }
+    attachSubmenu(submenu) {
+        this.remove();
+        this.DOMElement = submenu.DOMElement;
+    }
     createMenu(items, menuStyle, itemStyle, disabledItemStyle) {
         const menu = domElement(this.DOMElement, 'div', {
             position: 'absolute',
@@ -17,10 +21,10 @@ export default class HTMLMenu extends Element {
             minWidth: '40px',
             ...menuStyle
         });
-        Object.entries(items).forEach(([name, action], i) => {
+        Object.entries(items).forEach(([name, active], i) => {
             itemStyle ??= { color: '#FFF' };
             disabledItemStyle ??= { color: '#888' };
-            const style = (action) ? itemStyle : disabledItemStyle;
+            const style = (active) ? itemStyle : disabledItemStyle;
             const option = new Button(name, menu, {
                 border: 'none',
                 borderBottom: 'thin solid',
@@ -30,7 +34,7 @@ export default class HTMLMenu extends Element {
                 borderRadius: '0',
                 ...style
             });
-            option.onUp = (action) ? ev => this.onItemSelected?.(i, name) : null;
+            option.onUp = (active) ? ev => this.onItemSelected?.(i, name) : null;
         });
         return menu;
     }
