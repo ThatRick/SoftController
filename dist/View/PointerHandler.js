@@ -68,6 +68,9 @@ export default function CircuitPointerHandler(circuit) {
                 ? selection.remove(elem)
                 : selection.add(elem);
         }
+        else if (elem instanceof TraceAnchorHandle) {
+            selection.anchor.traceLine.onSelected();
+        }
     };
     const onRightClicked = (ev) => {
         const elem = pointer.targetElem;
@@ -197,8 +200,10 @@ export default function CircuitPointerHandler(circuit) {
     //  Drag IO pin
     // -------------
     let connectionLine;
-    let connectionValid;
     let connectionDropTargetPin;
+    let connectionCreateValid;
+    let connectionMoveInput;
+    let connectionMoveOutput;
     dragBehaviour.set(4 /* DRAG_IO_PIN */, {
         start(ev) {
             const startPos = circuit.traceLayer.cellCenterScreenPos(selection.pin.absPos);
@@ -213,24 +218,40 @@ export default function CircuitPointerHandler(circuit) {
             connectionLine.setEndPos(pointer.screenPos);
             if (pointer.targetElem instanceof IOPinView) {
                 connectionDropTargetPin = pointer.targetElem;
-                connectionValid = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'right' ||
-                    selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'left');
-                connectionLine.setColor(connectionValid ? circuit.style.colors.connectionLineValid
+                connectionCreateValid = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'right'
+                    || selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'left');
+                connectionMoveInput = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'left'
+                    && selection.pin.io.sourcePin != null);
+                connectionMoveOutput = (selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'right'
+                    && ([...circuit.traceLines.values()].find(trace => trace.sourcePinView.io == selection.pin.io) != null));
+                connectionLine.setColor((connectionCreateValid || connectionMoveInput || connectionMoveOutput)
+                    ? circuit.style.colors.connectionLineValid
                     : circuit.style.colors.connectionLine);
             }
             else {
-                connectionValid = false;
+                connectionCreateValid = false;
+                connectionMoveInput = false;
+                connectionMoveOutput = false;
                 connectionDropTargetPin = null;
                 connectionLine.setColor(circuit.style.colors.connectionLine);
             }
         },
         end(ev) {
-            if (connectionValid) {
+            if (connectionCreateValid) {
                 (selection.pin.direction == 'left')
                     ? selection.pin.io.setSource(connectionDropTargetPin.io)
                     : connectionDropTargetPin.io.setSource(selection.pin.io);
-                selection.removeAll();
             }
+            if (connectionMoveInput) {
+                connectionDropTargetPin.io.setSource(selection.pin.io.sourcePin);
+                selection.pin.io.setSource(null);
+            }
+            if (connectionMoveOutput) {
+                ([...circuit.traceLines.values()]
+                    .filter(trace => trace.sourcePinView.io == selection.pin.io)
+                    .forEach(trace => trace.destPinView.io.setSource(connectionDropTargetPin.io)));
+            }
+            selection.removeAll();
             connectionLine.delete();
         }
     });

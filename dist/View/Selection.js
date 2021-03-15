@@ -78,6 +78,7 @@ export default class CircuitSelection {
         this.type = 'Anchor';
     }
     unselectAnchor() {
+        this.anchor.traceLine.onUnselected();
         this.anchor = null;
         this.type = null;
     }

@@ -31,6 +31,33 @@ class CircuitBody extends GUIChildElement {
         this.onRestyle();
     }
 }
+class CircuitIOArea extends GUIChildElement {
+    constructor(circuitView, type) {
+        super(circuitView.children, 'div', vec2(0, 0), vec2(0, 0), {
+            cursor: 'auto',
+            backgroundColor: circuitView.style.colors.IOAreaBackground
+        }, true);
+        this.circuitView = circuitView;
+        this.type = type;
+        this.handleCircuitResize = () => {
+            this.setPos((this.type == 'inputs')
+                ? vec2(0, 0)
+                : vec2(this.circuitView.size.x - CircuitView.IO_AREA_WIDTH, 0));
+            this.setSize(vec2(CircuitView.IO_AREA_WIDTH, this.circuitView.size.y));
+        };
+        circuitView.events.subscribe(this.handleCircuitResize, [0 /* Resized */]);
+        this.onRestyle();
+        this.handleCircuitResize();
+    }
+    onRestyle() {
+        this.setStyle({
+            ...HTML.backgroundLinesStyle(this.circuitView.scale, this.circuitView.style.colors.gridLines),
+        });
+    }
+    onRescale() {
+        this.onRestyle();
+    }
+}
 export default class CircuitView extends GUIView {
     constructor(parent, size, scale, style = defaultStyle) {
         super(parent, size, scale, style, {
@@ -92,6 +119,8 @@ export default class CircuitView extends GUIView {
         this.traceLines = new Map();
         this.grid = new CircuitGrid(this);
         this.body = new CircuitBody(this);
+        this.inputArea = new CircuitIOArea(this, 'inputs');
+        this.outputArea = new CircuitIOArea(this, 'outputs');
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale, this.style);
         this.pointer.attachEventHandler(CircuitPointerHandler(this));
     }
@@ -157,15 +186,17 @@ export default class CircuitView extends GUIView {
     createCircuitPinViews(def) {
         this.inputPins ??= this.circuitBlock.inputs.map((input, index) => {
             const posY = def.positions?.inputs?.[index] || index;
-            return this.createCircuitPinView(input, vec2(0, posY));
+            return this.createCircuitPinView(input, posY);
         });
         this.outputPins ??= this.circuitBlock.outputs.map((output, index) => {
             const posY = def.positions?.outputs?.[index] || index;
-            return this.createCircuitPinView(output, vec2(this.body.size.x - 1, posY));
+            return this.createCircuitPinView(output, posY);
         });
     }
-    createCircuitPinView(io, pos) {
-        const pin = new IOPinView(io, pos, this.body.children);
+    createCircuitPinView(io, posY) {
+        const parentContainer = (io.type == 'input') ? this.inputArea : this.outputArea;
+        const posX = (io.type == 'input') ? CircuitView.IO_AREA_WIDTH : -1;
+        const pin = new IOPinView(io, vec2(posX, posY), parentContainer.children);
         if (pin.direction == 'left')
             io.events.subscribe(this.ioEventHandler.bind(this), [IOPinEventType.SourceChanged]);
         return pin;

@@ -12,6 +12,7 @@ export const defaultStyle =
         pinSelection: 'rgba(240, 240, 255, 0.2)',
         pinHighlight: 'rgba(240, 240, 255, 0.1)',
         background: '#505060',
+        IOAreaBackground: '#404050',
         gridLines:  '#555565',
         float:      '#8A8',
         integer:    '#88A',
@@ -23,7 +24,7 @@ export const defaultStyle =
     },
     fontSize: 0.8,
     traceWidth: 0.125,
-    crossingGap: 0.2
+    crossingGap: 0.25
 }
 
 export type Style = typeof defaultStyle

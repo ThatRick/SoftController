@@ -40,6 +40,9 @@ export class TraceLine {
         this.handles.vertical2?.delete()
     }
 
+    onSelected() { this.traceLayer.setSelected(this.route) }
+    onUnselected() { this.traceLayer.setUnselected(this.route) }
+
     anchorHandleMoved(name: keyof ITraceAnchors, value: number) {
         this.route.anchors[name] = value
         this.circuitView.requestUpdate(this)

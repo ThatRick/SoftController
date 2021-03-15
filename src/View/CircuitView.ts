@@ -64,6 +64,37 @@ class CircuitBody extends GUIChildElement
     }
 }
 
+class CircuitIOArea extends GUIChildElement
+{
+    constructor(readonly circuitView: CircuitView, readonly type: 'inputs' | 'outputs') {
+        super(circuitView.children, 'div', vec2(0, 0), vec2(0, 0), {
+            cursor: 'auto',
+            backgroundColor: circuitView.style.colors.IOAreaBackground
+        }, true)
+            
+        circuitView.events.subscribe(this.handleCircuitResize, [GUIEventType.Resized])
+            
+        this.onRestyle()
+        this.handleCircuitResize()
+    }
+
+    handleCircuitResize = () => {
+        this.setPos((this.type == 'inputs')
+            ? vec2(0, 0)
+            : vec2(this.circuitView.size.x - CircuitView.IO_AREA_WIDTH, 0))
+        this.setSize(vec2(CircuitView.IO_AREA_WIDTH, this.circuitView.size.y))
+    }
+
+    onRestyle() {
+        this.setStyle({
+            ...HTML.backgroundLinesStyle(this.circuitView.scale, this.circuitView.style.colors.gridLines),
+        })
+    }
+    onRescale() {
+        this.onRestyle()
+    }
+}
+
 export default class CircuitView extends GUIView<GUIChildElement, Style>
 {
     static readonly IO_AREA_WIDTH = 5
@@ -152,8 +183,10 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
 
     circuitViewEvents = new EventEmitter<CircuitViewEvent>(this)
 
-    body: GUIChildElement
-
+    body: CircuitBody
+    inputArea: CircuitIOArea
+    outputArea: CircuitIOArea
+    
     grid: CircuitGrid
     traceLayer: TraceLayer
 
@@ -171,6 +204,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         
         this.grid = new CircuitGrid(this)
         this.body = new CircuitBody(this)
+        this.inputArea = new CircuitIOArea(this, 'inputs')
+        this.outputArea = new CircuitIOArea(this, 'outputs')
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale, this.style)
         
         this.pointer.attachEventHandler(CircuitPointerHandler(this))
@@ -220,16 +255,18 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     {
         this.inputPins ??= this.circuitBlock.inputs.map((input, index) => {
             const posY = def.positions?.inputs?.[index] || index
-            return this.createCircuitPinView(input, vec2(0, posY))
+            return this.createCircuitPinView(input, posY)
         })
         this.outputPins ??= this.circuitBlock.outputs.map((output, index) => {
             const posY = def.positions?.outputs?.[index] || index
-            return this.createCircuitPinView(output, vec2(this.body.size.x-1, posY))
+            return this.createCircuitPinView(output, posY)
         })
     }
 
-    protected createCircuitPinView(io: IOPinInterface, pos: Vec2) {
-        const pin = new IOPinView(io, pos, this.body.children)
+    protected createCircuitPinView(io: IOPinInterface, posY: number) {
+        const parentContainer = (io.type == 'input') ? this.inputArea : this.outputArea
+        const posX = (io.type == 'input') ? CircuitView.IO_AREA_WIDTH : -1
+        const pin = new IOPinView(io, vec2(posX, posY), parentContainer.children)
         if (pin.direction == 'left') io.events.subscribe(this.ioEventHandler.bind(this), [IOPinEventType.SourceChanged])
         return pin 
     }
