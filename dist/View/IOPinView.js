@@ -44,6 +44,11 @@ export default class IOPinView extends GUIChildElement {
         this._backgroundColor = color;
         this.setStyle({ backgroundColor: color });
     }
+    setValueVisibility(visible) {
+        if (!this.valueField)
+            return;
+        this.valueField.style.visibility = (visible) ? 'visible' : 'hidden';
+    }
     //////////////////////////////////////////////
     //               Protected
     //////////////////////////////////////////////

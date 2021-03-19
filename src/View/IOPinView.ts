@@ -37,6 +37,11 @@ export default class IOPinView extends GUIChildElement
 
     ioPinViewEvents = new EventEmitter<IOPinViewEvent>(this)
 
+    setValueVisibility(visible: boolean) {
+        if (!this.valueField) return
+        this.valueField.style.visibility = (visible) ? 'visible' : 'hidden'
+    }
+
     //////////////////////////////////////////////
     //              Constructor
     //////////////////////////////////////////////

@@ -48,10 +48,10 @@ export class Space extends Element {
             paddingLeft: '2px',
             paddingRight: '2px',
         })
-        this.DOMElement.textContent = '-'
+        this.DOMElement.textContent = '⋮'
     }
 }
-
+const sym = '⁃ ⋮ ▪'
 export class Text extends Element {
     constructor (text: string, options?: {
         style?: Partial<CSSStyleDeclaration>,

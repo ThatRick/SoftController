@@ -86,6 +86,9 @@ export class TraceLine {
         this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos);
         this.updateHandles();
         this.updatePositionPending = false;
+        const d = Vec2.sub(this.route.destPos, this.route.sourcePos).round();
+        const hidden = (d.x > 0 && d.x < 4 && d.y == 0);
+        this.destPinView.setValueVisibility(!hidden);
     }
     getColor() {
         return this.sourcePinView.color;

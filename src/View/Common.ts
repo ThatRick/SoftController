@@ -14,7 +14,7 @@ export const defaultStyle =
         background:             '#505060',
         IOAreaBackground:       '#606070',
         gridLines:              '#555565',
-        float:                  '#80A080',
+        float:                  '#90B090',
         integer:                '#88A',
         binary:                 '#AAA',
         binaryOff:              '#887',

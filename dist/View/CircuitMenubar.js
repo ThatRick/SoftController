@@ -6,7 +6,7 @@ export class CircuitMenuBar {
         this.handleGuiEvent = (ev) => {
             switch (ev.type) {
                 case 1 /* Rescaled */:
-                    this.menuItems.scaleTitle.setText('Scale: ' + this.view.scale.y);
+                    this.menuItems.scaleTitle.setText('scale: ' + this.view.scale.y);
                     break;
                 case 0 /* Resized */:
                     break;
@@ -34,9 +34,9 @@ export class CircuitMenuBar {
         const menu = this.menu;
         this.menuItems = {
             name: new HTML.Text(view.name),
-            gap1: new HTML.Space(8),
+            gap1: new HTML.Space(14),
             ...this.scaleControls(),
-            gap2: new HTML.Text(''),
+            gap2: new HTML.Space(14),
             gridMapToggle: this.toggleGridMap(),
             step: this.stepController()
         };
@@ -54,7 +54,7 @@ export class CircuitMenuBar {
         }, this.view.grid.visible);
     }
     scaleControls() {
-        const scaleTitle = new HTML.Text('Scale: ' + this.view.scale.y, {
+        const scaleTitle = new HTML.Text('scale: ' + this.view.scale.y, {
             style: { width: this.menu.height * 3.5 + 'px' }
         });
         const scaleDecBtn = new HTML.ActionButton('-', {
