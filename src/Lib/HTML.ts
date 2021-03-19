@@ -22,6 +22,13 @@ export interface IElement
     DOMElement: HTMLElement
 }
 
+export function domElement<K extends keyof HTMLElementTagNameMap>(parentDOM: HTMLElement, tagName: K, style?: Partial<CSSStyleDeclaration>): HTMLElementTagNameMap[K] {
+    const elem = document.createElement(tagName)
+    Object.assign(elem.style, style)
+    parentDOM?.appendChild(elem)
+    return elem
+}
+
 export class Element {
     DOMElement: HTMLElement
     remove() {
@@ -34,11 +41,15 @@ export class Element {
     style: Style = defaultStyle
 }
 
-export function domElement<K extends keyof HTMLElementTagNameMap>(parentDOM: HTMLElement, tagName: K, style?: Partial<CSSStyleDeclaration>): HTMLElementTagNameMap[K] {
-    const elem = document.createElement(tagName)
-    Object.assign(elem.style, style)
-    parentDOM?.appendChild(elem)
-    return elem
+export class Space extends Element {
+    constructor(width: number) {
+        super()
+        this.DOMElement = domElement(null, 'div', {
+            paddingLeft: '2px',
+            paddingRight: '2px',
+        })
+        this.DOMElement.textContent = '-'
+    }
 }
 
 export class Text extends Element {

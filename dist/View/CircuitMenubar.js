@@ -3,36 +3,44 @@ import { Menubar } from '../Lib/HTMLMenubar.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 export class CircuitMenuBar {
     constructor(parent) {
+        this.handleGuiEvent = (ev) => {
+            switch (ev.type) {
+                case 1 /* Rescaled */:
+                    this.menuItems.scaleTitle.setText('Scale: ' + this.view.scale.y);
+                    break;
+                case 0 /* Resized */:
+                    break;
+            }
+        };
+        this.handleCircuitViewEvent = (ev) => {
+            switch (ev.type) {
+                case 0 /* CircuitLoaded */:
+                    break;
+                case 1 /* CircuitClosed */:
+                    break;
+                case 2 /* NameChanged */:
+                    this.menuItems.name.setText(this.view.name);
+                    break;
+            }
+        };
         this.menu = new Menubar(parent, {
             overflow: 'visible'
         });
     }
-    handleGuiEvent(ev) {
-        switch (ev.type) {
-            case 1 /* Rescaled */:
-                break;
-            case 0 /* Resized */:
-                break;
-        }
-    }
-    handleCircuitViewEvent(ev) {
-        switch (ev.type) {
-            case 0 /* CircuitLoaded */:
-                break;
-            case 1 /* CircuitClosed */:
-                break;
-        }
-    }
     attachCircuitView(view) {
         this.view = view;
-        view.events.subscribe(this.handleGuiEvent.bind(this));
-        view.circuitViewEvents.subscribe(this.handleCircuitViewEvent.bind(this));
+        view.events.subscribe(this.handleGuiEvent);
+        view.circuitViewEvents.subscribe(this.handleCircuitViewEvent);
         const menu = this.menu;
-        menu.addItems([
+        this.menuItems = {
+            name: new HTML.Text(view.name),
+            gap1: new HTML.Space(8),
             ...this.scaleControls(),
-            this.toggleGridMap(),
-            this.stepController()
-        ]);
+            gap2: new HTML.Text(''),
+            gridMapToggle: this.toggleGridMap(),
+            step: this.stepController()
+        };
+        menu.addItems(Object.values(this.menuItems));
     }
     stepController() {
         return new HTML.ActionButton('Step', {
@@ -46,18 +54,17 @@ export class CircuitMenuBar {
         }, this.view.grid.visible);
     }
     scaleControls() {
-        const title = new HTML.Text('Scale: ' + this.view.scale.y, {
+        const scaleTitle = new HTML.Text('Scale: ' + this.view.scale.y, {
             style: { width: this.menu.height * 3.5 + 'px' }
         });
-        this.view.events.subscribe(() => title.setText('Scale: ' + this.view.scale.y), [1 /* Rescaled */]);
-        const decBtn = new HTML.ActionButton('-', {
+        const scaleDecBtn = new HTML.ActionButton('-', {
             action: () => this.view.rescale(Vec2.sub(this.view.scale, vec2(1))),
             style: { width: this.menu.parentHeight + 'px' }
         });
-        const incBtn = new HTML.ActionButton('+', {
+        const scaleIncBtn = new HTML.ActionButton('+', {
             action: () => this.view.rescale(Vec2.add(this.view.scale, vec2(1))),
             style: { width: this.menu.parentHeight + 'px' }
         });
-        return [title, decBtn, incBtn];
+        return { scaleTitle, scaleDecBtn, scaleIncBtn };
     }
 }

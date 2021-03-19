@@ -31,6 +31,7 @@ export interface CircuitViewDefinition
 export const enum CircuitViewEventType {
     CircuitLoaded,
     CircuitClosed,
+    NameChanged
 }
 
 export interface CircuitViewEvent {
@@ -196,11 +197,20 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     grid: CircuitGrid
     traceLayer: TraceLayer
 
+    blockViews = new Map<FunctionBlockInterface, FunctionBlockView>()
+    traceLines = new Map<IOPinInterface, TraceLine>()
+
     selection = new CircuitSelection(this.style)
     
     get circuitBlock(): FunctionBlockInterface { return this._circuitBlock }
 
-    constructor(parent: HTMLElement, size: Vec2, scale: Vec2, style: Readonly<Style> = defaultStyle)
+    get name() { return this._name }
+    set name(text: string) {
+        this._name = text
+        this.events.emit(CircuitViewEventType.NameChanged)
+    }
+
+    constructor(parent: HTMLElement, size = vec2(48, 32), scale = vec2(16, 16), style: Readonly<Style> = defaultStyle)
     {
         super(parent, size, scale, style, {
             backgroundColor: style.colors.background,
@@ -219,10 +229,9 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
 
     protected inputPins: CircuitIOView[]
     protected outputPins: CircuitIOView[]
-    
-    blockViews = new Map<FunctionBlockInterface, FunctionBlockView>()
-    traceLines = new Map<IOPinInterface, TraceLine>()
 
+    protected _name = 'New circuit'
+    
     protected createFunctionBlockView(block: FunctionBlockInterface, pos: Vec2) {
         const blockView = new FunctionBlockView(block, pos, this.body.children)
         // subscribe for io connection events

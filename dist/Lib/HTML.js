@@ -10,6 +10,12 @@ export const defaultStyle = {
     boxShadow: '0px 2px 2px 1px rgba(0,0,0,0.25)',
     fontSize: 14
 };
+export function domElement(parentDOM, tagName, style) {
+    const elem = document.createElement(tagName);
+    Object.assign(elem.style, style);
+    parentDOM?.appendChild(elem);
+    return elem;
+}
 export class Element {
     constructor() {
         this.style = defaultStyle;
@@ -22,11 +28,15 @@ export class Element {
         Object.assign(this.DOMElement.style, style);
     }
 }
-export function domElement(parentDOM, tagName, style) {
-    const elem = document.createElement(tagName);
-    Object.assign(elem.style, style);
-    parentDOM?.appendChild(elem);
-    return elem;
+export class Space extends Element {
+    constructor(width) {
+        super();
+        this.DOMElement = domElement(null, 'div', {
+            paddingLeft: '2px',
+            paddingRight: '2px',
+        });
+        this.DOMElement.textContent = '-';
+    }
 }
 export class Text extends Element {
     constructor(text, options) {

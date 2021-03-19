@@ -59,7 +59,7 @@ class CircuitIOArea extends GUIChildElement {
     }
 }
 export default class CircuitView extends GUIView {
-    constructor(parent, size, scale, style = defaultStyle) {
+    constructor(parent, size = vec2(48, 32), scale = vec2(16, 16), style = defaultStyle) {
         super(parent, size, scale, style, {
             backgroundColor: style.colors.background,
             fontFamily: 'system-ui',
@@ -114,9 +114,10 @@ export default class CircuitView extends GUIView {
             }
         };
         this.circuitViewEvents = new EventEmitter(this);
-        this.selection = new CircuitSelection(this.style);
         this.blockViews = new Map();
         this.traceLines = new Map();
+        this.selection = new CircuitSelection(this.style);
+        this._name = 'New circuit';
         this.grid = new CircuitGrid(this);
         this.body = new CircuitBody(this);
         this.inputArea = new CircuitIOArea(this, 'inputs');
@@ -155,6 +156,11 @@ export default class CircuitView extends GUIView {
         this.createFunctionBlockView(block, Vec2.round(pos));
     }
     get circuitBlock() { return this._circuitBlock; }
+    get name() { return this._name; }
+    set name(text) {
+        this._name = text;
+        this.events.emit(2 /* NameChanged */);
+    }
     createFunctionBlockView(block, pos) {
         const blockView = new FunctionBlockView(block, pos, this.body.children);
         // subscribe for io connection events

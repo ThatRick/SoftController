@@ -19,35 +19,56 @@ export class CircuitMenuBar
         })
     }
 
-    handleGuiEvent(ev: GUIEvent) {
+    handleGuiEvent = (ev: GUIEvent) => {
         switch(ev.type)
         {
             case GUIEventType.Rescaled:
+                this.menuItems.scaleTitle.setText('Scale: '+this.view.scale.y)
                 break
             case GUIEventType.Resized:
                 break
         }
     }
-    handleCircuitViewEvent(ev: CircuitViewEvent) {
+    handleCircuitViewEvent = (ev: CircuitViewEvent) => {
         switch(ev.type)
         {
             case CircuitViewEventType.CircuitLoaded:
                 break
             case CircuitViewEventType.CircuitClosed:
                 break
+            case CircuitViewEventType.NameChanged:
+                this.menuItems.name.setText(this.view.name)
+                break
         }
+    }
+
+    menuItems: {
+        name: HTML.Text
+        gap1: HTML.Space
+        scaleTitle: HTML.Text
+        scaleDecBtn: HTML.Button
+        scaleIncBtn: HTML.Button
+        gap2: HTML.Text
+        gridMapToggle: HTML.Button
+        step: HTML.Button
     }
 
     attachCircuitView(view: CircuitView) {
         this.view = view
-        view.events.subscribe(this.handleGuiEvent.bind(this))
-        view.circuitViewEvents.subscribe(this.handleCircuitViewEvent.bind(this))
+        view.events.subscribe(this.handleGuiEvent)
+        view.circuitViewEvents.subscribe(this.handleCircuitViewEvent)
         const menu = this.menu
-        menu.addItems([
+        
+        this.menuItems = {
+            name: new HTML.Text(view.name),
+            gap1: new HTML.Space(8),
             ...this.scaleControls(),
-            this.toggleGridMap(),
-            this.stepController()
-        ])
+            gap2: new HTML.Text(''),
+            gridMapToggle: this.toggleGridMap(),
+            step: this.stepController()
+        }
+
+        menu.addItems(Object.values(this.menuItems))
     }
 
     stepController() {
@@ -64,23 +85,19 @@ export class CircuitMenuBar
     }
 
     scaleControls() {
-        const title = new HTML.Text('Scale: '+this.view.scale.y, {
+        const scaleTitle = new HTML.Text('Scale: '+this.view.scale.y, {
             style: { width: this.menu.height * 3.5 + 'px' }
         })
-        this.view.events.subscribe(() =>
-            title.setText('Scale: '+this.view.scale.y),
-            [GUIEventType.Rescaled]
-        )
-        const decBtn = new HTML.ActionButton('-', {
+        const scaleDecBtn = new HTML.ActionButton('-', {
             action: () => this.view.rescale(Vec2.sub(this.view.scale, vec2(1))),
             style: { width: this.menu.parentHeight+'px'}
         })
-        const incBtn = new HTML.ActionButton('+', {
+        const scaleIncBtn = new HTML.ActionButton('+', {
             action: () => this.view.rescale(Vec2.add(this.view.scale, vec2(1))),
             style: { width: this.menu.parentHeight+'px'}
         })
 
-        return [title, decBtn, incBtn]
+        return { scaleTitle, scaleDecBtn, scaleIncBtn }
     }
 
 }

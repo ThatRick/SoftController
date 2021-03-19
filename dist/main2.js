@@ -10,7 +10,7 @@ import { CircuitMenuBar } from './View/CircuitMenubar.js';
 window.onload = () => app().catch(rejected => console.error(rejected));
 const myProg = {
     definition: {
-        name: 'My circuit',
+        name: 'Test circuit 1',
         inputs: {
             meas: { value: 123, dataType: 'FLOAT' },
             fault: { value: 0, dataType: 'BINARY' }
@@ -42,7 +42,7 @@ const myProg = {
             ]
         }
     },
-    size: { x: 40, y: 30 },
+    size: { x: 48, y: 32 },
     positions: {
         blocks: [
             { x: 8, y: 4 },
@@ -63,7 +63,7 @@ function testCircuit(view, terminal) {
 async function app() {
     const mainMenubar = new Menubar(document.getElementById('mainMenubar'));
     const circuitMenubar = new CircuitMenuBar(document.getElementById('guiMenubar'));
-    const view = new CircuitView(document.getElementById('gui'), vec2(64, 48), vec2(12, 12));
+    const view = new CircuitView(document.getElementById('gui'), vec2(64, 48), vec2(16, 16));
     const terminalMenubar = new Menubar(document.getElementById('terminalMenubar'));
     const terminal = new ControllerTerminal(document.getElementById('terminal'), null);
     circuitMenubar.attachCircuitView(view);
