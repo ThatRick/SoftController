@@ -1,5 +1,5 @@
-import { Vec2 } from '../GUI/GUITypes.js';
-import * as HTML from './HTML.js'
+import Vec2 from '../Vector2.js';
+import {IElement, domElement, getInnerHeight} from './HTMLCommon.js'
 
 export class Menubar
 {
@@ -10,7 +10,7 @@ export class Menubar
     constructor (
         private parent: HTMLElement,
         private style?: Partial<CSSStyleDeclaration>,
-        private menuItems: HTML.IElement[] = [])
+        private menuItems: IElement[] = [])
     {
         this.parentHeight = parent.clientHeight
         
@@ -26,23 +26,23 @@ export class Menubar
             ...style
         } as Partial<CSSStyleDeclaration>
         
-        this.DOMElement = HTML.domElement(parent, 'div', menuBarStyle)
-        this.height = HTML.getInnerHeight(this.DOMElement)
+        this.DOMElement = domElement(parent, 'div', menuBarStyle)
+        this.height = getInnerHeight(this.DOMElement)
         this.menuItems = menuItems
         this.addItems(menuItems)
     }
 
-    addItem(item: HTML.IElement) {
+    addItem(item: IElement) {
         this.DOMElement.appendChild(item.DOMElement)
         Object.assign(item.DOMElement.style, {
             display: 'inline-block',
             boxSizing: 'border-box',
             height: '100%',
         })
-        const lineHeight = HTML.getInnerHeight(item.DOMElement)
+        const lineHeight = getInnerHeight(item.DOMElement)
         item.DOMElement.style.lineHeight = lineHeight + 'px'
     }
-    addItems(items: HTML.IElement[]) {
+    addItems(items: IElement[]) {
         items.forEach(item => this.addItem(item))
     }
 }

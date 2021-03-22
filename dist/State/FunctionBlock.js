@@ -31,7 +31,6 @@ export class FunctionBlock {
     get typeName() { return this._typeName; }
     get symbol() { return this._symbol; }
     get description() { return this._description; }
-    get parentCircuit() { return this._parentCircuit; }
     setVariableInputCount(n) {
         console.log('Set variable input count to', n);
         if (!this.variableInputs)
@@ -94,7 +93,12 @@ export class FunctionBlock {
     remove() {
         this.inputs.forEach(input => input.remove());
         this.outputs.forEach(output => output.remove());
-        this.circuit?.removeBlock(this);
+        if (this.circuit) {
+            this.circuit.remove();
+        }
+        if (this.parentCircuit) {
+            this.parentCircuit.removeBlock(this);
+        }
         this.events.emit(2 /* Removed */);
         this.events.clear();
     }

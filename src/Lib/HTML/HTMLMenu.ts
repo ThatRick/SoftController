@@ -1,6 +1,7 @@
-import { Button, domElement, Element } from './HTML.js'
+import { domElement, Element } from './HTMLCommon.js'
+import { Button } from './HTMLButton.js'
 
-export default class HTMLMenu extends Element {
+export class Menu extends Element {
 
     constructor(items: Record<string, unknown>, options: {
         parent?: HTMLElement,
@@ -15,7 +16,7 @@ export default class HTMLMenu extends Element {
         this.onItemSelected = options?.onItemSelected
     }
 
-    attachSubmenu(submenu: HTMLMenu) {
+    attachSubmenu(submenu: Menu) {
         this.remove()
         this.DOMElement = submenu.DOMElement
     }

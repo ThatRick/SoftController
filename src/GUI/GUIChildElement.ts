@@ -156,6 +156,7 @@ export class GUIChildElement implements IChildElementGUI
         this.parentContainer.removeChildElement(this)
         this.children?.delete()
         this.events.emit(GUIChildEventType.Removed)
+        this.events.clear()
     }
 
     // Event receivers

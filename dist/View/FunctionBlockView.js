@@ -11,12 +11,30 @@ export default class FunctionBlockView extends GUIChildElement {
             borderRadius: '2px',
             cursor: 'grab'
         }, true);
+        this.blockEventHandler = (ev) => {
+            switch (ev.type) {
+                case 0 /* InputCountChanged */:
+                case 1 /* OutputCountChanged */:
+                    this.setSize(FunctionBlockView.getBlockSize(this.block));
+                    if (this.visualStyle == 'minimal')
+                        this.createSymbol();
+                    else
+                        this.createIONames();
+                    this.changePinCount();
+                    break;
+                case 2 /* Removed */:
+                    this.delete();
+                    break;
+                default:
+                // console.log('FunctionBlockView: Unhandled block event!')
+            }
+        };
         this.onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.primaryHL });
         this.onPointerLeave = () => this.setStyle({ backgroundColor: this.gui.style.colors.primary });
         this.setStyle({
             backgroundColor: this.gui.style.colors.primary
         });
-        block.events.subscribe(this.blockEventHandler.bind(this));
+        block.events.subscribe(this.blockEventHandler);
         this.block = block;
         this.create();
     }
@@ -26,25 +44,11 @@ export default class FunctionBlockView extends GUIChildElement {
         foundPin ??= this.outputPins.find(pin => pin.io == io);
         return foundPin;
     }
-    get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
-    blockEventHandler(ev) {
-        switch (ev.type) {
-            case 0 /* InputCountChanged */:
-            case 1 /* OutputCountChanged */:
-                this.setSize(FunctionBlockView.getBlockSize(this.block));
-                if (this.visualStyle == 'minimal')
-                    this.createSymbol();
-                else
-                    this.createIONames();
-                this.changePinCount();
-                break;
-            case 2 /* Removed */:
-                this.delete();
-                break;
-            default:
-            // console.log('FunctionBlockView: Unhandled block event!')
-        }
+    delete() {
+        this.block.events.unsubscribe(this.blockEventHandler);
+        super.delete();
     }
+    get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
     onRescale() {
         this.create();
     }

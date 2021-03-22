@@ -1,5 +1,6 @@
-import { Button, domElement } from './HTML.js'
-import HTMLMenu from './HTMLMenu.js'
+import { domElement } from './HTMLCommon.js'
+import { Button } from './HTMLButton.js'
+import { Menu } from './HTMLMenu.js'
 
 const arrowDown = ' ⋁'
 
@@ -8,7 +9,7 @@ export class DropdownMenu {
     buttonName: string
     DOMElement: HTMLDivElement
     button: Button
-    menu: HTMLMenu
+    menu: Menu
 
     constructor(name: string, options: {
         items: string[],
@@ -21,7 +22,7 @@ export class DropdownMenu {
         this.items = options.items
 
         this.button = new Button(name, this.DOMElement)
-        this.menu = new HTMLMenu(options.items.reduce((obj, name) => obj[name] = true, {}), {
+        this.menu = new Menu(options.items.reduce((obj, name) => obj[name] = true, {}), {
             parent: this.DOMElement,
             menuStyle: { visibility: 'hidden' }
         })

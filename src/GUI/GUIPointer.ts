@@ -2,7 +2,7 @@ import Vec2, { vec2 } from '../lib/Vector2.js'
 import { GUIChildElement } from './GUIChildElement.js'
 import { GUIPointerEventHandler, IChildElementGUI } from './GUITypes.js'
 import GUIView from './GUIView.js'
-import * as HTML from './../Lib/HTML.js'
+import * as HTML from '../Lib/HTML.js'
 
 const DOUBLE_CLICK_INTERVAL = 400
 

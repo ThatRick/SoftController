@@ -1,8 +1,6 @@
 import { IChildElementGUI, GUIPointerState, IElementGUI, IRootViewGUI, IStyleGUI, GUIPointerEventHandler } from './GUITypes.js'
 import Vec2, {vec2} from '../Lib/Vector2.js'
 import GUIContainer from './GUIContainer.js'
-import { GUIChildElement } from './GUIChildElement.js'
-import * as HTML from './../Lib/HTML.js'
 import GUIPointer from './GUIPointer.js'
 import { EventEmitter } from '../Lib/Events.js'
 

@@ -1,17 +1,15 @@
-import * as HTML from '../lib/HTML.js';
-import { DropdownMenu } from '../Lib/HTMLDropdownMenu.js';
-import { Menubar } from '../Lib/HTMLMenubar.js';
+import * as HTML from '../Lib/HTML.js';
 import { instructions } from '../FunctionCollection.js';
 export class CircuitMenuBar {
     constructor(parent) {
-        this.menu = new Menubar(parent, {
+        this.menu = new HTML.Menubar(parent, {
             overflow: 'visible'
         });
     }
     attachCircuit(view) {
         const menu = this.menu;
         const funcLibMenus = instructions.libraries.map(lib => {
-            const libMenu = new DropdownMenu(lib.name, { items: lib.functions.map(func => func.name) });
+            const libMenu = new HTML.DropdownMenu(lib.name, { items: lib.functions.map(func => func.name) });
             libMenu.onItemSelected = (i, name) => {
                 view.insertBlock(lib.id, i);
             };

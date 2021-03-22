@@ -1,6 +1,5 @@
-import HTMLMenu from '../Lib/HTMLMenu.js'
-import HTMLInput from '../Lib/HTMLInput.js'
-import {defaultStyle} from '../Lib/HTML.js'
+
+import * as HTML from '../Lib/HTML.js'
 import Vec2 from '../Lib/Vector2.js'
 import { BlockEventType } from '../State/FunctionBlock.js'
 import IOPinView from './IOPinView.js'
@@ -19,12 +18,12 @@ export default function FunctionBlockContextMenu(options: {
         'Disconnect':   (ioPinView.io.sourcePin) ? () => { ioPinView.io.setSource(null) } : null
     }
     
-    const menu = new HTMLMenu(items, {
+    const menu = new HTML.Menu(items, {
         parent: parentContainer,
         menuStyle: {
             left: pos.x + 'px',
             top: pos.y + 'px',
-            fontSize: defaultStyle.fontSize + 'px',
+            fontSize: HTML.defaultStyle.fontSize + 'px',
         },
         onItemSelected: (index: number, name: string) => {
             items[name]?.()

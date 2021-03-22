@@ -20,6 +20,11 @@ export default class FunctionBlockView extends GUIChildElement
         return foundPin
     }
 
+    delete() {
+        this.block.events.unsubscribe(this.blockEventHandler)
+        super.delete()
+    }
+
     constructor(block: FunctionBlockInterface, pos: Vec2, parentContainer: IContainerGUI )
     {
         super(parentContainer, 'div', pos, FunctionBlockView.getBlockSize(block), {
@@ -34,7 +39,7 @@ export default class FunctionBlockView extends GUIChildElement
             backgroundColor: this.gui.style.colors.primary
         })
 
-        block.events.subscribe(this.blockEventHandler.bind(this))
+        block.events.subscribe(this.blockEventHandler)
 
         this.block = block
         this.create()
@@ -47,7 +52,7 @@ export default class FunctionBlockView extends GUIChildElement
     protected IONameTable: HTML.Table
     protected titleElem: HTML.Text
 
-    protected blockEventHandler(ev: BlockEvent) {
+    protected blockEventHandler = (ev: BlockEvent) => {
         switch (ev.type)
         {
             case BlockEventType.InputCountChanged:

@@ -1,7 +1,7 @@
-import Vec2, { vec2 } from './Vector2.js'
-import { Button, domElement, Element } from './HTML.js'
+import Vec2, { vec2 } from '../Vector2.js'
+import { domElement, Element } from './HTMLCommon.js'
 
-export default class HTMLValue extends Element
+export class InputField extends Element
 {
     constructor(options: {
         name?: string,

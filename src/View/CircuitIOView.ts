@@ -1,9 +1,9 @@
 import Vec2, {vec2} from '../Lib/Vector2.js'
-import { GUIChildElement } from '../GUI/GUIChildElement.js'
+import { GUIChildElement, GUIChildEvent, GUIChildEventType } from '../GUI/GUIChildElement.js'
 import { BlockEvent, BlockEventType, FunctionBlockInterface } from '../State/FunctionBlock.js'
 import * as HTML from '../Lib/HTML.js'
 import { IContainerGUI } from '../GUI/GUITypes.js'
-import IOPinView from './IOPinView.js'
+import IOPinView, { IOPinViewEvent } from './IOPinView.js'
 import CircuitView from './CircuitView.js'
 import { IOPinInterface } from '../State/IOPin.js'
 
@@ -29,7 +29,17 @@ export default class FunctionBlockView extends GUIChildElement
 
         const pinPosX = (io.type == 'input') ? CircuitView.IO_AREA_WIDTH : -1
         this.pin = new IOPinView(io, vec2(pinPosX, 0), this.children)
+        this.pin.events.subscribe(this.guiChildEventHandler)
+
         this.create()
+    }
+
+    protected guiChildEventHandler = (ev: GUIChildEvent) => {
+        switch (ev.type) {
+            case GUIChildEventType.Removed:
+                this.delete()
+                break
+        }
     }
 
     protected titleElem: HTML.Text

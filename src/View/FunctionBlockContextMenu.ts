@@ -1,7 +1,5 @@
 import FunctionBlockView from './FunctionBlockView.js'
-import HTMLMenu from '../Lib/HTMLMenu.js'
-import HTMLInput from '../Lib/HTMLInput.js'
-import {defaultStyle} from '../Lib/HTML.js'
+import * as HTML from '../Lib/HTML.js'
 import Vec2 from '../Lib/Vector2.js'
 import { BlockEventType } from '../State/FunctionBlock.js'
 import CircuitSelection from './Selection.js'
@@ -19,7 +17,7 @@ export default function FunctionBlockContextMenu(pars: {
     
     const items = {
         'Input count': (singleSelection?.block.variableInputs) ? () => {
-            const input = new HTMLInput({
+            const input = new HTML.InputField({
                 name: 'Input count',
                 value: singleSelection.block.inputs.length,
                 pos,
@@ -42,12 +40,12 @@ export default function FunctionBlockContextMenu(pars: {
             pars.selection.unselectAll()
         },
     }
-    const menu = new HTMLMenu(items, {
+    const menu = new HTML.Menu(items, {
         parent: parentContainer,
         menuStyle: {
             left: pos.x + 'px',
             top: pos.y + 'px',
-            fontSize: defaultStyle.fontSize + 'px',
+            fontSize: HTML.defaultStyle.fontSize + 'px',
         },
         onItemSelected: (index: number, name: string) => {
             items[name]?.()

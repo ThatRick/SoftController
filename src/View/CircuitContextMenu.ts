@@ -1,7 +1,5 @@
 import CircuitView from './CircuitView.js'
-import HTMLMenu from '../Lib/HTMLMenu.js'
-import HTMLInput from '../Lib/HTMLInput.js'
-import {defaultStyle} from '../Lib/HTML.js'
+import * as HTML from '../Lib/HTML.js'
 import Vec2, { vec2 } from '../Lib/Vector2.js'
 import { functionLib, FunctionTypeName, functionTypeNames } from '../State/FunctionLib.js'
 
@@ -16,12 +14,12 @@ export default function CircuitContextMenu(options: {
     
     const items = {
         'Add block': () => {
-            const submenu = new HTMLMenu(functionLib, {
+            const submenu = new HTML.Menu(functionLib, {
                 parent: parentContainer,
                 menuStyle: {
                     left: pos.x + 'px',
                     top: pos.y + 'px',
-                    fontSize: defaultStyle.fontSize + 'px',
+                    fontSize: HTML.defaultStyle.fontSize + 'px',
                 },
                 onItemSelected: (index: number, name: string) => {
                     console.log('function menu selection:', name)
@@ -32,7 +30,7 @@ export default function CircuitContextMenu(options: {
             return submenu
         },
         'Width': () => {
-            const input = new HTMLInput({
+            const input = new HTML.InputField({
                 name: 'Circuit Width',
                 value: circuitView.size.x,
                 pos,
@@ -48,7 +46,7 @@ export default function CircuitContextMenu(options: {
             })
         },
         'Height': () => {
-            const input = new HTMLInput({
+            const input = new HTML.InputField({
                 name: 'Circuit Height',
                 value: circuitView.size.y,
                 pos,
@@ -64,12 +62,12 @@ export default function CircuitContextMenu(options: {
             })
         },
     }
-    const menu = new HTMLMenu(items, {
+    const menu = new HTML.Menu(items, {
         parent: parentContainer,
         menuStyle: {
             left: pos.x + 'px',
             top: pos.y + 'px',
-            fontSize: defaultStyle.fontSize + 'px',
+            fontSize: HTML.defaultStyle.fontSize + 'px',
         },
         onItemSelected: (index: number, itemName: keyof typeof items) => {
             if (itemName == 'Add block') {

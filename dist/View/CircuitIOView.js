@@ -12,6 +12,13 @@ export default class FunctionBlockView extends GUIChildElement {
             borderRadius: '2px',
             cursor: 'grab'
         }, true);
+        this.guiChildEventHandler = (ev) => {
+            switch (ev.type) {
+                case 1 /* Removed */:
+                    this.delete();
+                    break;
+            }
+        };
         this.onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.primaryHL });
         this.onPointerLeave = () => this.setStyle({ backgroundColor: this.gui.style.colors.primary });
         this.setStyle({
@@ -19,6 +26,7 @@ export default class FunctionBlockView extends GUIChildElement {
         });
         const pinPosX = (io.type == 'input') ? CircuitView.IO_AREA_WIDTH : -1;
         this.pin = new IOPinView(io, vec2(pinPosX, 0), this.children);
+        this.pin.events.subscribe(this.guiChildEventHandler);
         this.create();
     }
     onRescale() {

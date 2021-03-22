@@ -1,9 +1,9 @@
 import { getFunctionBlock } from './FunctionLib.js';
 import { EventEmitter } from "../Lib/Events.js";
 export default class Circuit {
-    constructor(def, circBlock) {
+    constructor(def, circuitBlock) {
         this.events = new EventEmitter(this);
-        this.circBlock = circBlock;
+        this.circuitBlock = circuitBlock;
         // Create blocks
         const blocks = def.blocks.map(funcDef => getFunctionBlock(funcDef));
         // Set block input sources
@@ -18,7 +18,7 @@ export default class Circuit {
                             const { blockNum, outputNum, inverted = false } = inputDef.source;
                             // Connect to circuit input (blockNum = -1) or block output (blockNum = 0..n)
                             const sourcePin = (blockNum == -1)
-                                ? circBlock.inputs[outputNum]
+                                ? circuitBlock.inputs[outputNum]
                                 : blocks[blockNum].outputs[outputNum];
                             input.setSource(sourcePin);
                             input.setInverted(inverted);
@@ -32,19 +32,32 @@ export default class Circuit {
     get blocks() { return Array.from(this._blocks.values()); }
     addBlock(def) {
         const block = getFunctionBlock(def);
+        block.parentCircuit = this;
         this._blocks.add(block);
         return block;
     }
     removeBlock(block) {
+        // Remove connections to other blocks
+        this._blocks.forEach(otherBlock => {
+            otherBlock.inputs.forEach(input => {
+                if (block.outputs.includes(input.sourcePin)) {
+                    input.setSource(null);
+                    console.log('connection cleared to removed block');
+                }
+            });
+        });
         this._blocks.delete(block);
     }
-    connect(inputPin, outputPin, inverted) { }
-    disconnect(inputPin) { }
     update(dt) {
         this._blocks.forEach(block => block.update(dt));
     }
     remove() {
+        this._blocks.forEach(block => block.remove());
+        this._blocks.clear();
+        this._blocks = null;
         this.events.emit(4 /* Removed */);
         this.events.clear();
+        this.events = null;
+        this.circuitBlock = null;
     }
 }

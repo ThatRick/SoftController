@@ -1,6 +1,5 @@
-import * as HTML from './lib/HTML.js'
+import * as HTML from './Lib/HTML.js'
 import { ControllerTerminal } from './Terminal.js';
-import { Menubar } from './Lib/HTMLMenubar.js'
 import { BlockEventType } from './State/FunctionBlock.js'
 
 import { getFunctionBlock } from './State/FunctionLib.js'
@@ -71,10 +70,10 @@ function testCircuit(view: CircuitView, terminal: ControllerTerminal) {
 
 async function app()
 {
-    const mainMenubar = new Menubar(document.getElementById('mainMenubar'))
+    const mainMenubar = new HTML.Menubar(document.getElementById('mainMenubar'))
     const circuitMenubar = new CircuitMenuBar(document.getElementById('guiMenubar'))
     const view = new CircuitView(document.getElementById('gui'), vec2(64, 48), vec2(16, 16))
-    const terminalMenubar = new Menubar(document.getElementById('terminalMenubar'))
+    const terminalMenubar = new HTML.Menubar(document.getElementById('terminalMenubar'))
     const terminal = new ControllerTerminal(document.getElementById('terminal'), null);
 
     circuitMenubar.attachCircuitView(view)

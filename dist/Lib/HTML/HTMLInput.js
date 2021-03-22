@@ -1,4 +1,4 @@
-import { domElement, Element } from './HTML.js';
+import { domElement, Element } from './HTMLCommon.js';
 export class InputField extends Element {
     constructor(options) {
         super();

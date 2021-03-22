@@ -5,9 +5,8 @@ import { Circuit } from './CircuitView/CircuitState.js';
 import VirtualControllerLink from './VirtualController/VirtualControllerLink.js';
 import { instructions } from './Controller/ControllerInterface.js';
 import { defaultStyle } from './CircuitView/CircuitTypes.js';
-import * as HTML from './lib/HTML.js';
+import * as HTML from './Lib/HTML.js';
 import { ControllerTerminal } from './Terminal.js';
-import { Menubar } from './Lib/HTMLMenubar.js';
 import { CircuitMenuBar } from './CircuitView/CircuitMenuBar.js';
 import { getFunctionBlock } from './State/FunctionLib.js';
 function createControlButtonBar(buttons) {
@@ -40,9 +39,9 @@ function testzone(terminal) {
     terminal.print(sel.toString());
 }
 async function app() {
-    const mainMenubar = new Menubar(document.getElementById('mainMenubar'));
+    const mainMenubar = new HTML.Menubar(document.getElementById('mainMenubar'));
     const circuitMenubar = new CircuitMenuBar(document.getElementById('guiMenubar'));
-    const terminalMenubar = new Menubar(document.getElementById('terminalMenubar'));
+    const terminalMenubar = new HTML.Menubar(document.getElementById('terminalMenubar'));
     // Create controller interface
     const cpu = new VirtualControllerLink();
     // Create a controller

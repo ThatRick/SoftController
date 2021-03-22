@@ -25,7 +25,7 @@ export interface FunctionTypeDefinition
 
 export interface FunctionInstanceDefinition
 {
-    typeName:       FunctionTypeName
+    typeName:       string
     inputs?:        { [name: string]: IOPinInstanceDefinition }
     outputs?:       { [name: string]: IOPinInstanceDefinition }
 }
@@ -58,12 +58,13 @@ export interface FunctionBlockInterface
     readonly inputs:            IOPinInterface[]
     readonly outputs:           IOPinInterface[]
     readonly circuit?:          CircuitInterface
-    readonly parentCircuit?:    FunctionBlockInterface
     readonly variableInputs?:   VariableIOCountDefinition
     readonly variableOutputs?:  VariableIOCountDefinition
     readonly typeDef:           FunctionTypeDefinition
     readonly events:            EventEmitter<BlockEvent>
-
+    
+    parentCircuit?:             CircuitInterface
+    
     setVariableInputCount(n: number): void
     setVariableOutputCount(n: number): void
     update(dt: number): void
@@ -80,7 +81,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     readonly    inputs:            IOPinInterface[]
     readonly    outputs:           IOPinInterface[]
     readonly    circuit?:          CircuitInterface
-    get         parentCircuit()    { return this._parentCircuit }
     readonly    variableInputs?:   VariableIOCountDefinition
     readonly    variableOutputs?:  VariableIOCountDefinition
     readonly    typeDef:           FunctionTypeDefinition
@@ -147,7 +147,12 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     remove() {
         this.inputs.forEach(input => input.remove())
         this.outputs.forEach(output => output.remove())
-        this.circuit?.removeBlock(this)
+        if (this.circuit) {
+            this.circuit.remove()
+        }
+        if (this.parentCircuit) {
+            this.parentCircuit.removeBlock(this)
+        }
         this.events.emit(BlockEventType.Removed)
         this.events.clear()
     }
@@ -171,6 +176,8 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
         return text
     }
+
+    parentCircuit?: CircuitInterface
 
     //////////////  CONSTRUCTOR /////////////////
     
@@ -204,8 +211,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     protected _typeName: string
     protected _symbol: string
     protected _description: string
-
-    protected _parentCircuit?: FunctionBlockInterface
 
     protected updateInputs() {
         this.inputs.forEach(input => {

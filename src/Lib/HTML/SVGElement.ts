@@ -1,4 +1,4 @@
-import { Vec2 } from "../GUI/GUITypes"
+import Vec2 from '../Vector2.js'
 
 const xmlns = 'http://www.w3.org/2000/svg'
 
