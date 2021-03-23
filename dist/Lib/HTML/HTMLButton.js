@@ -5,8 +5,8 @@ export class Button extends Element {
         this.backgroundColor = this.style.colors.base;
         this.DOMElement = domElement(null, 'div', {
             color: 'white',
-            paddingLeft: '2px',
-            paddingRight: '2px',
+            paddingLeft: '3px',
+            paddingRight: '3px',
             marginLeft: '1px',
             marginRight: '1px',
             backgroundColor: this.style.colors.base,

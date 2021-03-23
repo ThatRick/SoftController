@@ -17,7 +17,7 @@ export class TraceAnchorHandle extends GUIChildElement {
     }
 }
 export class TraceLine {
-    constructor(circuitView, sourcePinView, destPinView) {
+    constructor(circuitView, sourcePinView, destPinView, anchors) {
         this.circuitView = circuitView;
         this.sourcePinView = sourcePinView;
         this.destPinView = destPinView;
@@ -46,7 +46,7 @@ export class TraceLine {
         this.traceLayer = circuitView.traceLayer;
         const sourceMinReach = 1;
         const destMinReach = 1;
-        this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor());
+        this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor(), anchors);
         this.updateHandles();
         this.sourcePinView.events.subscribe(this.pinViewGUIChildEventHandler);
         this.destPinView.events.subscribe(this.pinViewGUIChildEventHandler);

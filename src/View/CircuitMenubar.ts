@@ -47,12 +47,14 @@ export class CircuitMenuBar
         newCircuitBtn: HTML.ActionButton
         openCircuitBtn: HTML.ActionButton
         saveCircuitBtn: HTML.ActionButton
-        closeCircuitBtn: HTML.ActionButton
         gap2: HTML.Space
+        importBtn: HTML.ActionButton
+        exportBtn: HTML.ActionButton
+        gap3: HTML.Space
         scaleTitle: HTML.Text
         scaleDecBtn: HTML.Button
         scaleIncBtn: HTML.Button
-        gap3: HTML.Space
+        gap4: HTML.Space
         gridMapToggle: HTML.Button
         step: HTML.Button
     }
@@ -68,8 +70,10 @@ export class CircuitMenuBar
             gap1: new HTML.Space(14),
             ...this.fileControls(),
             gap2: new HTML.Space(14),
-            ...this.scaleControls(),
+            ...this.importExport(),
             gap3: new HTML.Space(14),
+            ...this.scaleControls(),
+            gap4: new HTML.Space(14),
             gridMapToggle: this.toggleGridMap(),
             step: this.stepController()
         }
@@ -91,7 +95,9 @@ export class CircuitMenuBar
     }
 
     circuitName() {
-        const nameLabel = new HTML.Text(this.circuitView.name)
+        const nameLabel = new HTML.Text(this.circuitView.name, {
+            style: { fontWeight: 'bold' }
+        })
         nameLabel.DOMElement.ondblclick = () => {
             const input = new HTML.InputField({
                 name: 'Circuit Name',
@@ -109,9 +115,13 @@ export class CircuitMenuBar
         return nameLabel
     }
 
+    runTimeControls() {
+        
+    }
+
     fileControls() {
         const newCircuitBtn = new HTML.ActionButton('New', {
-            action: () => console.log('New circuit')
+            action: () => this.circuitView.newCircuit()
         })
         const openCircuitBtn = new HTML.ActionButton('Open', {
             action: () => this.circuitView.open()
@@ -119,10 +129,19 @@ export class CircuitMenuBar
         const saveCircuitBtn = new HTML.ActionButton('Save', {
             action: () => this.circuitView.save()
         })
-        const closeCircuitBtn = new HTML.ActionButton('Close', {
-            action: () => this.circuitView.close()
+
+        return { newCircuitBtn, openCircuitBtn, saveCircuitBtn }
+    }
+
+    importExport() {
+        const importBtn = new HTML.ActionButton('Import', {
+            action: () => console.log('Import pressed')
         })
-        return { newCircuitBtn, openCircuitBtn, saveCircuitBtn, closeCircuitBtn }
+        const exportBtn = new HTML.ActionButton('Export', {
+            action: () => this.circuitView.export()
+        })
+
+        return { importBtn, exportBtn }
     }
 
     scaleControls() {
@@ -140,5 +159,4 @@ export class CircuitMenuBar
 
         return { scaleTitle, scaleDecBtn, scaleIncBtn }
     }
-
 }

@@ -170,7 +170,9 @@ export const functionTypeNames = Object.keys(functionLib)
 
 export function getFunctionBlock(instance: FunctionInstanceDefinition) {
     const ctor = functionLib[instance.typeName]
+    console.assert(ctor != null, 'Function block not found:', instance)
     const block = new ctor()
+    block.setTypeName(instance.typeName)
     if (instance.inputs) {
         if (block.typeDef.variableInputs) {
             const instanceInputCount = Math.max(
@@ -209,8 +211,8 @@ export class CircuitBlock extends FunctionBlock
     }
     protected updateOutputs() {
         this.outputs.forEach(output => {
-            if (output.sourcePin) {
-                let newValue = output.sourcePin.value
+            if (output.sourceIO) {
+                let newValue = output.sourceIO.value
                 if (output.inverted) newValue = (newValue) ? 0 : 1
                 else if (output.datatype == 'INTEGER') newValue = Math.trunc(newValue)
                 output.setValue(newValue)

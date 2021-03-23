@@ -18,7 +18,6 @@ export class FunctionBlock {
         this.outputs = Object.entries(typeDef.outputs).map(([name, output]) => {
             return new IOPin('output', output.value, name, output.dataType, this, this.getIONum);
         });
-        this._typeName = this.typeDef.name;
         this._symbol = this.typeDef.symbol;
         this._description = this.typeDef.description;
         this.variableInputs = typeDef.variableInputs;
@@ -119,10 +118,11 @@ export class FunctionBlock {
         this.variableOutputs && addLine('Variable outputs: ' + this.variableOutputs.min + ' - ' + this.variableOutputs.max);
         return text;
     }
+    setTypeName(name) { this._typeName = name; }
     updateInputs() {
         this.inputs.forEach(input => {
-            if (input.sourcePin) {
-                let newValue = input.sourcePin.value;
+            if (input.sourceIO) {
+                let newValue = input.sourceIO.value;
                 if (input.inverted)
                     newValue = (newValue) ? 0 : 1;
                 else if (input.datatype == 'INTEGER')

@@ -7,6 +7,7 @@ export class InputField extends Element
         name?: string,
         value?: string | number,
         pos?: Vec2,
+        width?: number,
         onSubmitValue?: (value: number | null) => void,
         onSubmitText?: (value: string | null) => void,
         parent?: HTMLElement,
@@ -15,15 +16,15 @@ export class InputField extends Element
         containerStyle?: Partial<CSSStyleDeclaration>,
     }) {
         super()
-        const { name, value, pos, onSubmitValue, onSubmitText, parent } = options
-        
+        let { name, value, pos, width, onSubmitValue, onSubmitText, parent } = options
+        width ??= 64
+
         if (!onSubmitValue && !onSubmitText) console.error('No submit callback given!')
         
         const inputField = domElement(null, 'input', {
-            width: '64px',
+            width: width +'px',
             backgroundColor: 'black',
             color: 'white',
-            //outlineColor: 'red', //this.style.colors.light,
             userSelect: 'text',
             pointerEvents: 'auto',
             ...options.inputStyle
@@ -69,16 +70,24 @@ export class InputField extends Element
             }
         }
 
-        this.DOMElement = domElement(parent, 'div', {
-            color: this.style.colors.text,
-            backgroundColor: this.style.colors.base,
-            outline: 'thin solid' + this.style.colors.light,
-            fontSize: this.style.fontSize + 'px',
-            padding: '4px',
-            zIndex: '2',
-            boxShadow: this.style.boxShadow,
-            ...options.containerStyle
-        })
+        const containerStyle = (name)
+            ? {
+                color: this.style.colors.text,
+                backgroundColor: this.style.colors.base,
+                outline: 'thin solid' + this.style.colors.light,
+                fontSize: this.style.fontSize + 'px',
+                padding: '4px',
+                zIndex: '2',
+                boxShadow: this.style.boxShadow,
+                ...options.containerStyle
+            }
+            : {
+                zIndex: '2',
+                boxShadow: this.style.boxShadow,
+                ...options.containerStyle
+            }
+
+        this.DOMElement = domElement(parent, 'div', containerStyle)
 
         if (name) {
             const title = domElement(this.DOMElement, 'div', options.nameStyle)

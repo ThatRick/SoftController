@@ -17,8 +17,8 @@ export class Menubar
         const menuBarStyle = {
             boxSizing: 'border-box',
             color: 'white',
-            fontFamily: 'system-ui',
-            fontSize: Math.round(this.parentHeight * 0.6) + 'px',
+            fontFamily: 'Calibri, sans-serif',
+            fontSize: Math.round(this.parentHeight * 0.65) + 'px',
             height: '100%',
             padding: '2px',
             paddingTop: '1px',

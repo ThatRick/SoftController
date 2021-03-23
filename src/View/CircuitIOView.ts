@@ -15,16 +15,16 @@ export default class FunctionBlockView extends GUIChildElement
 
     constructor(io: IOPinInterface, posY: number, parentContainer: IContainerGUI )
     {
-        super(parentContainer, 'div', vec2(0, posY), vec2(CircuitView.IO_AREA_WIDTH, 1), {
+        super(parentContainer, 'div', vec2(0, posY), vec2(CircuitView.IO_AREA_WIDTH, 1), null, true)
+        
+        this.setStyle({
             color: 'white',
             boxSizing: 'border-box',
             userSelect: 'none',
             borderRadius: '2px',
-            cursor: 'grab'
-        }, true)
-
-        this.setStyle({
-            backgroundColor: this.gui.style.colors.primary
+            borderBottom: '1px solid ' + this.gui.style.colors.dark,
+            backgroundColor: this.gui.style.colors.primary,
+            cursor: 'grab',
         })
 
         const pinPosX = (io.type == 'input') ? CircuitView.IO_AREA_WIDTH : -1

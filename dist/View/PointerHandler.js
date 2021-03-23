@@ -78,6 +78,38 @@ export default function CircuitPointerHandler(circuit) {
             selection.anchor.traceLine.onSelected();
         }
     };
+    const onDoubleClicked = (ev) => {
+        if (selection.type == 'Pin') {
+            const pin = selection.pin;
+            selection.unselectAll();
+            if (pin.io.datatype == 'BINARY') {
+                if (pin.io.sourceIO) {
+                    pin.io.setInverted(!pin.io.inverted);
+                }
+                else {
+                    pin.io.setValue(pin.io.value ? 0 : 1);
+                }
+            }
+            else {
+                const inputField = new HTML.InputField({
+                    value: pin.io.value,
+                    parent: pin.DOMElement,
+                    containerStyle: {
+                        position: 'absolute',
+                        [(pin.direction == 'left') ? 'right' : 'left']: '0px',
+                        bottom: '0px'
+                    },
+                    inputStyle: { textAlign: (pin.direction == 'left') ? 'right' : 'left' },
+                    onSubmitValue: (value) => {
+                        console.log('set value to', value);
+                        if (value != null)
+                            pin.io.setValue(value);
+                        inputField.remove();
+                    }
+                });
+            }
+        }
+    };
     const onRightClicked = (ev) => {
         const elem = pointer.targetElem;
         // Open circuit context menu
@@ -250,7 +282,7 @@ export default function CircuitPointerHandler(circuit) {
                     || selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'left');
                 connectionMoveInputValid = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'left'
                     && selection.pin != connectionDropTargetPin
-                    && selection.pin.io.sourcePin != null);
+                    && selection.pin.io.sourceIO != null);
                 connectionMoveOutputValid = (selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'right'
                     && selection.pin != connectionDropTargetPin
                     && ([...circuit.traceLines.values()].find(trace => trace.sourcePinView.io == selection.pin.io) != null));
@@ -273,7 +305,8 @@ export default function CircuitPointerHandler(circuit) {
                     : connectionDropTargetPin.io.setSource(selection.pin.io);
             }
             if (connectionMoveInputValid) {
-                connectionDropTargetPin.io.setSource(selection.pin.io.sourcePin);
+                connectionDropTargetPin.io.setSource(selection.pin.io.sourceIO);
+                connectionDropTargetPin.io.setInverted(selection.pin.io.inverted);
                 selection.pin.io.setSource(null);
             }
             if (connectionMoveOutputValid) {
@@ -343,6 +376,7 @@ export default function CircuitPointerHandler(circuit) {
     return {
         onPointerDown,
         onClicked,
+        onDoubleClicked,
         onRightClicked,
         onDragStarted,
         onDragging,

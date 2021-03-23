@@ -110,6 +110,36 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         }
     }
 
+    const onDoubleClicked = (ev: PointerEvent) => {
+        if (selection.type == 'Pin') {
+            const pin = selection.pin
+            selection.unselectAll()
+            if (pin.io.datatype == 'BINARY') {
+                if (pin.io.sourceIO) {
+                    pin.io.setInverted(!pin.io.inverted)
+                } else {
+                    pin.io.setValue(pin.io.value ? 0 : 1)
+                }
+            } else {
+                const inputField = new HTML.InputField({
+                    value: pin.io.value,
+                    parent: pin.DOMElement,
+                    containerStyle: {
+                        position: 'absolute',
+                        [(pin.direction == 'left') ? 'right' : 'left']: '0px',
+                        bottom: '0px'
+                    },
+                    inputStyle: { textAlign: (pin.direction == 'left') ? 'right' : 'left' },
+                    onSubmitValue: (value: number) => {
+                        console.log('set value to', value)
+                        if (value != null) pin.io.setValue(value)
+                        inputField.remove()
+                    }
+                })
+            }
+        }
+    }
+
     const onRightClicked = (ev: PointerEvent) => {
         const elem = pointer.targetElem
         
@@ -302,7 +332,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 
                 connectionMoveInputValid = (selection.pin.direction == 'left' && connectionDropTargetPin.direction == 'left'
                                       && selection.pin != connectionDropTargetPin
-                                      && selection.pin.io.sourcePin != null);
+                                      && selection.pin.io.sourceIO != null);
 
                 connectionMoveOutputValid = (selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'right'
                                       && selection.pin != connectionDropTargetPin
@@ -327,7 +357,8 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                     : connectionDropTargetPin.io.setSource(selection.pin.io)
             }
             if (connectionMoveInputValid) {
-                connectionDropTargetPin.io.setSource(selection.pin.io.sourcePin)
+                connectionDropTargetPin.io.setSource(selection.pin.io.sourceIO)
+                connectionDropTargetPin.io.setInverted(selection.pin.io.inverted)
                 selection.pin.io.setSource(null)
             }
 
@@ -406,6 +437,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     return {
         onPointerDown,
         onClicked,
+        onDoubleClicked,
         onRightClicked,
         onDragStarted,
         onDragging,

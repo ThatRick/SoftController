@@ -38,7 +38,10 @@ const myProg = {
                         sel: { source: { blockNum: 1, outputNum: 0 } }
                     }
                 },
-            ]
+            ],
+            circuitOutputSources: {
+                out: { blockNum: 4, outputNum: 0 }
+            }
         }
     },
     size: { x: 48, y: 32 },

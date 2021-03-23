@@ -51,7 +51,7 @@ export interface IOPinInterface
     readonly datatype: IODataType
     readonly ioNum: number
     readonly block: FunctionBlockInterface
-    readonly sourcePin?: IOPinInterface
+    readonly sourceIO?: IOPinInterface
     readonly inverted?: boolean
     readonly events: EventEmitter<IOPinEvent>
 
@@ -72,7 +72,7 @@ export class IOPin implements IOPinInterface
     get datatype() { return this._datatype }
     get block() { return this._block }
     get ioNum() { return this.getIONum(this) }
-    get sourcePin() { return this._sourcePin }
+    get sourceIO() { return this._sourcePin }
     get inverted() { return this._inverted }
 
     setValue(value: number) {
@@ -116,7 +116,7 @@ export class IOPin implements IOPinInterface
     }
 
     toString() {
-        const connected = (this.sourcePin) ? 'connected ':' '
+        const connected = (this.sourceIO) ? 'connected ':' '
         const inverted = (this.inverted) ? 'inverted':''
         const str = (this.name + ': ').padEnd(6) + this.value.toString().padStart(8) + ('  ['+this.datatype+']').padEnd(10) + '  #'+this.ioNum+' ' + connected + inverted
         return str

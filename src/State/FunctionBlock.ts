@@ -25,7 +25,7 @@ export interface FunctionTypeDefinition
 
 export interface FunctionInstanceDefinition
 {
-    typeName:       string
+    typeName:       FunctionTypeName
     inputs?:        { [name: string]: IOPinInstanceDefinition }
     outputs?:       { [name: string]: IOPinInstanceDefinition }
 }
@@ -52,7 +52,7 @@ export interface BlockEvent {
 
 export interface FunctionBlockInterface
 {
-    readonly typeName:          string
+    readonly typeName:          FunctionTypeName
     readonly symbol?:           string
     readonly description:       string
     readonly inputs:            IOPinInterface[]
@@ -177,6 +177,8 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         return text
     }
 
+    setTypeName(name: FunctionTypeName) { this._typeName = name }
+
     parentCircuit?: CircuitInterface
 
     //////////////  CONSTRUCTOR /////////////////
@@ -190,7 +192,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.outputs = Object.entries(typeDef.outputs).map(([name, output]) => {
             return new IOPin('output', output.value, name, output.dataType, this, this.getIONum )
         })
-        this._typeName = this.typeDef.name
         this._symbol = this.typeDef.symbol
         this._description = this.typeDef.description
         this.variableInputs = typeDef.variableInputs
@@ -208,14 +209,14 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     protected statics: {}
 
-    protected _typeName: string
+    protected _typeName: FunctionTypeName
     protected _symbol: string
     protected _description: string
 
     protected updateInputs() {
         this.inputs.forEach(input => {
-            if (input.sourcePin) {
-                let newValue = input.sourcePin.value
+            if (input.sourceIO) {
+                let newValue = input.sourceIO.value
                 if (input.inverted) newValue = (newValue) ? 0 : 1
                 else if (input.datatype == 'INTEGER') newValue = Math.trunc(newValue)
                 input.setValue(newValue)

@@ -3,20 +3,20 @@ import GUIView, { GUIEventType } from '../GUI/GUIView.js'
 import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import * as HTML from '../Lib/HTML.js'
 import { defaultStyle, Style } from './Common.js'
-import { BlockEvent, BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionInstanceDefinition, FunctionTypeDefinition } from '../State/FunctionBlock.js'
+import { BlockEvent, BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionTypeDefinition } from '../State/FunctionBlock.js'
 import { CircuitBlock, FunctionTypeName } from '../State/FunctionLib.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import { EventEmitter } from '../Lib/Events.js'
 import { IRootViewGUI } from '../GUI/GUITypes.js'
 import CircuitSelection from './Selection.js'
 import CircuitPointerHandler from './PointerHandler.js'
-import TraceLayer from './TraceLayer.js'
+import TraceLayer, { ITraceAnchors } from './TraceLayer.js'
 import { TraceLine } from './TraceLine.js'
 import IOPinView from './IOPinView.js'
-import { IOPinEvent, IOPinEventType, IOPinInstanceDefinition, IOPinInterface } from '../State/IOPin.js'
+import { IOPinEvent, IOPinEventType, IOPinInterface } from '../State/IOPin.js'
 import CircuitGrid from './CircuitGrid.js'
 import CircuitIOView from './CircuitIOView.js'
-import { CircuitDefinition } from '../State/Circuit.js'
+import { exportToFile, generateCircuitViewDefinition } from './CircuitSerializer.js'
 
 export interface CircuitViewDefinition
 {
@@ -26,12 +26,18 @@ export interface CircuitViewDefinition
         blocks: IVec2[]
         inputs: number[]
         outputs: number[]
+        traces?: {
+            blockNum: number
+            inputNum: number
+            anchors: ITraceAnchors
+        }[]
     }
 }
 
 export const enum CircuitViewEventType {
     CircuitLoaded,
     CircuitClosed,
+    RuntimeStateChanged,
     NameChanged
 }
 
@@ -98,6 +104,33 @@ class CircuitIOArea extends GUIChildElement
     }
 }
 
+class Ticker
+{
+    protected timerHandle: number
+    protected running = false
+    
+    constructor (
+        protected interval_ms: number,
+        protected callback: (arg: any) => void
+    ) {}
+    
+    start() {
+        this.timerHandle = setInterval(this.callback, this.interval_ms)
+        this.running = true
+    }
+    stop() {
+        clearInterval(this.timerHandle)
+        this.running = false
+    }
+    setInterval(interval_ms: number) {
+        this.interval_ms = interval_ms
+        if (this.running) {
+            this.stop()
+            this.start()
+        }
+    }
+}
+
 export default class CircuitView extends GUIView<GUIChildElement, Style>
 {
     static readonly IO_AREA_WIDTH = 5
@@ -117,13 +150,19 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
             this.createFunctionBlockView(block, vec2(pos))
         })
         
-        // Create connection lines
-        this.circuit.blocks.forEach((destBlock) => {
-            destBlock.inputs?.forEach(destIO => {
-                if (destIO.sourcePin) this.createConnectionTrace(destIO)
+        // Create connection lines for blocks
+        this.circuit.blocks.forEach((destBlock, blockNum) => {
+            destBlock.inputs?.forEach((destIO, inputNum) => {
+                const anchors = positions.traces?.find(trace => (trace.blockNum == blockNum && trace.inputNum == inputNum ))?.anchors
+                if (destIO.sourceIO) this.createConnectionTrace(destIO, anchors)
             })
         })
-
+        // Create connection lines for circuit outputs
+        this.circuitBlock.outputs?.forEach((destIO, index) => {
+            const anchors = positions.traces?.find(trace => (trace.blockNum == -1 && trace.inputNum == index ))?.anchors
+            if (destIO.sourceIO) this.createConnectionTrace(destIO, anchors)
+        })
+        this.name = definition.name
         this.circuitViewEvents.emit(CircuitViewEventType.CircuitLoaded)
     }
     
@@ -140,19 +179,19 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
                 
                 const currentTrace = this.traceLines.get(io)
                 // If connection removed
-                if (!io.sourcePin) {
+                if (!io.sourceIO) {
                     currentTrace?.delete()
                 }
                 // If connection made
-                if (io.sourcePin) {
-                    if (currentTrace && (currentTrace.sourcePinView.io != io.sourcePin)) currentTrace.delete()
+                if (io.sourceIO) {
+                    if (currentTrace && (currentTrace.sourcePinView.io != io.sourceIO)) currentTrace.delete()
                     this.createConnectionTrace(io)
                 }
                 this.requestUpdate(this.grid)
                 break
                 
             case IOPinEventType.Removed:
-                if (io.sourcePin) {
+                if (io.sourceIO) {
                     const trace = this.traceLines.get(io)
                     trace.delete()
                     this.traceLines.delete(io)
@@ -205,6 +244,11 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     selection = new CircuitSelection(this.style)
     
     get circuitBlock(): FunctionBlockInterface { return this._circuitBlock }
+    
+    get circuit() { return this._circuitBlock?.circuit }
+
+    inputViews: CircuitIOView[]
+    outputViews: CircuitIOView[]
 
     get name() { return this._name }
     set name(text: string) {
@@ -229,9 +273,6 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.pointer.attachEventHandler(CircuitPointerHandler(this))
     }
 
-    protected inputViews: CircuitIOView[]
-    protected outputViews: CircuitIOView[]
-
     protected _name = 'New circuit'
     
     protected createFunctionBlockView(block: FunctionBlockInterface, pos: Vec2) {
@@ -247,73 +288,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     }
 
     save() {
-        const circuit: CircuitDefinition = {
-            blocks: this.circuit.blocks.map(block => ({
-                typeName: block.typeName,
-                inputs: block.inputs.reduce((obj, input) => {
-                    const inputDef: IOPinInstanceDefinition = { value: input.value }
-                    if (input.sourcePin) {
-                        const sourceIsCircuitInput = (this.circuitBlock.inputs.includes(input.sourcePin))
-                        const blockNum = (sourceIsCircuitInput)
-                            ? -1
-                            : this.circuit.blocks.findIndex(block => block.outputs.includes(input.sourcePin))
-                        
-                        console.assert(Number.isInteger(blockNum))
-                        
-                        const outputNum = (sourceIsCircuitInput)
-                            ? this.circuitBlock.inputs.findIndex(circuitInput => circuitInput == input.sourcePin)
-                            : this.circuit.blocks[blockNum].outputs.findIndex(output => output == input.sourcePin)
-                        
-                        console.assert(outputNum > -1)
-                        
-                        inputDef.source = {
-                            blockNum,
-                            outputNum,
-                            inverted: input.inverted
-                        }
-                    }
-                    obj[input.name] = inputDef
-
-                    return obj
-                }, {}),
-
-                outputs: block.outputs.reduce((obj, output) => {
-                    obj[output.name] = { value: output.value }
-                    return obj
-                }, {})
-            }))
-        }
-        const def: CircuitViewDefinition = {
-            definition: {
-                name: this.name,
-                inputs: this.circuitBlock.inputs.reduce((obj, input) => {
-                    obj[input.name] = {
-                        dataType: input.datatype,
-                        value: input.value,
-                    }
-                    return obj
-                }, {}),
-                outputs: this.circuitBlock.outputs.reduce((obj, output) => {
-                    obj[output.name] = {
-                        dataType: output.datatype,
-                        value: output.value,
-                    }
-                    return obj
-                }, {}),
-                circuit
-            },
-            size: {x: this.size.x, y: this.size.y},
-            positions: {
-                blocks: this.circuit.blocks.map(block => {
-                    const {x, y} = this.blockViews.get(block).pos
-                    return {x, y}
-                }),
-                inputs: this.inputViews.map(inputView => inputView.pos.y),
-                outputs: this.outputViews.map(outputView => outputView.pos.y),
-            }
-        }
-
-        window.localStorage.setItem(this.name, JSON.stringify(def))
+        const circViewDef = generateCircuitViewDefinition(this)
+        window.localStorage.setItem(this.name, JSON.stringify(circViewDef))
     }
 
     open() {
@@ -336,7 +312,6 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
                 console.dir(def)
                 openMenu.remove()
                 this.close()
-                debugger
                 this.loadCircuitDefinition(def)
             }
         })
@@ -348,50 +323,55 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.blockViews.clear()
         this.inputViews = []
         this.outputViews = []
-        this.circuitViewEvents.clear()
     }
 
-    blank() {
+    newCircuit() {
         this.close()
         this._circuitBlock = new CircuitBlock({
             name: 'New circuit',
             inputs: {},
             outputs: {},
             circuit: {
-                blocks: []
+                blocks: [],
+                circuitOutputSources: {}
             }
         })
     }
 
-    protected createConnectionTrace(destIO: IOPinInterface) {
-        if (destIO.sourcePin) {
+    export() {
+        const circViewDef = generateCircuitViewDefinition(this)
+        exportToFile(circViewDef, this.name + '.json')
+    }
+
+    protected createConnectionTrace(destIO: IOPinInterface, anchors?: ITraceAnchors) {
+        if (destIO.sourceIO) {
             const destBlock = destIO.block
             const destPin = (destBlock == this.circuitBlock)
                 ? this.getPinForIO(destIO)
                 : this.blockViews.get(destBlock)?.getPinForIO(destIO)
-            const sourceBlock = destIO.sourcePin.block
+            const sourceBlock = destIO.sourceIO.block
             const sourcePin = (sourceBlock == this.circuitBlock)
-                ? this.getPinForIO(destIO.sourcePin)
-                : this.blockViews.get(sourceBlock)?.getPinForIO(destIO.sourcePin)
+                ? this.getPinForIO(destIO.sourceIO)
+                : this.blockViews.get(sourceBlock)?.getPinForIO(destIO.sourceIO)
             
             if (destPin && sourcePin) {
-                const traceLine = new TraceLine(this, sourcePin, destPin)
+                const traceLine = new TraceLine(this, sourcePin, destPin, anchors)
                 this.traceLines.set(destIO, traceLine)
                 this.requestUpdate(this.grid)
             }
             else if (!destPin) console.error('Trace failed. Destination IO pin view not found', destIO)
-            else if (!sourcePin) console.error('Trace failed. Source IO pin view not found', destIO.sourcePin)
+            else if (!sourcePin) console.error('Trace failed. Source IO pin view not found', destIO.sourceIO)
         }
         else console.error('Trace failed. IO has no source', destIO)
     }
 
     protected createCircuitIOViews(def: CircuitViewDefinition)
     {
-        this.inputViews ??= this.circuitBlock.inputs.map((input, index) => {
+        this.inputViews = this.circuitBlock.inputs.map((input, index) => {
             const posY = def.positions?.inputs?.[index] || index
             return this.createCircuitIOView(input, posY)
         })
-        this.outputViews ??= this.circuitBlock.outputs.map((output, index) => {
+        this.outputViews = this.circuitBlock.outputs.map((output, index) => {
             const posY = def.positions?.outputs?.[index] || index
             return this.createCircuitIOView(output, posY)
         })
@@ -421,5 +401,4 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     }
 
     protected _circuitBlock: FunctionBlock
-    protected get circuit() { return this._circuitBlock?.circuit }
 }

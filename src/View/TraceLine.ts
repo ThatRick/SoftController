@@ -58,13 +58,14 @@ export class TraceLine {
         public circuitView: CircuitView,
         public sourcePinView: IOPinView,
         public destPinView: IOPinView,
+        anchors?: ITraceAnchors
     ) {
         this.traceLayer = circuitView.traceLayer
 
         const sourceMinReach = 1
         const destMinReach = 1
 
-        this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor())
+        this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor(), anchors)
         this.updateHandles()
 
         this.sourcePinView.events.subscribe(this.pinViewGUIChildEventHandler)
