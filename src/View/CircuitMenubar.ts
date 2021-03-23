@@ -45,7 +45,7 @@ export class CircuitMenuBar
         name: HTML.Text
         gap1: HTML.Space
         newCircuitBtn: HTML.ActionButton
-        openCircuitBtn: HTML.ActionButton
+        openCircuitBtn: HTML.DropdownMenu
         saveCircuitBtn: HTML.ActionButton
         gap2: HTML.Space
         importBtn: HTML.ActionButton
@@ -119,12 +119,22 @@ export class CircuitMenuBar
         
     }
 
+    getLocalStorageEntries() {
+        return Object.entries(window.localStorage).reduce((obj, [key, value]) => {
+            obj[key] = value
+            return obj
+        }, {})
+    }
+
     fileControls() {
         const newCircuitBtn = new HTML.ActionButton('New', {
             action: () => this.circuitView.newCircuit()
         })
-        const openCircuitBtn = new HTML.ActionButton('Open', {
-            action: () => this.circuitView.open()
+        const openCircuitBtn = new HTML.DropdownMenu('Open', {
+            getItems: () => this.getLocalStorageEntries(),
+            onItemSelected: (index: number, name: string) => {
+                this.circuitView.open(name)
+            }
         })
         const saveCircuitBtn = new HTML.ActionButton('Save', {
             action: () => this.circuitView.save()

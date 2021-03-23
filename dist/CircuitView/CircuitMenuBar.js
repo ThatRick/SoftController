@@ -9,10 +9,16 @@ export class CircuitMenuBar {
     attachCircuit(view) {
         const menu = this.menu;
         const funcLibMenus = instructions.libraries.map(lib => {
-            const libMenu = new HTML.DropdownMenu(lib.name, { items: lib.functions.map(func => func.name) });
-            libMenu.onItemSelected = (i, name) => {
-                view.insertBlock(lib.id, i);
-            };
+            const menuItems = lib.functions.reduce((obj, func) => {
+                obj[func.name] = true;
+                return obj;
+            }, {});
+            const libMenu = new HTML.DropdownMenu(lib.name, {
+                getItems: () => menuItems,
+                onItemSelected: (i, name) => {
+                    view.insertBlock(lib.id, i);
+                }
+            });
             return libMenu;
         });
         menu.addItems([

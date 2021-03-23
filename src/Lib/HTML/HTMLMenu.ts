@@ -1,15 +1,19 @@
 import { domElement, Element } from './HTMLCommon.js'
 import { Button } from './HTMLButton.js'
 
-export class Menu extends Element {
+interface MenuOptions
+{
+    parent?: HTMLElement,
+    menuStyle?: Partial<CSSStyleDeclaration>,
+    itemStyle?: Partial<CSSStyleDeclaration>,
+    disabledItemStyle?: Partial<CSSStyleDeclaration>,
+    onItemSelected?: (index: number, name: string) => void
+}
 
-    constructor(items: Record<string, unknown>, options: {
-        parent?: HTMLElement,
-        menuStyle?: Partial<CSSStyleDeclaration>,
-        itemStyle?: Partial<CSSStyleDeclaration>,
-        disabledItemStyle?: Partial<CSSStyleDeclaration>,
-        onItemSelected?: (index: number, name: string) => void
-    }) {
+export class Menu extends Element
+{
+    constructor(items: Record<string, unknown>, options: MenuOptions)
+    {
         super()
         this.DOMElement = this.createMenu(items, options?.menuStyle, options?.itemStyle, options?.disabledItemStyle)
         options?.parent?.appendChild(this.DOMElement)
@@ -21,12 +25,19 @@ export class Menu extends Element {
         this.DOMElement = submenu.DOMElement
     }
 
-    onItemSelected?: (index: number, name: string) => void
+    updateMenu(items: Record<string, unknown>) {
+        const newMenu = this.createMenu(items, this.options?.menuStyle, this.options?.itemStyle, this.options?.disabledItemStyle)
+        this.options?.parent?.replaceChild(newMenu, this.DOMElement)
+    }
+
+    protected options: MenuOptions
+
+    protected onItemSelected?: (index: number, name: string) => void
 
     protected createMenu(items: Record<string, unknown>, menuStyle?: Partial<CSSStyleDeclaration>,
         itemStyle?: Partial<CSSStyleDeclaration>, disabledItemStyle?: Partial<CSSStyleDeclaration>) {
 
-        const menu = domElement(this.DOMElement, 'div', {
+        const menu = domElement(null, 'div', {
             position: 'absolute',
             display: 'block',
             textAlign: 'left',
@@ -40,7 +51,8 @@ export class Menu extends Element {
             itemStyle ??= { color: '#FFF' }
             disabledItemStyle ??= { color: '#888' }
             const style = (active) ? itemStyle : disabledItemStyle
-            const option = new Button(name, menu, {
+            
+            const menuItem = new Button(name, menu, {
                 border: 'none',
                 borderBottom: 'thin solid',
                 borderColor: this.style.colors.light,
@@ -49,7 +61,7 @@ export class Menu extends Element {
                 borderRadius: '0',
                 ...style
             })
-            option.onUp = (active) ? ev => this.onItemSelected?.(i, name): null
+            menuItem.onUp = (active) ? ev => this.onItemSelected?.(i, name): null
         })
         return menu
     }

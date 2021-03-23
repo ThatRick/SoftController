@@ -11,8 +11,12 @@ export class Menu extends Element {
         this.remove();
         this.DOMElement = submenu.DOMElement;
     }
+    updateMenu(items) {
+        const newMenu = this.createMenu(items, this.options?.menuStyle, this.options?.itemStyle, this.options?.disabledItemStyle);
+        this.options?.parent?.replaceChild(newMenu, this.DOMElement);
+    }
     createMenu(items, menuStyle, itemStyle, disabledItemStyle) {
-        const menu = domElement(this.DOMElement, 'div', {
+        const menu = domElement(null, 'div', {
             position: 'absolute',
             display: 'block',
             textAlign: 'left',
@@ -26,7 +30,7 @@ export class Menu extends Element {
             itemStyle ??= { color: '#FFF' };
             disabledItemStyle ??= { color: '#888' };
             const style = (active) ? itemStyle : disabledItemStyle;
-            const option = new Button(name, menu, {
+            const menuItem = new Button(name, menu, {
                 border: 'none',
                 borderBottom: 'thin solid',
                 borderColor: this.style.colors.light,
@@ -35,7 +39,7 @@ export class Menu extends Element {
                 borderRadius: '0',
                 ...style
             });
-            option.onUp = (active) ? ev => this.onItemSelected?.(i, name) : null;
+            menuItem.onUp = (active) ? ev => this.onItemSelected?.(i, name) : null;
         });
         return menu;
     }

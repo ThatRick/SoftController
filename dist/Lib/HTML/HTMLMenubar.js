@@ -28,7 +28,7 @@ export class Menubar {
             boxSizing: 'border-box',
             height: '100%',
         });
-        const lineHeight = getInnerHeight(item.DOMElement);
+        const lineHeight = '100%'; // getInnerHeight(item.DOMElement)
         item.DOMElement.style.lineHeight = lineHeight + 'px';
     }
     addItems(items) {

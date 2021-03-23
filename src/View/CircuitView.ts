@@ -292,29 +292,13 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         window.localStorage.setItem(this.name, JSON.stringify(circViewDef))
     }
 
-    open() {
-        const keys = Object.keys(window.localStorage)
-        const fileList = keys.reduce((obj, key) => {
-            obj[key] = true
-            return obj
-        }, {})
-        const openMenu = new HTML.Menu(fileList, {
-            parent: this.body.DOMElement,
-            onItemSelected: (index: number, name: string) => {
-                console.log('Valitsit tiedoston:', name, index)
-                const defString = window.localStorage.getItem(name)
-                if (!defString) {
-                    console.error('Circuit not found:', name)
-                    return
-                }
-                const def = JSON.parse(defString)
-                console.log(defString)
-                console.dir(def)
-                openMenu.remove()
-                this.close()
-                this.loadCircuitDefinition(def)
-            }
-        })
+    open(name: string) {
+        const defString = window.localStorage.get(name)        
+        const def = JSON.parse(defString)
+        console.log(defString)
+        console.dir(def)
+        this.close()
+        this.loadCircuitDefinition(def)
     }
 
     close() {
