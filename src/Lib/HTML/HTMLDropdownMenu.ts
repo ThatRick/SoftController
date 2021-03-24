@@ -44,7 +44,7 @@ export class DropdownMenu extends Element
         this.DOMElement.onpointerleave = ev => this.setMenuVisibility('hidden')
     }
     
-    protected setMenuVisibility(visibility: 'hidden' | 'visible') {
+    setMenuVisibility(visibility: 'hidden' | 'visible') {
         if (visibility == 'visible') {
             const items = this.getItems()
             this.menu.updateMenu(items)

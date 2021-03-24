@@ -1,4 +1,4 @@
-import { FunctionBlock, FunctionBlockInterface, FunctionInstanceDefinition } from "./FunctionBlock.js";
+import { BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionInstanceDefinition } from "./FunctionBlock.js";
 import { IOPinInterface, IOPinSource } from './IOPin.js';
 import { FunctionTypeName, getFunctionBlock } from './FunctionLib.js'
 import { Subscriber } from "./CommonTypes.js";
@@ -34,24 +34,29 @@ export interface CircuitInterface
     addBlock(blockDef: FunctionInstanceDefinition)
     removeBlock(block: FunctionBlockInterface)
     update(dt: number)
-
-    remove(): void
+    remove()
+    getBlockIndex(block: FunctionBlockInterface): number
+    setBlockIndex(block: FunctionBlockInterface, newIndex: number)
 }
 
 export default class Circuit implements CircuitInterface
 {
-    get blocks() { return Array.from(this._blocks.values()) }
-
-    addBlock(def: FunctionInstanceDefinition) {
+    addBlock(def: FunctionInstanceDefinition, index?: number) {
         const block = getFunctionBlock(def)
         block.parentCircuit = this
-        this._blocks.add(block)
+        if (index != null) {
+            this.blocks.splice(index, 0, block)            
+            this.blocks.forEach(block => block.events.emit(BlockEventType.CallIndexChanged))
+        } else {
+            this.blocks.push(block)
+        }
+
         return block
     }
 
     removeBlock(block: FunctionBlock) {
         // Remove connections to other blocks
-        this._blocks.forEach(otherBlock => {
+        this.blocks.forEach(otherBlock => {
             otherBlock.inputs.forEach(input => {
                 if (block.outputs.includes(input.sourceIO)) {
                     input.setSource(null)
@@ -59,22 +64,40 @@ export default class Circuit implements CircuitInterface
                 }
             })
         })
-        this._blocks.delete(block)
+        const index = this.getBlockIndex(block)
+        console.log('removing block with index', index)
+        if (index > -1) this.blocks.splice(index, 1)
+        this.blocks.forEach(block => block.events.emit(BlockEventType.CallIndexChanged))
+    }
+
+    getBlockIndex(block: FunctionBlockInterface) {
+        return this.blocks.indexOf(block as FunctionBlock)
+    }
+
+    setBlockIndex(block: FunctionBlockInterface, newIndex: number) {
+        newIndex = Math.min(newIndex, this.blocks.length - 1)
+        newIndex = Math.max(newIndex, 0)
+        const currentIndex = this.getBlockIndex(block)
+        this.blocks.splice(currentIndex, 1)
+        this.blocks.splice(newIndex, 0, block as FunctionBlock)
+        this.blocks.forEach(block => block.events.emit(BlockEventType.CallIndexChanged))
     }
 
     update(dt: number) {
-        this._blocks.forEach(block => block.update(dt))
+        this.blocks.forEach(block => block.update(dt))
     }
 
     remove() {
-        this._blocks.forEach(block => block.remove())
-        this._blocks.clear()
-        this._blocks = null
+        this.blocks.forEach(block => {
+            block.parentCircuit = null
+            block.remove()
+        })
         this.events.emit(CircuitEventType.Removed)
         this.events.clear()
-        this.events = null
-
+        
+        this.blocks = null
         this.circuitBlock = null
+        this.events = null
     }
 
     events = new EventEmitter<CircuitEvent>(this)
@@ -84,10 +107,9 @@ export default class Circuit implements CircuitInterface
         this.circuitBlock = circuitBlock
         // Create blocks
         const blocks = def.blocks.map(funcDef => getFunctionBlock(funcDef))
+        // Set this as parent circuit
+        blocks.forEach(block => block.parentCircuit = this)
 
-        function getSourcePin(source: IOPinSource) {
-
-        }
         // Set block input sources
         def.blocks.forEach((block, blockIndex) => {
             if (block.inputs) {
@@ -122,11 +144,13 @@ export default class Circuit implements CircuitInterface
                 output.setInverted(inverted)
             }
         })
-        this._blocks = new Set(blocks)
+        this.blocks = blocks
+
+        console.log(this.blocks)
     }
 
     protected circuitBlock: FunctionBlock
 
-    protected _blocks: Set<FunctionBlock>
+    blocks: FunctionBlock[]
 
 }

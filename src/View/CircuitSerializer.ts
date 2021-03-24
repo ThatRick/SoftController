@@ -55,9 +55,9 @@ export function generateCircuitViewDefinition(circuitView: CircuitView)
     }
     const traces = []
     circuitView.traceLines.forEach(traceLine => {
-        const blockNum = circuitView.circuit.blocks.findIndex(block => block == traceLine.destPinView.io.block)
+        const blockNum = traceLine.destPinView.io.block.callIndex ?? -1
         console.assert(blockNum > -1 || traceLine.destPinView.io.block == circuitView.circuitBlock, 'Could not find dest block for traceLine', traceLine)
-        const inputNum = traceLine.sourcePinView.io.ioNum
+        const inputNum = traceLine.destPinView.io.ioNum
         const trace = {
             blockNum,
             inputNum,

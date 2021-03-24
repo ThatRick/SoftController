@@ -65,8 +65,10 @@ export class TraceLine {
         const sourceMinReach = 1
         const destMinReach = 1
 
+        console.log('Creating trace line with anchors', anchors)
         this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor(), anchors)
         this.updateHandles()
+        this.updateDestPinValueVisibility()
 
         this.sourcePinView.events.subscribe(this.pinViewGUIChildEventHandler)
         this.destPinView.events.subscribe(this.pinViewGUIChildEventHandler)
@@ -90,6 +92,10 @@ export class TraceLine {
         this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos)
         this.updateHandles()
         this.updatePositionPending = false
+        this.updateDestPinValueVisibility()
+    }
+
+    protected updateDestPinValueVisibility() {
         const d = Vec2.sub(this.route.destPos, this.route.sourcePos).round()
         const hidden = (d.x > 0 && d.x < 4 && d.y == 0)
         this.destPinView.setValueVisibility(!hidden)

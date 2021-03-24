@@ -16,7 +16,7 @@ export default class CircuitSelection
     anchor: TraceAnchorHandle | null
 
     get isMulti() { return this.blocks.size > 1 }
-    get singleBlock() { return (this.blocks.size == 1) ? this.blocks.values().next().value : null }
+    get singleBlock(): FunctionBlockView { return (this.blocks.size == 1) ? this.blocks.values().next().value : null }
 
     has(elem: FunctionBlockView | IOPinView | TraceAnchorHandle | CircuitIOView) {
         if (elem instanceof FunctionBlockView) {

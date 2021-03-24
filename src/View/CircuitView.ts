@@ -129,11 +129,53 @@ class Ticker
             this.start()
         }
     }
+
+    get isRunning() { return this.running }
 }
 
 export default class CircuitView extends GUIView<GUIChildElement, Style>
 {
     static readonly IO_AREA_WIDTH = 5
+
+    save() {
+        const circViewDef = generateCircuitViewDefinition(this)
+        window.localStorage.setItem(this.name, JSON.stringify(circViewDef))
+    }
+
+    open(name: string) {
+        const defString = window.localStorage.getItem(name)        
+        const def = JSON.parse(defString)
+        console.log(defString)
+        console.dir(def)
+        this.close()
+        this.loadCircuitDefinition(def)
+    }
+
+    close() {
+        this._circuitBlock?.remove()
+        this._circuitBlock = null
+        this.blockViews.clear()
+        this.inputViews = []
+        this.outputViews = []
+    }
+
+    newCircuit() {
+        this.close()
+        this._circuitBlock = new CircuitBlock({
+            name: 'New circuit',
+            inputs: {},
+            outputs: {},
+            circuit: {
+                blocks: [],
+                circuitOutputSources: {}
+            }
+        })
+    }
+
+    export() {
+        const circViewDef = generateCircuitViewDefinition(this)
+        exportToFile(circViewDef, this.name + '.json')
+    }
 
     loadCircuitDefinition(circuitViewDefinition: CircuitViewDefinition) {
         const { definition, positions, size } = circuitViewDefinition
@@ -154,6 +196,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.circuit.blocks.forEach((destBlock, blockNum) => {
             destBlock.inputs?.forEach((destIO, inputNum) => {
                 const anchors = positions.traces?.find(trace => (trace.blockNum == blockNum && trace.inputNum == inputNum ))?.anchors
+                console.log('Create trace line for block, io, anchors', blockNum, inputNum, anchors)
                 if (destIO.sourceIO) this.createConnectionTrace(destIO, anchors)
             })
         })
@@ -164,8 +207,27 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         })
         this.name = definition.name
         this.circuitViewEvents.emit(CircuitViewEventType.CircuitLoaded)
+
+        this.ticker?.stop()
+        this.ticker = new Ticker(100, () => this.circuitBlock.update(100 / 1000))
     }
     
+    functionBlockEventHandler = (event: BlockEvent) => {
+        const block = event.source
+        switch (event.type)
+        {
+            case BlockEventType.InputAdded:
+                const newInput = block.inputs[block.inputs.length-1]
+                newInput.events.subscribe(this.ioEventHandler, [IOPinEventType.SourceChanged])
+                break
+
+            case BlockEventType.Removed:
+                this.blockViews.delete(block)
+                this.requestUpdate(this.grid)
+                break
+        }
+    }
+
     ioEventHandler = (event: IOPinEvent) => {
         const io = event.source
         switch (event.type)
@@ -201,22 +263,6 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         }
     }
 
-    functionBlockEventHandler = (event: BlockEvent) => {
-        const block = event.source
-        switch (event.type)
-        {
-            case BlockEventType.InputAdded:
-                const newInput = block.inputs[block.inputs.length-1]
-                newInput.events.subscribe(this.ioEventHandler, [IOPinEventType.SourceChanged])
-                break
-
-            case BlockEventType.Removed:
-                this.blockViews.delete(block)
-                this.requestUpdate(this.grid)
-                break
-        }
-    }
-
     getPinForIO(io: IOPinInterface) { 
         let foundPin: IOPinView
         foundPin = this.inputViews.find(ioView => ioView.pin.io == io)?.pin
@@ -227,6 +273,15 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     addFunctionBlock(name: FunctionTypeName, pos: Vec2) {
         const block = this.circuit.addBlock({typeName: name})
         this.createFunctionBlockView(block, Vec2.round(pos))
+    }
+
+    startRuntime() {
+        this.ticker.start()
+        this.circuitViewEvents.emit(CircuitViewEventType.RuntimeStateChanged)
+    }
+    stopRuntime() {
+        this.ticker.stop()
+        this.circuitViewEvents.emit(CircuitViewEventType.RuntimeStateChanged)
     }
 
     circuitViewEvents = new EventEmitter<CircuitViewEvent>(this)
@@ -246,6 +301,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     get circuitBlock(): FunctionBlockInterface { return this._circuitBlock }
     
     get circuit() { return this._circuitBlock?.circuit }
+
+    ticker: Ticker
 
     inputViews: CircuitIOView[]
     outputViews: CircuitIOView[]
@@ -285,46 +342,6 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.blockViews.set(block, blockView)
         this.requestUpdate(this.grid)
         return blockView
-    }
-
-    save() {
-        const circViewDef = generateCircuitViewDefinition(this)
-        window.localStorage.setItem(this.name, JSON.stringify(circViewDef))
-    }
-
-    open(name: string) {
-        const defString = window.localStorage.get(name)        
-        const def = JSON.parse(defString)
-        console.log(defString)
-        console.dir(def)
-        this.close()
-        this.loadCircuitDefinition(def)
-    }
-
-    close() {
-        this._circuitBlock?.remove()
-        this._circuitBlock = null
-        this.blockViews.clear()
-        this.inputViews = []
-        this.outputViews = []
-    }
-
-    newCircuit() {
-        this.close()
-        this._circuitBlock = new CircuitBlock({
-            name: 'New circuit',
-            inputs: {},
-            outputs: {},
-            circuit: {
-                blocks: [],
-                circuitOutputSources: {}
-            }
-        })
-    }
-
-    export() {
-        const circViewDef = generateCircuitViewDefinition(this)
-        exportToFile(circViewDef, this.name + '.json')
     }
 
     protected createConnectionTrace(destIO: IOPinInterface, anchors?: ITraceAnchors) {

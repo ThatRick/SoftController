@@ -3,6 +3,21 @@ export default function FunctionBlockContextMenu(pars) {
     const { selection, pos, parentContainer, destructor } = pars;
     const singleSelection = selection.singleBlock;
     const items = {
+        'Call index': () => {
+            const input = new HTML.InputField({
+                name: 'Call index',
+                value: singleSelection.block.callIndex,
+                pos,
+                parent: parentContainer,
+                onSubmitValue: (value) => {
+                    if (value != null) {
+                        value = Math.trunc(value);
+                        singleSelection.block.setCallIndex(value);
+                    }
+                    input.remove();
+                }
+            });
+        },
         'Input count': (singleSelection?.block.variableInputs) ? () => {
             const input = new HTML.InputField({
                 name: 'Input count',
@@ -14,8 +29,6 @@ export default function FunctionBlockContextMenu(pars) {
                         value = Math.trunc(value);
                         singleSelection.block.setVariableInputCount(value);
                     }
-                    else
-                        console.log('Input canceled');
                     input.remove();
                 }
             });

@@ -41,7 +41,7 @@ export class Menu extends Element
             position: 'absolute',
             display: 'block',
             textAlign: 'left',
-            zIndex: '2',
+            zIndex: '3',
             backgroundColor: this.style.colors.base,
             boxShadow: this.style.boxShadow,
             minWidth: '40px',

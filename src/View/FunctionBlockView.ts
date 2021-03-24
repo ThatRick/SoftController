@@ -51,6 +51,7 @@ export default class FunctionBlockView extends GUIChildElement
     protected get visualStyle() { return this.block.typeDef.visualStyle ?? 'full' }
     protected IONameTable: HTML.Table
     protected titleElem: HTML.Text
+    protected callIndexIndicator: HTML.Text
 
     protected blockEventHandler = (ev: BlockEvent) => {
         switch (ev.type)
@@ -65,6 +66,9 @@ export default class FunctionBlockView extends GUIChildElement
             case BlockEventType.Removed:
                 this.delete()
                 break
+            case BlockEventType.CallIndexChanged:
+                this.callIndexIndicator.setText(this.block.callIndex.toString())
+                break
             default:
                 // console.log('FunctionBlockView: Unhandled block event!')
         }
@@ -78,6 +82,7 @@ export default class FunctionBlockView extends GUIChildElement
         if (this.visualStyle == 'minimal') this.createSymbol()
         else this.createIONames()
         this.createPins()
+        this.createCallIndexIndicator()
     }
 
     protected createPins() {
@@ -112,9 +117,26 @@ export default class FunctionBlockView extends GUIChildElement
         }
     }
 
+    protected createCallIndexIndicator() {
+        const callIndex = this.block.parentCircuit.getBlockIndex(this.block)
+        this.callIndexIndicator ??= new HTML.Text(callIndex.toString(), {
+            style: {
+                position: 'absolute',
+                top: -1 * this.gui.scale.y + 'px',
+                width: '100%',
+                textAlign: 'center',
+                fontWeight: 'normal',
+                color: this.gui.style.colors.callIndex,
+                zIndex: '2',
+                pointerEvents: 'none'
+            },
+            parent: this.DOMElement
+        })
+    }
+
     protected createTitle() {
         const gui = this.gui
-        this.titleElem ??= new HTML.Text(this.block.typeName, {
+        this.titleElem ??= new HTML.Text(this.block.symbol, {
             parent: this.DOMElement
         })
         this.titleElem.setCSS({

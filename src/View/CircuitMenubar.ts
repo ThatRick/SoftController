@@ -38,6 +38,9 @@ export class CircuitMenuBar
             case CircuitViewEventType.NameChanged:
                 this.menuItems.name.setText(this.circuitView.name)
                 break
+            case CircuitViewEventType.RuntimeStateChanged:
+                this.menuItems.runtimeStatusText.setText(this.circuitView.ticker.isRunning ? 'Running' : 'Stopped')
+                break
         }
     }
 
@@ -55,8 +58,10 @@ export class CircuitMenuBar
         scaleDecBtn: HTML.Button
         scaleIncBtn: HTML.Button
         gap4: HTML.Space
-        gridMapToggle: HTML.Button
-        step: HTML.Button
+        runtimeStatusText: HTML.Text
+        runtimeStartBtn: HTML.ActionButton
+        runtimeStopBtn: HTML.ActionButton
+        runtimeStepBtn: HTML.ActionButton
     }
 
     attachCircuitView(circuitView: CircuitView) {
@@ -74,17 +79,14 @@ export class CircuitMenuBar
             gap3: new HTML.Space(14),
             ...this.scaleControls(),
             gap4: new HTML.Space(14),
-            gridMapToggle: this.toggleGridMap(),
-            step: this.stepController()
+            ...this.runTimeControls()
         }
 
         menu.addItems(Object.values(this.menuItems))
     }
 
     stepController() {
-        return new HTML.ActionButton('Step', {
-            action: () => this.circuitView.circuitBlock.update(100)
-        })
+        return 
     }
 
     toggleGridMap() {
@@ -116,7 +118,12 @@ export class CircuitMenuBar
     }
 
     runTimeControls() {
-        
+        const runtimeStatusText = new HTML.Text(this.circuitView.ticker?.isRunning ? 'Running' : 'Stopped')
+        const runtimeStartBtn = new HTML.ActionButton('Start', { action: () => this.circuitView.startRuntime() })
+        const runtimeStopBtn = new HTML.ActionButton('Stop', { action: () => this.circuitView.stopRuntime() })
+        const runtimeStepBtn = new HTML.ActionButton('Step', { action: () => this.circuitView.circuitBlock.update(100) })
+
+        return { runtimeStatusText, runtimeStartBtn, runtimeStopBtn, runtimeStepBtn }
     }
 
     getLocalStorageEntries() {
@@ -130,9 +137,11 @@ export class CircuitMenuBar
         const newCircuitBtn = new HTML.ActionButton('New', {
             action: () => this.circuitView.newCircuit()
         })
-        const openCircuitBtn = new HTML.DropdownMenu('Open', {
+        const openCircuitDropMenu = new HTML.DropdownMenu('Open', {
             getItems: () => this.getLocalStorageEntries(),
             onItemSelected: (index: number, name: string) => {
+                console.log('open file', name)
+                openCircuitDropMenu.setMenuVisibility('hidden')
                 this.circuitView.open(name)
             }
         })
@@ -140,7 +149,7 @@ export class CircuitMenuBar
             action: () => this.circuitView.save()
         })
 
-        return { newCircuitBtn, openCircuitBtn, saveCircuitBtn }
+        return { newCircuitBtn, openCircuitBtn: openCircuitDropMenu, saveCircuitBtn }
     }
 
     importExport() {

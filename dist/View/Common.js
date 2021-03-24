@@ -19,6 +19,7 @@ export const defaultStyle = {
         binaryOn: '#DDB',
         connectionLine: 'rgba(192, 192, 192, 0.6)',
         connectionLineValid: 'rgba(128, 255, 128, 0.8)',
+        callIndex: '#AAC'
     },
     fontSize: 0.8,
     traceWidth: 0.125,

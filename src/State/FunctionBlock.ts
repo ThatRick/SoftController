@@ -42,7 +42,8 @@ export const enum BlockEventType {
     OutputCountChanged,
     Removed,
     InputAdded,
-    InputRemoved
+    InputRemoved,
+    CallIndexChanged
 }
 
 export interface BlockEvent {
@@ -62,9 +63,11 @@ export interface FunctionBlockInterface
     readonly variableOutputs?:  VariableIOCountDefinition
     readonly typeDef:           FunctionTypeDefinition
     readonly events:            EventEmitter<BlockEvent>
-    
+    readonly callIndex:         number
+
     parentCircuit?:             CircuitInterface
     
+    setCallIndex(n: number): void
     setVariableInputCount(n: number): void
     setVariableOutputCount(n: number): void
     update(dt: number): void
@@ -75,18 +78,21 @@ export interface FunctionBlockInterface
 
 export abstract class FunctionBlock implements FunctionBlockInterface
 {
-    get         typeName()         { return this._typeName }
-    get         symbol()           { return this._symbol }
-    get         description()      { return this._description }
-    readonly    inputs:            IOPinInterface[]
-    readonly    outputs:           IOPinInterface[]
-    readonly    circuit?:          CircuitInterface
-    readonly    variableInputs?:   VariableIOCountDefinition
-    readonly    variableOutputs?:  VariableIOCountDefinition
-    readonly    typeDef:           FunctionTypeDefinition
-    readonly    events =           new EventEmitter<BlockEvent>(this)
+    get         typeName()          { return this._typeName }
+    get         symbol()            { return this._symbol }
+    get         description()       { return this._description }
+    readonly    inputs:             IOPinInterface[]
+    readonly    outputs:            IOPinInterface[]
+    readonly    circuit?:           CircuitInterface
+    readonly    variableInputs?:    VariableIOCountDefinition
+    readonly    variableOutputs?:   VariableIOCountDefinition
+    readonly    typeDef:            FunctionTypeDefinition
+    readonly    events =            new EventEmitter<BlockEvent>(this)
+    get         callIndex()         { return this.parentCircuit?.getBlockIndex(this) }
 
-
+    setCallIndex(n: number) {
+        this.parentCircuit?.setBlockIndex(this, n)
+    }
     setVariableInputCount(n: number) {
         console.log('Set variable input count to', n)
         if (!this.variableInputs) return
@@ -138,7 +144,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         const outputs = this.outputs.map(outputs => outputs.value)
         let ret = this.run(inputs, outputs, dt)
         if (typeof ret == 'object') {
-            outputs.forEach((value, i) => this.outputs[i].setValue(value))
+            ret.forEach((value, i) => this.outputs[i].setValue(value))
         } else if (typeof ret == 'number') {
             this.outputs[0].setValue(ret)
         }
@@ -156,6 +162,8 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.events.emit(BlockEventType.Removed)
         this.events.clear()
     }
+
+
 
     toString() {
         let text = '';
@@ -196,7 +204,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this._description = this.typeDef.description
         this.variableInputs = typeDef.variableInputs
         this.variableOutputs = typeDef.variableOutputs
-        this.statics = typeDef.statics
+        this.statics = {...typeDef.statics}
         
         if (typeDef.circuit) {
             this.circuit = new Circuit(typeDef.circuit, this)

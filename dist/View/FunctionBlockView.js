@@ -25,6 +25,9 @@ export default class FunctionBlockView extends GUIChildElement {
                 case 2 /* Removed */:
                     this.delete();
                     break;
+                case 5 /* CallIndexChanged */:
+                    this.callIndexIndicator.setText(this.block.callIndex.toString());
+                    break;
                 default:
                 // console.log('FunctionBlockView: Unhandled block event!')
             }
@@ -60,6 +63,7 @@ export default class FunctionBlockView extends GUIChildElement {
         else
             this.createIONames();
         this.createPins();
+        this.createCallIndexIndicator();
     }
     createPins() {
         this.inputPins ??= this.block.inputs.map((input, index) => {
@@ -91,9 +95,25 @@ export default class FunctionBlockView extends GUIChildElement {
             this.outputPins.pop();
         }
     }
+    createCallIndexIndicator() {
+        const callIndex = this.block.parentCircuit.getBlockIndex(this.block);
+        this.callIndexIndicator ??= new HTML.Text(callIndex.toString(), {
+            style: {
+                position: 'absolute',
+                top: -1 * this.gui.scale.y + 'px',
+                width: '100%',
+                textAlign: 'center',
+                fontWeight: 'normal',
+                color: this.gui.style.colors.callIndex,
+                zIndex: '2',
+                pointerEvents: 'none'
+            },
+            parent: this.DOMElement
+        });
+    }
     createTitle() {
         const gui = this.gui;
-        this.titleElem ??= new HTML.Text(this.block.typeName, {
+        this.titleElem ??= new HTML.Text(this.block.symbol, {
             parent: this.DOMElement
         });
         this.titleElem.setCSS({
