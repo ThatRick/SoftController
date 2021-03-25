@@ -51,6 +51,15 @@ export function generateCircuitViewDefinition(circuitView) {
         };
         traces.push(trace);
     });
+    const blockOutputPinOffsets = [];
+    circuitView.blockViews.forEach(blockView => {
+        if (blockView.outputPinOffset) {
+            blockOutputPinOffsets.push({
+                blockNum: blockView.block.callIndex,
+                outputPinOffset: blockView.outputPinOffset
+            });
+        }
+    });
     const def = {
         definition: {
             name: circuitView.name,
@@ -78,7 +87,8 @@ export function generateCircuitViewDefinition(circuitView) {
             }),
             inputs: circuitView.inputViews.map(inputView => inputView.pos.y),
             outputs: circuitView.outputViews.map(outputView => outputView.pos.y),
-            traces
+            traces,
+            blockOutputPinOffsets
         }
     };
     return def;

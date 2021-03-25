@@ -32,7 +32,7 @@ class CircuitBody extends GUIChildElement {
         this.onRestyle();
     }
 }
-class CircuitIOArea extends GUIChildElement {
+export class CircuitIOArea extends GUIChildElement {
     constructor(circuitView, type) {
         super(circuitView.children, 'div', vec2(0, 0), vec2(0, 0), {
             cursor: 'auto',
@@ -41,7 +41,7 @@ class CircuitIOArea extends GUIChildElement {
         this.circuitView = circuitView;
         this.type = type;
         this.handleCircuitResize = () => {
-            this.setPos((this.type == 'inputs')
+            this.setPos((this.type == 'input')
                 ? vec2(0, 0)
                 : vec2(this.circuitView.size.x - CircuitView.IO_AREA_WIDTH, 0));
             this.setSize(vec2(CircuitView.IO_AREA_WIDTH, this.circuitView.size.y));
@@ -144,8 +144,8 @@ export default class CircuitView extends GUIView {
         this._name = 'New circuit';
         this.grid = new CircuitGrid(this);
         this.body = new CircuitBody(this);
-        this.inputArea = new CircuitIOArea(this, 'inputs');
-        this.outputArea = new CircuitIOArea(this, 'outputs');
+        this.inputArea = new CircuitIOArea(this, 'input');
+        this.outputArea = new CircuitIOArea(this, 'output');
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale, this.style);
         this.pointer.attachEventHandler(CircuitPointerHandler(this));
     }
@@ -193,7 +193,10 @@ export default class CircuitView extends GUIView {
         // Create function block views
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index];
-            this.createFunctionBlockView(block, vec2(pos));
+            const blockView = this.createFunctionBlockView(block, vec2(pos));
+            const outputPinOffset = positions.blockOutputPinOffsets?.find(item => item.blockNum == index)?.outputPinOffset;
+            if (outputPinOffset)
+                blockView.setOutputPinOffset(outputPinOffset);
         });
         // Create connection lines for blocks
         this.circuit.blocks.forEach((destBlock, blockNum) => {
@@ -224,6 +227,16 @@ export default class CircuitView extends GUIView {
     addFunctionBlock(name, pos) {
         const block = this.circuit.addBlock({ typeName: name });
         this.createFunctionBlockView(block, Vec2.round(pos));
+    }
+    addCircuitIO(ioType, dataType, name, posY) {
+        const io = (ioType == 'input')
+            ? this.circuitBlock.addInput(dataType, name)
+            : this.circuitBlock.addOutput(dataType, name);
+        const ioView = this.createCircuitIOView(io, posY);
+        if (io.type == 'input')
+            this.inputViews.push(ioView);
+        else
+            this.outputViews.push(ioView);
     }
     startRuntime() {
         this.ticker.start();

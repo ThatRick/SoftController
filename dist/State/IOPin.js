@@ -10,20 +10,19 @@ export var IOPinEventType;
 })(IOPinEventType || (IOPinEventType = {}));
 export class IOPin {
     //////////////////////////////////////////////
-    constructor(type, value, name, datatype, block, getIONum) {
+    constructor(type, value, name, datatype, block) {
         this.events = new EventEmitter(this);
         this.type = type;
         this._value = value;
         this._name = name;
         this._datatype = datatype;
         this._block = block;
-        this.getIONum = getIONum;
     }
     get value() { return this._value; }
     get name() { return this._name; }
     get datatype() { return this._datatype; }
     get block() { return this._block; }
-    get ioNum() { return this.getIONum(this); }
+    get ioNum() { return this._block.getIONum(this); }
     get sourceIO() { return this._sourcePin; }
     get inverted() { return this._inverted; }
     setValue(value) {

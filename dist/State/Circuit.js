@@ -52,7 +52,7 @@ export default class Circuit {
         block.parentCircuit = this;
         if (index != null) {
             this.blocks.splice(index, 0, block);
-            this.blocks.forEach(block => block.events.emit(5 /* CallIndexChanged */));
+            this.blocks.forEach(block => block.events.emit(7 /* CallIndexChanged */));
         }
         else {
             this.blocks.push(block);
@@ -73,7 +73,7 @@ export default class Circuit {
         console.log('removing block with index', index);
         if (index > -1)
             this.blocks.splice(index, 1);
-        this.blocks.forEach(block => block.events.emit(5 /* CallIndexChanged */));
+        this.blocks.forEach(block => block.events.emit(7 /* CallIndexChanged */));
     }
     getBlockIndex(block) {
         return this.blocks.indexOf(block);
@@ -84,7 +84,7 @@ export default class Circuit {
         const currentIndex = this.getBlockIndex(block);
         this.blocks.splice(currentIndex, 1);
         this.blocks.splice(newIndex, 0, block);
-        this.blocks.forEach(block => block.events.emit(5 /* CallIndexChanged */));
+        this.blocks.forEach(block => block.events.emit(7 /* CallIndexChanged */));
     }
     update(dt) {
         this.blocks.forEach(block => block.update(dt));

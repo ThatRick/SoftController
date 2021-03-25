@@ -25,6 +25,16 @@ export default class FunctionBlockView extends GUIChildElement
         super.delete()
     }
 
+    setOutputPinOffset(offset: number) {
+        if (this.block.outputs.length != 1) return
+        offset = Math.max(offset, 0)
+        offset = Math.min(offset, this.block.inputs.length - 1)
+        this._outputPinOffset = offset
+        this.outputPins[0].setPos(vec2(this.size.x, this._outputPinOffset))
+    }
+
+    get outputPinOffset() { return this._outputPinOffset }
+
     constructor(block: FunctionBlockInterface, pos: Vec2, parentContainer: IContainerGUI )
     {
         super(parentContainer, 'div', pos, FunctionBlockView.getBlockSize(block), {
@@ -47,6 +57,8 @@ export default class FunctionBlockView extends GUIChildElement
 
     protected inputPins: IOPinView[]
     protected outputPins: IOPinView[]
+
+    protected _outputPinOffset = 0
 
     protected get visualStyle() { return this.block.typeDef.visualStyle ?? 'full' }
     protected IONameTable: HTML.Table
@@ -91,7 +103,7 @@ export default class FunctionBlockView extends GUIChildElement
             return pin
         })
         this.outputPins ??= this.block.outputs.map((output, index) => {
-            const pin = new IOPinView(output, vec2(this.size.x, index), this.children)
+            const pin = new IOPinView(output, vec2(this.size.x, index + this._outputPinOffset), this.children)
             return pin
         })
     }
@@ -115,22 +127,29 @@ export default class FunctionBlockView extends GUIChildElement
         while (this.block.outputs.length < this.outputPins.length) {
             this.outputPins.pop()
         }
+        this.create()
+        if (this.outputPinOffset) this.setOutputPinOffset(this._outputPinOffset)
     }
 
     protected createCallIndexIndicator() {
         const callIndex = this.block.parentCircuit.getBlockIndex(this.block)
         this.callIndexIndicator ??= new HTML.Text(callIndex.toString(), {
-            style: {
-                position: 'absolute',
-                top: -1 * this.gui.scale.y + 'px',
-                width: '100%',
-                textAlign: 'center',
-                fontWeight: 'normal',
-                color: this.gui.style.colors.callIndex,
-                zIndex: '2',
-                pointerEvents: 'none'
-            },
             parent: this.DOMElement
+        })
+        this.callIndexIndicator.setCSS({
+            position: 'absolute',
+            top: (this.size.y - 0.3) * this.gui.scale.y + 'px',
+            right: (-0.5) * this.gui.scale.x + 'px',
+            height: this.gui.scale.y + 'px',
+            lineHeight: this.gui.scale.y + 'px',
+            color: this.gui.style.colors.callIndex,
+            backgroundColor: this.gui.style.colors.callIndexBackground,
+            borderRadius: '3px',
+            fontWeight: 'normal',
+            zIndex: '2',
+            pointerEvents: 'none',
+            paddingLeft: '3px',
+            paddingRight: '3px',
         })
     }
 

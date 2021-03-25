@@ -2,7 +2,7 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js'
 import { GUIPointerEventHandler } from '../GUI/GUITypes.js'
 import * as HTML from '../Lib/HTML.js'
 import Vec2, { vec2 } from '../Lib/Vector2.js'
-import CircuitView from './CircuitView.js'
+import CircuitView, { CircuitIOArea } from './CircuitView.js'
 import FunctionBlockView from './FunctionBlockView.js'
 import IOPinView from './IOPinView.js'
 import FunctionBlockContextMenu from './FunctionBlockContextMenu.js'
@@ -10,6 +10,7 @@ import CircuitContextMenu from './CircuitContextMenu.js'
 import { TraceAnchorHandle } from './TraceLine.js'
 import IOPinContextMenu from './IOPinContextMenu.js'
 import CircuitIOView from './CircuitIOView.js'
+import CircuitIOAreaContextMenu from './CircuitIOAreaContextMenu.js'
 
 const enum PointerMode {
     DEFAULT,
@@ -111,6 +112,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     }
 
     const onDoubleClicked = (ev: PointerEvent) => {
+        // Double click on IO pin
         if (selection.type == 'Pin') {
             const pin = selection.pin
             selection.unselectAll()
@@ -138,6 +140,24 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                 })
             }
         }
+        // Double click on Circuit IO view
+        if (selection.type == 'CircuitIO') {
+            const circIOView = selection.circuitIO
+            const inputField = new HTML.InputField({
+                value: circIOView.pin.io.name,
+                parent: circIOView.DOMElement,
+                containerStyle: {
+                    position: 'absolute',
+                    left: '0px',
+                    bottom: '0px'
+                },
+                onSubmitText: (text: string) => {
+                    console.log('set value to', text)
+                    if (text != null) circIOView.pin.io.setName(text)
+                    inputField.remove()
+                }
+            })
+        }
     }
 
     const onRightClicked = (ev: PointerEvent) => {
@@ -155,6 +175,22 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
                     menu.remove()
                     menu = null
                     pointerMode = PointerMode.DEFAULT
+                }
+            })
+        }
+        // Open circuit IO area context menu
+        else if (elem instanceof CircuitIOArea) {
+            pointerMode = PointerMode.MODAL_MENU
+            const ioArea = elem as CircuitIOArea
+            menu = CircuitIOAreaContextMenu({
+                ioArea,
+                parentContainer: circuit.DOMElement,
+                pos: pointer.screenDownPos.copy(),
+                destructor: () => {
+                    menu.remove()
+                    menu = null
+                    pointerMode = PointerMode.DEFAULT
+                    selection.unselectAll()
                 }
             })
         }

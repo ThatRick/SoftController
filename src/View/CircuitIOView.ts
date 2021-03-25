@@ -5,7 +5,7 @@ import * as HTML from '../Lib/HTML.js'
 import { IContainerGUI } from '../GUI/GUITypes.js'
 import IOPinView, { IOPinViewEvent } from './IOPinView.js'
 import CircuitView from './CircuitView.js'
-import { IOPinInterface } from '../State/IOPin.js'
+import { IOPinEvent, IOPinEventType, IOPinInterface } from '../State/IOPin.js'
 
 export default class FunctionBlockView extends GUIChildElement
 {
@@ -29,20 +29,25 @@ export default class FunctionBlockView extends GUIChildElement
 
         const pinPosX = (io.type == 'input') ? CircuitView.IO_AREA_WIDTH : -1
         this.pin = new IOPinView(io, vec2(pinPosX, 0), this.children)
-        this.pin.events.subscribe(this.guiChildEventHandler)
+        this.pin.events.subscribe(this.guiChildEventHandler, [GUIChildEventType.Removed])
+        this.pin.io.events.subscribe(this.ioEventHandler, [IOPinEventType.NameChanged])
 
         this.create()
     }
 
-    protected guiChildEventHandler = (ev: GUIChildEvent) => {
-        switch (ev.type) {
-            case GUIChildEventType.Removed:
-                this.delete()
-                break
+    protected ioEventHandler = (ev: IOPinEvent) => {
+        if (ev.type == IOPinEventType.NameChanged) {
+            this.nameElem.setText(this.pin.io.name)
         }
     }
 
-    protected titleElem: HTML.Text
+    protected guiChildEventHandler = (ev: GUIChildEvent) => {
+        if (ev.type == GUIChildEventType.Removed) {
+            this.delete()
+        }
+    }
+
+    protected nameElem: HTML.Text
 
     protected onRescale() {
         this.create()
@@ -54,10 +59,10 @@ export default class FunctionBlockView extends GUIChildElement
 
     protected createTitle() {
         const gui = this.gui
-        this.titleElem ??= new HTML.Text(this.pin.io.name, {
+        this.nameElem ??= new HTML.Text(this.pin.io.name, {
             parent: this.DOMElement
         })
-        this.titleElem.setCSS({
+        this.nameElem.setCSS({
             color: 'black',
             textAlign: 'center',
             width: '100%',

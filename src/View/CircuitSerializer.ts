@@ -65,6 +65,15 @@ export function generateCircuitViewDefinition(circuitView: CircuitView)
         }
         traces.push(trace)
     })
+    const blockOutputPinOffsets = []
+    circuitView.blockViews.forEach(blockView => {
+        if (blockView.outputPinOffset) {
+            blockOutputPinOffsets.push({
+                blockNum: blockView.block.callIndex,
+                outputPinOffset: blockView.outputPinOffset
+            })
+        }
+    })
     const def: CircuitViewDefinition = {
         definition: {
             name: circuitView.name,
@@ -92,7 +101,8 @@ export function generateCircuitViewDefinition(circuitView: CircuitView)
             }),
             inputs: circuitView.inputViews.map(inputView => inputView.pos.y),
             outputs: circuitView.outputViews.map(outputView => outputView.pos.y),
-            traces
+            traces,
+            blockOutputPinOffsets
         }
     }
 

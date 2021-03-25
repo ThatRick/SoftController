@@ -33,6 +33,21 @@ export default function FunctionBlockContextMenu(pars) {
                 }
             });
         } : null,
+        'Output offset': (singleSelection?.block.outputs.length == 1 && singleSelection?.block.inputs.length > 1) ? () => {
+            const input = new HTML.InputField({
+                name: 'Output pin offset',
+                value: singleSelection.outputPinOffset,
+                pos,
+                parent: parentContainer,
+                onSubmitValue: (value) => {
+                    if (value != null) {
+                        value = Math.trunc(value);
+                        singleSelection.setOutputPinOffset(value);
+                    }
+                    input.remove();
+                }
+            });
+        } : null,
         'Insertion point': null,
         'Copy': null,
         'Replace': null,

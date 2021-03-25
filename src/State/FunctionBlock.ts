@@ -1,5 +1,6 @@
 import { EventEmitter } from "../Lib/Events.js"
 import Circuit, { CircuitDefinition, CircuitInterface } from "./Circuit.js"
+import { IODataType } from "./CommonTypes.js"
 import { FunctionTypeName, BlockVisualStyle } from "./FunctionLib.js"
 import { IOPin, IOPinDefinition, IOPinInstanceDefinition, IOPinInterface } from "./IOPin.js"
 
@@ -43,6 +44,8 @@ export const enum BlockEventType {
     Removed,
     InputAdded,
     InputRemoved,
+    OutputAdded,
+    OutputRemoved,
     CallIndexChanged
 }
 
@@ -70,6 +73,13 @@ export interface FunctionBlockInterface
     setCallIndex(n: number): void
     setVariableInputCount(n: number): void
     setVariableOutputCount(n: number): void
+    getIONum(io: IOPinInterface): number
+
+    addInput(dataType: IODataType, name?: string): IOPinInterface
+    addOutput(dataType: IODataType, name?: string): IOPinInterface
+    removeInput(io: IOPinInterface): void
+    removeOutput(io: IOPinInterface): void
+
     update(dt: number): void
 
     remove(): void
@@ -89,21 +99,26 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     readonly    typeDef:            FunctionTypeDefinition
     readonly    events =            new EventEmitter<BlockEvent>(this)
     get         callIndex()         { return this.parentCircuit?.getBlockIndex(this) }
+    
 
     setCallIndex(n: number) {
         this.parentCircuit?.setBlockIndex(this, n)
     }
+
     setVariableInputCount(n: number) {
         console.log('Set variable input count to', n)
         if (!this.variableInputs) return
+        
         const { min, max, initialCount: initial, structSize=1 } = this.variableInputs
         if (n < min) n = min
         if (n > max) n = max
         const staticInputsCount = Object.keys(this.typeDef.inputs).length - initial * structSize
         const currentVariableInputsCount = (this.inputs.length - staticInputsCount) / structSize
         console.assert(currentVariableInputsCount % 1 == 0)
+        
         const addition = n - currentVariableInputsCount
         if (addition == 0) return
+
         // Remove inputs
         if (addition < 0) {     
             const newLength = staticInputsCount + n * structSize
@@ -125,7 +140,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
             for (let i = 0; i < addition; i++) {
                 const numbering = numberingStart + i
                 const newInputs = initialStruct.map(({name, value, dataType}) => {
-                    return new IOPin('input', value, name+numbering, dataType, this, this.getIONum )
+                    return new IOPin('input', value, name+numbering, dataType, this )
                 })
                 newInputs.forEach(input => {
                     this.inputs.push(input)
@@ -137,6 +152,38 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     }
 
     setVariableOutputCount(n: number) { /* todo */ }
+
+    addInput(dataType: IODataType, name?: string) {
+        name ??= 'Input' + this.inputs.length
+        const input = new IOPin('input', 0, name, dataType, this )
+        this.inputs.push(input)
+        this.events.emit(BlockEventType.InputAdded)
+        return input
+    }
+
+    addOutput(dataType: IODataType, name?: string) {
+        name ??= 'Output' + this.outputs.length
+        const output = new IOPin('output', 0, name, dataType, this )
+        this.outputs.push(output)
+        this.events.emit(BlockEventType.OutputAdded)
+        return output
+    }
+    
+    removeInput(input: IOPin) {
+        const index = this.inputs.indexOf(input)
+        if (index == -1) { console.error('Remove input: Input not found in function block inputs', input); return }
+        this.inputs.splice(index, 1)
+        input.remove()
+        this.events.emit(BlockEventType.InputRemoved)
+    }
+
+    removeOutput(output: IOPin) {
+        const index = this.outputs.indexOf(output)
+        if (index == -1) { console.error('Remove output: Output not found in function block outputs', output); return }
+        this.outputs.splice(index, 1)
+        output.remove()
+        this.events.emit(BlockEventType.OutputRemoved)
+    }
 
     update(dt: number) {
         this.updateInputs()
@@ -163,8 +210,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.events.clear()
     }
 
-
-
     toString() {
         let text = '';
         const addLine = (line: string) => text += (line + '\n');
@@ -186,7 +231,17 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     }
 
     setTypeName(name: FunctionTypeName) { this._typeName = name }
-
+    
+    getIONum(io: IOPinInterface) {
+        let ioNum = (io.type == 'input')
+            ? this.inputs.indexOf(io)
+            : this.outputs.indexOf(io)
+        if (ioNum > -1 && io.type == 'output')
+            ioNum += this.inputs.length
+        
+        return ioNum
+    }
+    
     parentCircuit?: CircuitInterface
 
     //////////////  CONSTRUCTOR /////////////////
@@ -195,10 +250,10 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     {
         this.typeDef = typeDef
         this.inputs = Object.entries(typeDef.inputs).map(([name, input]) => {
-            return new IOPin('input', input.value, name, input.dataType, this, this.getIONum )
+            return new IOPin('input', input.value, name, input.dataType, this )
         })
         this.outputs = Object.entries(typeDef.outputs).map(([name, output]) => {
-            return new IOPin('output', output.value, name, output.dataType, this, this.getIONum )
+            return new IOPin('output', output.value, name, output.dataType, this )
         })
         this._symbol = this.typeDef.symbol
         this._description = this.typeDef.description
@@ -230,11 +285,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
                 input.setValue(newValue)
             }
         })
-    }
-
-    protected getIONum = (io: IOPinInterface) => {
-        if (io.type == 'input') return this.inputs.findIndex(input => input == io)
-        else return this.outputs.findIndex(output => output == io) + this.inputs.length
     }
 
 }

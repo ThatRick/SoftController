@@ -11,6 +11,7 @@ export default class FunctionBlockView extends GUIChildElement {
             borderRadius: '2px',
             cursor: 'grab'
         }, true);
+        this._outputPinOffset = 0;
         this.blockEventHandler = (ev) => {
             switch (ev.type) {
                 case 0 /* InputCountChanged */:
@@ -25,7 +26,7 @@ export default class FunctionBlockView extends GUIChildElement {
                 case 2 /* Removed */:
                     this.delete();
                     break;
-                case 5 /* CallIndexChanged */:
+                case 7 /* CallIndexChanged */:
                     this.callIndexIndicator.setText(this.block.callIndex.toString());
                     break;
                 default:
@@ -51,6 +52,15 @@ export default class FunctionBlockView extends GUIChildElement {
         this.block.events.unsubscribe(this.blockEventHandler);
         super.delete();
     }
+    setOutputPinOffset(offset) {
+        if (this.block.outputs.length != 1)
+            return;
+        offset = Math.max(offset, 0);
+        offset = Math.min(offset, this.block.inputs.length - 1);
+        this._outputPinOffset = offset;
+        this.outputPins[0].setPos(vec2(this.size.x, this._outputPinOffset));
+    }
+    get outputPinOffset() { return this._outputPinOffset; }
     get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
     onRescale() {
         this.create();
@@ -71,7 +81,7 @@ export default class FunctionBlockView extends GUIChildElement {
             return pin;
         });
         this.outputPins ??= this.block.outputs.map((output, index) => {
-            const pin = new IOPinView(output, vec2(this.size.x, index), this.children);
+            const pin = new IOPinView(output, vec2(this.size.x, index + this._outputPinOffset), this.children);
             return pin;
         });
     }
@@ -94,21 +104,29 @@ export default class FunctionBlockView extends GUIChildElement {
         while (this.block.outputs.length < this.outputPins.length) {
             this.outputPins.pop();
         }
+        this.create();
+        if (this.outputPinOffset)
+            this.setOutputPinOffset(this._outputPinOffset);
     }
     createCallIndexIndicator() {
         const callIndex = this.block.parentCircuit.getBlockIndex(this.block);
         this.callIndexIndicator ??= new HTML.Text(callIndex.toString(), {
-            style: {
-                position: 'absolute',
-                top: -1 * this.gui.scale.y + 'px',
-                width: '100%',
-                textAlign: 'center',
-                fontWeight: 'normal',
-                color: this.gui.style.colors.callIndex,
-                zIndex: '2',
-                pointerEvents: 'none'
-            },
             parent: this.DOMElement
+        });
+        this.callIndexIndicator.setCSS({
+            position: 'absolute',
+            top: (this.size.y - 0.3) * this.gui.scale.y + 'px',
+            right: (-0.5) * this.gui.scale.x + 'px',
+            height: this.gui.scale.y + 'px',
+            lineHeight: this.gui.scale.y + 'px',
+            color: this.gui.style.colors.callIndex,
+            backgroundColor: this.gui.style.colors.callIndexBackground,
+            borderRadius: '3px',
+            fontWeight: 'normal',
+            zIndex: '2',
+            pointerEvents: 'none',
+            paddingLeft: '3px',
+            paddingRight: '3px',
         });
     }
     createTitle() {

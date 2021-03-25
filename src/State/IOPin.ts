@@ -71,7 +71,7 @@ export class IOPin implements IOPinInterface
     get name() { return this._name }
     get datatype() { return this._datatype }
     get block() { return this._block }
-    get ioNum() { return this.getIONum(this) }
+    get ioNum() { return this._block.getIONum(this) }
     get sourceIO() { return this._sourcePin }
     get inverted() { return this._inverted }
 
@@ -130,14 +130,12 @@ export class IOPin implements IOPinInterface
         name: string,
         datatype: IODataType,
         block: FunctionBlockInterface,
-        getIONum: (io: IOPinInterface) => number,
     ) {
         this.type = type
         this._value = value
         this._name = name
         this._datatype = datatype
         this._block = block
-        this.getIONum = getIONum
     }
 
     //////////////////////////////////////////////
@@ -145,7 +143,6 @@ export class IOPin implements IOPinInterface
     protected _value: number
     protected _name: string
     protected _datatype: IODataType
-    protected getIONum: (io: IOPinInterface) => number
     protected _block: FunctionBlockInterface
     protected _sourcePin: IOPinInterface
     protected _inverted: boolean

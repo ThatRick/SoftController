@@ -82,6 +82,7 @@ export default class IOPinView extends GUIChildElement {
             paddingRight: '2px',
             textAlign,
             pointerEvents: 'none',
+            zIndex: '2'
         };
     }
     onUpdate() {

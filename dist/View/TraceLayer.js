@@ -193,9 +193,10 @@ export default class TraceLayer {
             let lastCutIndex;
             let lastCutPos;
             sections = crossings.map(crossing => {
-                // debugger
                 const targetPos = points[crossing.pointIndex];
                 const prevPos = points[crossing.pointIndex - 1];
+                if (!targetPos || !prevPos)
+                    debugger;
                 console.assert(targetPos.x == prevPos.x, 'Crossing is not on a vertical line segment');
                 const cutPos = crossing.pos;
                 const startIndex = lastCutIndex || 0;

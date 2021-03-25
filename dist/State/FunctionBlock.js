@@ -5,18 +5,12 @@ export class FunctionBlock {
     //////////////  CONSTRUCTOR /////////////////
     constructor(typeDef) {
         this.events = new EventEmitter(this);
-        this.getIONum = (io) => {
-            if (io.type == 'input')
-                return this.inputs.findIndex(input => input == io);
-            else
-                return this.outputs.findIndex(output => output == io) + this.inputs.length;
-        };
         this.typeDef = typeDef;
         this.inputs = Object.entries(typeDef.inputs).map(([name, input]) => {
-            return new IOPin('input', input.value, name, input.dataType, this, this.getIONum);
+            return new IOPin('input', input.value, name, input.dataType, this);
         });
         this.outputs = Object.entries(typeDef.outputs).map(([name, output]) => {
-            return new IOPin('output', output.value, name, output.dataType, this, this.getIONum);
+            return new IOPin('output', output.value, name, output.dataType, this);
         });
         this._symbol = this.typeDef.symbol;
         this._description = this.typeDef.description;
@@ -70,7 +64,7 @@ export class FunctionBlock {
             for (let i = 0; i < addition; i++) {
                 const numbering = numberingStart + i;
                 const newInputs = initialStruct.map(({ name, value, dataType }) => {
-                    return new IOPin('input', value, name + numbering, dataType, this, this.getIONum);
+                    return new IOPin('input', value, name + numbering, dataType, this);
                 });
                 newInputs.forEach(input => {
                     this.inputs.push(input);
@@ -81,6 +75,40 @@ export class FunctionBlock {
         this.events.emit(0 /* InputCountChanged */);
     }
     setVariableOutputCount(n) { }
+    addInput(dataType, name) {
+        name ??= 'Input' + this.inputs.length;
+        const input = new IOPin('input', 0, name, dataType, this);
+        this.inputs.push(input);
+        this.events.emit(3 /* InputAdded */);
+        return input;
+    }
+    addOutput(dataType, name) {
+        name ??= 'Output' + this.outputs.length;
+        const output = new IOPin('output', 0, name, dataType, this);
+        this.outputs.push(output);
+        this.events.emit(5 /* OutputAdded */);
+        return output;
+    }
+    removeInput(input) {
+        const index = this.inputs.indexOf(input);
+        if (index == -1) {
+            console.error('Remove input: Input not found in function block inputs', input);
+            return;
+        }
+        this.inputs.splice(index, 1);
+        input.remove();
+        this.events.emit(4 /* InputRemoved */);
+    }
+    removeOutput(output) {
+        const index = this.outputs.indexOf(output);
+        if (index == -1) {
+            console.error('Remove output: Output not found in function block outputs', output);
+            return;
+        }
+        this.outputs.splice(index, 1);
+        output.remove();
+        this.events.emit(6 /* OutputRemoved */);
+    }
     update(dt) {
         this.updateInputs();
         const inputs = this.inputs.map(input => input.value);
@@ -123,6 +151,14 @@ export class FunctionBlock {
         return text;
     }
     setTypeName(name) { this._typeName = name; }
+    getIONum(io) {
+        let ioNum = (io.type == 'input')
+            ? this.inputs.indexOf(io)
+            : this.outputs.indexOf(io);
+        if (ioNum > -1 && io.type == 'output')
+            ioNum += this.inputs.length;
+        return ioNum;
+    }
     updateInputs() {
         this.inputs.forEach(input => {
             if (input.sourceIO) {

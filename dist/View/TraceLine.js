@@ -85,6 +85,8 @@ export class TraceLine {
         this.updateColorPending = false;
     }
     updatePosition() {
+        if (this.route.collisions)
+            this.route.collisions = [];
         this.traceLayer.updateTraceRoute(this.route, this.sourcePinView.absPos, this.destPinView.absPos);
         this.updateHandles();
         this.updatePositionPending = false;

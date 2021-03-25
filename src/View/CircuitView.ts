@@ -17,6 +17,7 @@ import { IOPinEvent, IOPinEventType, IOPinInterface } from '../State/IOPin.js'
 import CircuitGrid from './CircuitGrid.js'
 import CircuitIOView from './CircuitIOView.js'
 import { exportToFile, generateCircuitViewDefinition } from './CircuitSerializer.js'
+import { IODataType } from '../State/CommonTypes.js'
 
 export interface CircuitViewDefinition
 {
@@ -30,6 +31,10 @@ export interface CircuitViewDefinition
             blockNum: number
             inputNum: number
             anchors: ITraceAnchors
+        }[]
+        blockOutputPinOffsets?: {
+            blockNum: number
+            outputPinOffset: number
         }[]
     }
 }
@@ -73,9 +78,9 @@ class CircuitBody extends GUIChildElement
     }
 }
 
-class CircuitIOArea extends GUIChildElement
+export class CircuitIOArea extends GUIChildElement
 {
-    constructor(readonly circuitView: CircuitView, readonly type: 'inputs' | 'outputs') {
+    constructor(readonly circuitView: CircuitView, readonly type: 'input' | 'output') {
         super(circuitView.children, 'div', vec2(0, 0), vec2(0, 0), {
             cursor: 'auto',
             backgroundColor: circuitView.style.colors.IOAreaBackground
@@ -88,7 +93,7 @@ class CircuitIOArea extends GUIChildElement
     }
 
     handleCircuitResize = () => {
-        this.setPos((this.type == 'inputs')
+        this.setPos((this.type == 'input')
             ? vec2(0, 0)
             : vec2(this.circuitView.size.x - CircuitView.IO_AREA_WIDTH, 0))
         this.setSize(vec2(CircuitView.IO_AREA_WIDTH, this.circuitView.size.y))
@@ -189,7 +194,9 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         // Create function block views
         this.circuit.blocks.forEach((block, index) => {
             const pos = positions.blocks[index]
-            this.createFunctionBlockView(block, vec2(pos))
+            const blockView = this.createFunctionBlockView(block, vec2(pos))
+            const outputPinOffset = positions.blockOutputPinOffsets?.find(item => item.blockNum == index)?.outputPinOffset
+            if (outputPinOffset) blockView.setOutputPinOffset(outputPinOffset)
         })
         
         // Create connection lines for blocks
@@ -275,6 +282,18 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.createFunctionBlockView(block, Vec2.round(pos))
     }
 
+    addCircuitIO(ioType: 'input' | 'output', dataType: IODataType, name: string, posY: number) {
+        const io = (ioType == 'input')
+            ? this.circuitBlock.addInput(dataType, name)
+            : this.circuitBlock.addOutput(dataType, name)
+        const ioView = this.createCircuitIOView(io, posY)
+        
+        if (io.type == 'input')
+            this.inputViews.push(ioView)
+        else
+            this.outputViews.push(ioView)
+    }
+
     startRuntime() {
         this.ticker.start()
         this.circuitViewEvents.emit(CircuitViewEventType.RuntimeStateChanged)
@@ -323,8 +342,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         
         this.grid = new CircuitGrid(this)
         this.body = new CircuitBody(this)
-        this.inputArea = new CircuitIOArea(this, 'inputs')
-        this.outputArea = new CircuitIOArea(this, 'outputs')
+        this.inputArea = new CircuitIOArea(this, 'input')
+        this.outputArea = new CircuitIOArea(this, 'output')
         this.traceLayer = new TraceLayer(this.DOMElement, this.scale, this.style)
         
         this.pointer.attachEventHandler(CircuitPointerHandler(this))
