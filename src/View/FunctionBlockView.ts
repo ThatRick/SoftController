@@ -90,7 +90,7 @@ export default class FunctionBlockView extends GUIChildElement
     }
 
     protected create() {
-        if (this.visualStyle == 'full' || this.visualStyle == 'name on first row') this.createTitle()
+        if (this.visualStyle == 'full' || this.visualStyle.startsWith('name on first row')) this.createTitle()
         if (this.visualStyle == 'minimal') this.createSymbol()
         else this.createIONames()
         this.createPins()
@@ -231,12 +231,13 @@ export default class FunctionBlockView extends GUIChildElement
     static getBlockSize(block: FunctionBlockInterface) {
         let w: number, title: number
         switch (block.typeDef.visualStyle ?? 'full') {
-            case 'full':                w = 5;  title = 1;  break
-            case 'no title':            w = 3;  title = 0;  break
-            case 'no title min':        w = 2;  title = 0;  break
-            case 'name on first row':   w = 3;  title = 0;  break
-            case 'minimal':             w = 2;  title = 0;  break
-            default:                    w = 5;  title = 1;
+            case 'full':                    w = 5;  title = 1;  break
+            case 'no title':                w = 3;  title = 0;  break
+            case 'no title min':            w = 2;  title = 0;  break
+            case 'name on first row':       w = 3;  title = 0;  break
+            case 'name on first row min':   w = 2;  title = 0;  break
+            case 'minimal':                 w = 2;  title = 0;  break
+            default:                        w = 5;  title = 1;
         }
         const h = Math.max(block.inputs.length, block.outputs.length) + title
         return vec2(w, h)

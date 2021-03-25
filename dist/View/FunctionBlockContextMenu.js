@@ -1,6 +1,6 @@
 import * as HTML from '../Lib/HTML.js';
 export default function FunctionBlockContextMenu(pars) {
-    const { selection, pos, parentContainer, destructor } = pars;
+    const { selection, circuitView, pos, parentContainer, destructor } = pars;
     const singleSelection = selection.singleBlock;
     const items = {
         'Call index': () => {
@@ -48,7 +48,7 @@ export default function FunctionBlockContextMenu(pars) {
                 }
             });
         } : null,
-        'Insertion point': null,
+        'Insertion after': (singleSelection) ? () => { circuitView.insertionIndex = singleSelection?.block.callIndex + 1; } : null,
         'Copy': null,
         'Replace': null,
         'Delete': () => {

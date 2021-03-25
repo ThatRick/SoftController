@@ -141,6 +141,7 @@ export default class CircuitView extends GUIView {
         this.blockViews = new Map();
         this.traceLines = new Map();
         this.selection = new CircuitSelection(this.style);
+        this.insertionIndex = 0;
         this._name = 'New circuit';
         this.grid = new CircuitGrid(this);
         this.body = new CircuitBody(this);
@@ -215,6 +216,7 @@ export default class CircuitView extends GUIView {
         });
         this.name = definition.name;
         this.circuitViewEvents.emit(0 /* CircuitLoaded */);
+        this.insertionIndex = this.circuit.blocks.length;
         this.ticker?.stop();
         this.ticker = new Ticker(100, () => this.circuitBlock.update(100 / 1000));
     }
@@ -225,7 +227,7 @@ export default class CircuitView extends GUIView {
         return foundPin;
     }
     addFunctionBlock(name, pos) {
-        const block = this.circuit.addBlock({ typeName: name });
+        const block = this.circuit.addBlock({ typeName: name }, this.insertionIndex++);
         this.createFunctionBlockView(block, Vec2.round(pos));
     }
     addCircuitIO(ioType, dataType, name, posY) {

@@ -215,6 +215,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.name = definition.name
         this.circuitViewEvents.emit(CircuitViewEventType.CircuitLoaded)
 
+        this.insertionIndex = this.circuit.blocks.length
+
         this.ticker?.stop()
         this.ticker = new Ticker(100, () => this.circuitBlock.update(100 / 1000))
     }
@@ -278,7 +280,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     }
 
     addFunctionBlock(name: FunctionTypeName, pos: Vec2) {
-        const block = this.circuit.addBlock({typeName: name})
+        const block = this.circuit.addBlock({typeName: name}, this.insertionIndex++)
         this.createFunctionBlockView(block, Vec2.round(pos))
     }
 
@@ -322,6 +324,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     get circuit() { return this._circuitBlock?.circuit }
 
     ticker: Ticker
+
+    insertionIndex = 0
 
     inputViews: CircuitIOView[]
     outputViews: CircuitIOView[]

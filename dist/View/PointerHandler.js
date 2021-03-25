@@ -9,9 +9,9 @@ import { TraceAnchorHandle } from './TraceLine.js';
 import IOPinContextMenu from './IOPinContextMenu.js';
 import CircuitIOView from './CircuitIOView.js';
 import CircuitIOAreaContextMenu from './CircuitIOAreaContextMenu.js';
-export default function CircuitPointerHandler(circuit) {
-    const pointer = circuit.pointer;
-    const selection = circuit.selection;
+export default function CircuitPointerHandler(circuitView) {
+    const pointer = circuitView.pointer;
+    const selection = circuitView.selection;
     let menu;
     let pointerMode = 0 /* DEFAULT */;
     const onPointerDown = (ev) => {
@@ -24,7 +24,7 @@ export default function CircuitPointerHandler(circuit) {
             menu = null;
         }
         // Unselect all
-        if (elem == circuit.body) {
+        if (elem == circuitView.body) {
             selection.unselectAll();
         }
         // Function Block
@@ -134,12 +134,12 @@ export default function CircuitPointerHandler(circuit) {
     const onRightClicked = (ev) => {
         const elem = pointer.targetElem;
         // Open circuit context menu
-        if (elem == circuit.body) {
+        if (elem == circuitView.body) {
             selection.unselectAll();
             pointerMode = 8 /* MODAL_MENU */;
             menu = CircuitContextMenu({
-                circuitView: circuit,
-                parentContainer: circuit.DOMElement,
+                circuitView: circuitView,
+                parentContainer: circuitView.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove();
@@ -154,7 +154,7 @@ export default function CircuitPointerHandler(circuit) {
             const ioArea = elem;
             menu = CircuitIOAreaContextMenu({
                 ioArea,
-                parentContainer: circuit.DOMElement,
+                parentContainer: circuitView.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove();
@@ -169,7 +169,8 @@ export default function CircuitPointerHandler(circuit) {
             pointerMode = 8 /* MODAL_MENU */;
             menu = FunctionBlockContextMenu({
                 selection,
-                parentContainer: circuit.DOMElement,
+                circuitView,
+                parentContainer: circuitView.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove();
@@ -184,7 +185,7 @@ export default function CircuitPointerHandler(circuit) {
             pointerMode = 8 /* MODAL_MENU */;
             menu = IOPinContextMenu({
                 ioPinView: elem,
-                parentContainer: circuit.DOMElement,
+                parentContainer: circuitView.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove();
@@ -201,15 +202,15 @@ export default function CircuitPointerHandler(circuit) {
     let scrollStartPos;
     dragBehaviour.set(1 /* DRAG_SCROLL_VIEW */, {
         start(ev) {
-            scrollStartPos = vec2(circuit.parentDOM.scrollLeft, circuit.parentDOM.scrollTop);
-            circuit.DOMElement.style.cursor = 'grab';
+            scrollStartPos = vec2(circuitView.parentDOM.scrollLeft, circuitView.parentDOM.scrollTop);
+            circuitView.DOMElement.style.cursor = 'grab';
         },
         move(ev) {
-            circuit.parentDOM.scrollLeft = scrollStartPos.x - pointer.screenDragOffset.x;
-            circuit.parentDOM.scrollTop = scrollStartPos.y - pointer.screenDragOffset.y;
+            circuitView.parentDOM.scrollLeft = scrollStartPos.x - pointer.screenDragOffset.x;
+            circuitView.parentDOM.scrollTop = scrollStartPos.y - pointer.screenDragOffset.y;
         },
         end(ev) {
-            circuit.DOMElement.style.cursor = 'default';
+            circuitView.DOMElement.style.cursor = 'default';
         }
     });
     //  Draw selection box
@@ -219,28 +220,28 @@ export default function CircuitPointerHandler(circuit) {
     dragBehaviour.set(2 /* DRAG_SELECTION_BOX */, {
         start(ev) {
             selectionBoxStartPos = pointer.screenDownPos;
-            selectionBox = HTML.domElement(circuit.DOMElement, 'div', {
+            selectionBox = HTML.domElement(circuitView.DOMElement, 'div', {
                 position: 'absolute',
                 backgroundColor: 'rgba(128,128,255,0.2)',
                 border: 'thin solid #88F',
                 pointerEvents: 'none',
-                ...getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset)
+                ...getPositiveRectAttributes(selectionBoxStartPos, circuitView.pointer.screenDragOffset)
             });
         },
         move(ev) {
-            Object.assign(selectionBox.style, getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset));
+            Object.assign(selectionBox.style, getPositiveRectAttributes(selectionBoxStartPos, circuitView.pointer.screenDragOffset));
         },
         end(ev) {
             if (!ev.shiftKey)
                 selection.unselectAll();
-            circuit.blockViews.forEach(block => {
-                const pos = Vec2.div(selectionBoxStartPos, circuit.scale);
-                const size = Vec2.div(circuit.pointer.screenDragOffset, circuit.scale);
+            circuitView.blockViews.forEach(block => {
+                const pos = Vec2.div(selectionBoxStartPos, circuitView.scale);
+                const size = Vec2.div(circuitView.pointer.screenDragOffset, circuitView.scale);
                 if (isElementInsideRect(block, pos, size)) {
                     selection.add(block);
                 }
             });
-            circuit.DOMElement.removeChild(selectionBox);
+            circuitView.DOMElement.removeChild(selectionBox);
         }
     });
     //  Drag a block
@@ -251,25 +252,25 @@ export default function CircuitPointerHandler(circuit) {
             pointer.downTargetElem?.setStyle({ cursor: 'grabbing' });
             selection.blocks.forEach(block => {
                 selectedBlocksStartDragPos.set(block, block.pos.copy());
-                block.onDragStarted?.(ev, circuit.pointer);
+                block.onDragStarted?.(ev, circuitView.pointer);
             });
-            circuit.traceLayer.resetCollisions();
+            circuitView.traceLayer.resetCollisions();
         },
         move(ev) {
             selection.blocks.forEach(block => {
                 const startPos = selectedBlocksStartDragPos.get(block);
                 const newPos = Vec2.add(startPos, pointer.scaledDragOffset)
-                    .limit(vec2(CircuitView.IO_AREA_WIDTH + 3, 1), vec2(circuit.size.x - CircuitView.IO_AREA_WIDTH - block.size.x - 3, circuit.size.y - block.size.y - 1));
+                    .limit(vec2(CircuitView.IO_AREA_WIDTH + 3, 1), vec2(circuitView.size.x - CircuitView.IO_AREA_WIDTH - block.size.x - 3, circuitView.size.y - block.size.y - 1));
                 block.setPos(newPos);
-                block.onDragging?.(ev, circuit.pointer);
+                block.onDragging?.(ev, circuitView.pointer);
             });
         },
         end(ev) {
             pointer.downTargetElem?.setStyle({ cursor: 'grab' });
             selection.blocks.forEach(block => {
                 block.setPos(Vec2.round(block.pos));
-                block.onDragEnded?.(ev, circuit.pointer);
-                circuit.requestUpdate(circuit.grid);
+                block.onDragEnded?.(ev, circuitView.pointer);
+                circuitView.requestUpdate(circuitView.grid);
             });
         }
     });
@@ -283,14 +284,14 @@ export default function CircuitPointerHandler(circuit) {
         },
         move(ev) {
             const newPos = Vec2.add(circuitIODragStartPos, vec2(0, pointer.scaledDragOffset.y))
-                .limit(vec2(0, 0), vec2(0, circuit.size.y));
+                .limit(vec2(0, 0), vec2(0, circuitView.size.y));
             selection.circuitIO.setPos(newPos);
-            selection.circuitIO.onDragging?.(ev, circuit.pointer);
+            selection.circuitIO.onDragging?.(ev, circuitView.pointer);
         },
         end(ev) {
             selection.circuitIO.setPos(Vec2.round(selection.circuitIO.pos));
-            selection.circuitIO.onDragEnded?.(ev, circuit.pointer);
-            circuit.requestUpdate(circuit.grid);
+            selection.circuitIO.onDragEnded?.(ev, circuitView.pointer);
+            circuitView.requestUpdate(circuitView.grid);
         }
     });
     //  Drag IO pin
@@ -302,10 +303,10 @@ export default function CircuitPointerHandler(circuit) {
     let connectionMoveOutputValid;
     dragBehaviour.set(5 /* DRAG_IO_PIN */, {
         start(ev) {
-            const startPos = circuit.traceLayer.cellCenterScreenPos(selection.pin.absPos);
+            const startPos = circuitView.traceLayer.cellCenterScreenPos(selection.pin.absPos);
             const endPos = pointer.screenPos;
             connectionLine = new HTML.SVGLine(startPos, endPos, {
-                parent: circuit.traceLayer.svg,
+                parent: circuitView.traceLayer.svg,
                 color: 'rgba(255, 255, 255, 0.5)',
                 dashArray: '3, 3',
                 strokeWidth: 2
@@ -322,17 +323,17 @@ export default function CircuitPointerHandler(circuit) {
                     && selection.pin.io.sourceIO != null);
                 connectionMoveOutputValid = (selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'right'
                     && selection.pin != connectionDropTargetPin
-                    && ([...circuit.traceLines.values()].find(trace => trace.sourcePinView.io == selection.pin.io) != null));
+                    && ([...circuitView.traceLines.values()].find(trace => trace.sourcePinView.io == selection.pin.io) != null));
                 connectionLine.setColor((connectionCreateValid || connectionMoveInputValid || connectionMoveOutputValid)
-                    ? circuit.style.colors.connectionLineValid
-                    : circuit.style.colors.connectionLine);
+                    ? circuitView.style.colors.connectionLineValid
+                    : circuitView.style.colors.connectionLine);
             }
             else {
                 connectionCreateValid = false;
                 connectionMoveInputValid = false;
                 connectionMoveOutputValid = false;
                 connectionDropTargetPin = null;
-                connectionLine.setColor(circuit.style.colors.connectionLine);
+                connectionLine.setColor(circuitView.style.colors.connectionLine);
             }
         },
         end(ev) {
@@ -347,7 +348,7 @@ export default function CircuitPointerHandler(circuit) {
                 selection.pin.io.setSource(null);
             }
             if (connectionMoveOutputValid) {
-                ([...circuit.traceLines.values()]
+                ([...circuitView.traceLines.values()]
                     .filter(trace => trace.sourcePinView.io == selection.pin.io)
                     .forEach(trace => trace.destPinView.io.setSource(connectionDropTargetPin.io)));
             }
@@ -371,7 +372,7 @@ export default function CircuitPointerHandler(circuit) {
             const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset).round();
             selection.anchor.move(newPos);
             selection.unselectAll();
-            circuit.requestUpdate(circuit.grid);
+            circuitView.requestUpdate(circuitView.grid);
         }
     });
     // =======================
@@ -381,10 +382,10 @@ export default function CircuitPointerHandler(circuit) {
         ev.preventDefault();
         if (pointerMode == 8 /* MODAL_MENU */)
             return;
-        else if (pointer.downTargetElem == circuit.body && ev.buttons == 2 /* RIGHT */) {
+        else if (pointer.downTargetElem == circuitView.body && ev.buttons == 2 /* RIGHT */) {
             pointerMode = 1 /* DRAG_SCROLL_VIEW */;
         }
-        else if (pointer.downTargetElem == circuit.body && ev.buttons == 1 /* LEFT */) {
+        else if (pointer.downTargetElem == circuitView.body && ev.buttons == 1 /* LEFT */) {
             pointerMode = 2 /* DRAG_SELECTION_BOX */;
         }
         else if (selection.type == 'Block') {

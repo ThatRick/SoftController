@@ -7,12 +7,13 @@ import CircuitView from './CircuitView.js'
 
 export default function FunctionBlockContextMenu(pars: {
     selection: CircuitSelection,
+    circuitView: CircuitView,
     pos: Vec2,
     parentContainer: HTMLElement,
     destructor: () => void
 })
 {
-    const {selection, pos, parentContainer, destructor} = pars
+    const {selection, circuitView, pos, parentContainer, destructor} = pars
     const singleSelection = selection.singleBlock
     
     const items = {
@@ -61,7 +62,7 @@ export default function FunctionBlockContextMenu(pars: {
                 }
             })
         } : null,
-        'Insertion point': null,
+        'Insertion after': (singleSelection) ? () => { circuitView.insertionIndex = singleSelection?.block.callIndex + 1} : null,
         'Copy': null,
         'Replace': null,
         'Delete': () => {

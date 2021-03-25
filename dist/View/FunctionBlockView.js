@@ -66,7 +66,7 @@ export default class FunctionBlockView extends GUIChildElement {
         this.create();
     }
     create() {
-        if (this.visualStyle == 'full' || this.visualStyle == 'name on first row')
+        if (this.visualStyle == 'full' || this.visualStyle.startsWith('name on first row'))
             this.createTitle();
         if (this.visualStyle == 'minimal')
             this.createSymbol();
@@ -213,6 +213,10 @@ export default class FunctionBlockView extends GUIChildElement {
                 break;
             case 'name on first row':
                 w = 3;
+                title = 0;
+                break;
+            case 'name on first row min':
+                w = 2;
                 title = 0;
                 break;
             case 'minimal':

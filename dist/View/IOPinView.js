@@ -49,6 +49,7 @@ export default class IOPinView extends GUIChildElement {
             return;
         this.valueField.style.visibility = (visible) ? 'visible' : 'hidden';
     }
+    getValue() { return this.valueField?.textContent; }
     //////////////////////////////////////////////
     //               Protected
     //////////////////////////////////////////////

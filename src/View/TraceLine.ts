@@ -97,9 +97,12 @@ export class TraceLine {
     }
 
     protected updateDestPinValueVisibility() {
+        const valueLength = this.sourcePinView.getValue()?.length
+        if (!valueLength) return
+        const limitLength = Math.max(valueLength, 3)
         const d = Vec2.sub(this.route.destPos, this.route.sourcePos).round()
-        const hidden = (d.x > 0 && d.x < 4 && d.y == 0)
-        this.destPinView.setValueVisibility(!hidden)
+        const hidden = (d.x > 0 && d.x < limitLength && d.y == 0)
+        this.sourcePinView.setValueVisibility(!hidden)
     }
 
     protected pinViewGUIChildEventHandler = (event: GUIChildEvent) => {

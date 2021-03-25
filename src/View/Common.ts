@@ -42,8 +42,17 @@ export type Style = typeof defaultStyle
 
 export function formatValue(value: number, maxLength = 8)
 {
-    let [ints, decs] = value.toString().split('.')
-    if (!decs) return value.toString()
-    const numDesimals = Math.min(decs.length, maxLength - (ints.length + 1))
-    return Number(value.toFixed(numDesimals)).toString()
+    const str = value.toString()
+    if (str.length <= maxLength) return str
+
+    const [ints, decs] = str.split('.')
+    if (!decs) {
+        if (ints.length > maxLength) return value.toExponential(maxLength-5)
+        return value.toString()
+    }
+    if (ints.length >= maxLength) {
+        return value.toExponential(maxLength-5)
+    }
+    const numDesimals = Math.max(Math.min(decs.length, maxLength - ints.length - 2), 0)
+    return Number(value.toFixed(numDesimals)) + '~'
 }

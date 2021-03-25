@@ -5,6 +5,7 @@ export type BlockVisualStyle =
     | 'no title'
     | 'no title min'
     | 'name on first row'
+    | 'name on first row min'
     | 'minimal'
 
 

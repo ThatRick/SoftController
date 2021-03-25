@@ -31,7 +31,7 @@ export interface CircuitDefinition
 export interface CircuitInterface
 {
     readonly blocks: FunctionBlockInterface[]
-    addBlock(blockDef: FunctionInstanceDefinition)
+    addBlock(blockDef: FunctionInstanceDefinition, index?: number)
     removeBlock(block: FunctionBlockInterface)
     update(dt: number)
     remove()

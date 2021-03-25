@@ -36,10 +36,10 @@ interface IDragBehaviour {
     end(ev: PointerEvent): void
 }
 
-export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerEventHandler
+export default function CircuitPointerHandler(circuitView: CircuitView): GUIPointerEventHandler
 {
-    const pointer = circuit.pointer
-    const selection = circuit.selection
+    const pointer = circuitView.pointer
+    const selection = circuitView.selection
 
     let menu: HTML.Menu
 
@@ -55,7 +55,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             menu = null
         }
         // Unselect all
-        if (elem == circuit.body) {
+        if (elem == circuitView.body) {
             selection.unselectAll()
         }
         // Function Block
@@ -164,12 +164,12 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         const elem = pointer.targetElem
         
         // Open circuit context menu
-        if (elem == circuit.body) {
+        if (elem == circuitView.body) {
             selection.unselectAll()
             pointerMode = PointerMode.MODAL_MENU
             menu = CircuitContextMenu({
-                circuitView: circuit,
-                parentContainer: circuit.DOMElement,
+                circuitView: circuitView,
+                parentContainer: circuitView.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove()
@@ -184,7 +184,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             const ioArea = elem as CircuitIOArea
             menu = CircuitIOAreaContextMenu({
                 ioArea,
-                parentContainer: circuit.DOMElement,
+                parentContainer: circuitView.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove()
@@ -199,7 +199,8 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             pointerMode = PointerMode.MODAL_MENU
             menu = FunctionBlockContextMenu({
                 selection,
-                parentContainer: circuit.DOMElement,
+                circuitView,
+                parentContainer: circuitView.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove()
@@ -214,7 +215,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             pointerMode = PointerMode.MODAL_MENU
             menu = IOPinContextMenu({
                 ioPinView: elem,
-                parentContainer: circuit.DOMElement,
+                parentContainer: circuitView.DOMElement,
                 pos: pointer.screenDownPos.copy(),
                 destructor: () => {
                     menu.remove()
@@ -235,15 +236,15 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     dragBehaviour.set(PointerMode.DRAG_SCROLL_VIEW,
     {
         start(ev: PointerEvent) {
-            scrollStartPos = vec2(circuit.parentDOM.scrollLeft, circuit.parentDOM.scrollTop)
-            circuit.DOMElement.style.cursor = 'grab'
+            scrollStartPos = vec2(circuitView.parentDOM.scrollLeft, circuitView.parentDOM.scrollTop)
+            circuitView.DOMElement.style.cursor = 'grab'
         },
         move(ev: PointerEvent) {
-            circuit.parentDOM.scrollLeft = scrollStartPos.x - pointer.screenDragOffset.x
-            circuit.parentDOM.scrollTop = scrollStartPos.y - pointer.screenDragOffset.y
+            circuitView.parentDOM.scrollLeft = scrollStartPos.x - pointer.screenDragOffset.x
+            circuitView.parentDOM.scrollTop = scrollStartPos.y - pointer.screenDragOffset.y
         },
         end(ev: PointerEvent) {
-            circuit.DOMElement.style.cursor = 'default'
+            circuitView.DOMElement.style.cursor = 'default'
         }
     })
     
@@ -256,27 +257,27 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     {
         start(ev: PointerEvent) {
             selectionBoxStartPos = pointer.screenDownPos
-            selectionBox = HTML.domElement(circuit.DOMElement, 'div', {
+            selectionBox = HTML.domElement(circuitView.DOMElement, 'div', {
                 position: 'absolute',
                 backgroundColor: 'rgba(128,128,255,0.2)',
                 border: 'thin solid #88F',
                 pointerEvents: 'none',
-                ...getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset)
+                ...getPositiveRectAttributes(selectionBoxStartPos, circuitView.pointer.screenDragOffset)
             })
         },
         move(ev: PointerEvent) {
-            Object.assign(selectionBox.style, getPositiveRectAttributes(selectionBoxStartPos, circuit.pointer.screenDragOffset))
+            Object.assign(selectionBox.style, getPositiveRectAttributes(selectionBoxStartPos, circuitView.pointer.screenDragOffset))
         },
         end(ev: PointerEvent) {
             if (!ev.shiftKey) selection.unselectAll()
-            circuit.blockViews.forEach(block => {
-                const pos = Vec2.div(selectionBoxStartPos, circuit.scale)
-                const size = Vec2.div(circuit.pointer.screenDragOffset, circuit.scale)
+            circuitView.blockViews.forEach(block => {
+                const pos = Vec2.div(selectionBoxStartPos, circuitView.scale)
+                const size = Vec2.div(circuitView.pointer.screenDragOffset, circuitView.scale)
                 if (isElementInsideRect(block, pos, size)) {
                     selection.add(block)
                 }
             })
-            circuit.DOMElement.removeChild(selectionBox)
+            circuitView.DOMElement.removeChild(selectionBox)
         }
     })
 
@@ -290,26 +291,26 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             pointer.downTargetElem?.setStyle({cursor: 'grabbing'})
             selection.blocks.forEach(block => {
                 selectedBlocksStartDragPos.set(block, block.pos.copy())
-                block.onDragStarted?.(ev, circuit.pointer)
+                block.onDragStarted?.(ev, circuitView.pointer)
             })
-            circuit.traceLayer.resetCollisions()
+            circuitView.traceLayer.resetCollisions()
         },
         move(ev: PointerEvent) {
             selection.blocks.forEach(block => {
                 const startPos = selectedBlocksStartDragPos.get(block)
                 const newPos = Vec2.add(startPos, pointer.scaledDragOffset)
                                    .limit(vec2(CircuitView.IO_AREA_WIDTH + 3, 1),
-                                          vec2(circuit.size.x - CircuitView.IO_AREA_WIDTH - block.size.x - 3, circuit.size.y - block.size.y - 1))
+                                          vec2(circuitView.size.x - CircuitView.IO_AREA_WIDTH - block.size.x - 3, circuitView.size.y - block.size.y - 1))
                 block.setPos(newPos)
-                block.onDragging?.(ev, circuit.pointer)
+                block.onDragging?.(ev, circuitView.pointer)
             })
         },
         end(ev: PointerEvent) {
             pointer.downTargetElem?.setStyle({cursor: 'grab'})
             selection.blocks.forEach(block => {
                 block.setPos(Vec2.round(block.pos))
-                block.onDragEnded?.(ev, circuit.pointer)
-                circuit.requestUpdate(circuit.grid)
+                block.onDragEnded?.(ev, circuitView.pointer)
+                circuitView.requestUpdate(circuitView.grid)
             })
         }
     })
@@ -326,15 +327,15 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
         },
         move(ev: PointerEvent) {
             const newPos = Vec2.add(circuitIODragStartPos, vec2(0, pointer.scaledDragOffset.y))
-                           .limit(vec2(0, 0), vec2(0, circuit.size.y))
+                           .limit(vec2(0, 0), vec2(0, circuitView.size.y))
             selection.circuitIO.setPos(newPos)
-            selection.circuitIO.onDragging?.(ev, circuit.pointer)
+            selection.circuitIO.onDragging?.(ev, circuitView.pointer)
         },
         end(ev: PointerEvent) {
             selection.circuitIO.setPos(Vec2.round(selection.circuitIO.pos))
-            selection.circuitIO.onDragEnded?.(ev, circuit.pointer)
+            selection.circuitIO.onDragEnded?.(ev, circuitView.pointer)
             
-            circuit.requestUpdate(circuit.grid)
+            circuitView.requestUpdate(circuitView.grid)
         }
     })
 
@@ -349,10 +350,10 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     dragBehaviour.set(PointerMode.DRAG_IO_PIN,
     {
         start(ev: PointerEvent) {
-            const startPos = circuit.traceLayer.cellCenterScreenPos(selection.pin.absPos)
+            const startPos = circuitView.traceLayer.cellCenterScreenPos(selection.pin.absPos)
             const endPos = pointer.screenPos
             connectionLine = new HTML.SVGLine(startPos, endPos, {
-                parent: circuit.traceLayer.svg,
+                parent: circuitView.traceLayer.svg,
                 color: 'rgba(255, 255, 255, 0.5)',
                 dashArray: '3, 3',
                 strokeWidth: 2
@@ -372,18 +373,18 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
 
                 connectionMoveOutputValid = (selection.pin.direction == 'right' && connectionDropTargetPin.direction == 'right'
                                       && selection.pin != connectionDropTargetPin
-                                      && ([...circuit.traceLines.values()].find(trace => trace.sourcePinView.io == selection.pin.io) != null))
+                                      && ([...circuitView.traceLines.values()].find(trace => trace.sourcePinView.io == selection.pin.io) != null))
 
                 connectionLine.setColor((connectionCreateValid || connectionMoveInputValid || connectionMoveOutputValid)
-                    ? circuit.style.colors.connectionLineValid
-                    : circuit.style.colors.connectionLine)
+                    ? circuitView.style.colors.connectionLineValid
+                    : circuitView.style.colors.connectionLine)
             }
             else {
                 connectionCreateValid = false
                 connectionMoveInputValid = false
                 connectionMoveOutputValid = false
                 connectionDropTargetPin = null
-                connectionLine.setColor(circuit.style.colors.connectionLine)
+                connectionLine.setColor(circuitView.style.colors.connectionLine)
             }
         },
         end(ev: PointerEvent) {
@@ -399,7 +400,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             }
 
             if (connectionMoveOutputValid) {
-                ([...circuit.traceLines.values()]
+                ([...circuitView.traceLines.values()]
                 .filter(trace => trace.sourcePinView.io == selection.pin.io)
                 .forEach(trace => trace.destPinView.io.setSource(connectionDropTargetPin.io)))
             }
@@ -427,7 +428,7 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
             const newPos = Vec2.add(selectedAnchorStartDragPos, pointer.scaledDragOffset).round()
             selection.anchor.move(newPos)
             selection.unselectAll()
-            circuit.requestUpdate(circuit.grid)
+            circuitView.requestUpdate(circuitView.grid)
         }
     })
 
@@ -438,10 +439,10 @@ export default function CircuitPointerHandler(circuit: CircuitView): GUIPointerE
     {
         ev.preventDefault()
         if (pointerMode == PointerMode.MODAL_MENU) return
-        else if (pointer.downTargetElem == circuit.body && ev.buttons == MouseButton.RIGHT) {
+        else if (pointer.downTargetElem == circuitView.body && ev.buttons == MouseButton.RIGHT) {
             pointerMode = PointerMode.DRAG_SCROLL_VIEW
         }
-        else if (pointer.downTargetElem == circuit.body && ev.buttons == MouseButton.LEFT) {
+        else if (pointer.downTargetElem == circuitView.body && ev.buttons == MouseButton.LEFT) {
             pointerMode = PointerMode.DRAG_SELECTION_BOX
         }
         else if (selection.type == 'Block') {

@@ -4,12 +4,12 @@ export const BranchingLibDefinitions = createFunctionCollection({
     Select: {
         name: 'Select',
         symbol: 'SEL',
-        visualStyle: 'no title min',
+        visualStyle: 'name on first row min',
         description: 'Select between two values',
         inputs: {
-            0: { value: 0, dataType: 'FLOAT' },
-            1: { value: 0, dataType: 'FLOAT' },
-            sel: { value: 0, dataType: 'BINARY' }
+            sel: { value: 0, dataType: 'BINARY' },
+            '1 ': { value: 0, dataType: 'FLOAT' },
+            '0 ': { value: 0, dataType: 'FLOAT' },
         },
         outputs: {
             out: { value: 0, dataType: 'FLOAT' }
@@ -19,7 +19,7 @@ export const BranchingLibDefinitions = createFunctionCollection({
 class Select extends FunctionBlock {
     constructor() {
         super(BranchingLibDefinitions.Select);
-        this.run = ([in0, in1, sel]) => sel ? in1 : in0;
+        this.run = ([sel, in1, in0]) => sel ? in1 : in0;
     }
 }
 export const branchingLib = {
