@@ -1,7 +1,7 @@
 import { FunctionBlock } from "../FunctionBlock.js"
 import { createFunctionCollection } from './CommonLib.js'
 
-export const BranchingLibDefinitions = createFunctionCollection(
+export const ConditionalLibDefinitions = createFunctionCollection(
 {
     Select: {
         name: 'Select',
@@ -22,12 +22,12 @@ export const BranchingLibDefinitions = createFunctionCollection(
 
 class Select extends FunctionBlock
 {
-    constructor() { super(BranchingLibDefinitions.Select) }
+    constructor() { super(ConditionalLibDefinitions.Select) }
     protected run = ([sel, in1, in0]) => sel ? in1 : in0
 }
 
 
-export const branchingLib =
+export const conditionalLib =
 {
     Select
 }

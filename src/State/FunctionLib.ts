@@ -1,8 +1,8 @@
 import { FunctionBlock, FunctionInstanceDefinition, FunctionTypeDefinition } from "./FunctionBlock.js"
 
 import { logicLib } from './FunctionLib/LogicLib.js'
-import { arithmeticLib } from './FunctionLib/ArithmeticLib.js'
-import { branchingLib } from './FunctionLib/BranchingLib.js'
+import { mathLib } from './FunctionLib/MathLib.js'
+import { conditionalLib } from './FunctionLib/ConditionalLib.js'
 import { timerLib } from './FunctionLib/TimerLib.js'
 
 export { BlockVisualStyle } from './FunctionLib/CommonLib.js'
@@ -10,8 +10,8 @@ export { BlockVisualStyle } from './FunctionLib/CommonLib.js'
 export const functionLib =
 {
     ...logicLib,
-    ...arithmeticLib,
-    ...branchingLib,
+    ...mathLib,
+    ...conditionalLib,
     ...timerLib
 }
 
@@ -19,7 +19,8 @@ export type FunctionTypeName = keyof typeof functionLib
 
 export const functionTypeNames = Object.keys(functionLib)
 
-export function getFunctionBlock(instance: FunctionInstanceDefinition) {
+export function getFunctionBlock(instance: FunctionInstanceDefinition)
+{
     const ctor = functionLib[instance.typeName]
     console.assert(ctor != null, 'Function block not found:', instance)
     const block = new ctor()

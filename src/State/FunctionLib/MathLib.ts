@@ -1,7 +1,7 @@
 import { FunctionBlock } from "../FunctionBlock.js"
 import { createFunctionCollection } from './CommonLib.js'
 
-export const ArithmeticLibDefinitions = createFunctionCollection (
+export const MathLibDefinitions = createFunctionCollection (
 {
     ADD: {
         name: 'Addition',
@@ -70,30 +70,30 @@ export const ArithmeticLibDefinitions = createFunctionCollection (
 
 class ADD extends FunctionBlock
 {
-    constructor() { super(ArithmeticLibDefinitions.ADD) }
+    constructor() { super(MathLibDefinitions.ADD) }
     protected run = (inputs: number[]) => inputs.reduce((output, input) => output += input, 0)
 }
 
 class SUB extends FunctionBlock
 {
-    constructor() { super(ArithmeticLibDefinitions.SUB) }
+    constructor() { super(MathLibDefinitions.SUB) }
     protected run = ([a, b]) => a - b
 }
 
 class MUL extends FunctionBlock
 {
-    constructor() { super(ArithmeticLibDefinitions.MUL) }
+    constructor() { super(MathLibDefinitions.MUL) }
     protected run = (inputs: number[]) => inputs.reduce((output, input) => output *= input, 1)
 }
 
 class DIV extends FunctionBlock
 {
-    constructor() { super(ArithmeticLibDefinitions.DIV) }
+    constructor() { super(MathLibDefinitions.DIV) }
     protected run = ([a, b]) => (b == 0) ? [0, 1] : [a / b, 0]
 }
 
 
-export const arithmeticLib =
+export const mathLib =
 {
     ADD,
     SUB,
