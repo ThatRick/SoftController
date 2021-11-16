@@ -11,7 +11,7 @@ export default class FunctionBlockView extends GUIChildElement
 {
     readonly block: FunctionBlockInterface
 
-    gui: CircuitView
+    declare gui: CircuitView
 
     getPinForIO(io: IOPinInterface) { 
         let foundPin: IOPinView

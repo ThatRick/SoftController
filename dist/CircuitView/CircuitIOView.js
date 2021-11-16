@@ -2,6 +2,18 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import { vec2 } from '../Lib/Vector2.js';
 import FunctionBlockPinView from './FunctionBlockPinView.js';
 export default class CircuitIOView extends GUIChildElement {
+    type;
+    get id() { return this.ioPin.id; }
+    isDraggable = true;
+    isSelectable = true;
+    ioPin;
+    circuit;
+    ioNum;
+    // Restrict horizontal movement
+    setPos(v) {
+        v.x = this._pos.x;
+        super.setPos(v);
+    }
     constructor(parent, circuit, ioNum, pos) {
         super(parent, 'div', pos, vec2(parent.gui.style.IOAreaWidth, 1), {
             borderBottom: '1px solid',
@@ -11,24 +23,10 @@ export default class CircuitIOView extends GUIChildElement {
             boxSizing: 'border-box',
             userSelect: 'none',
         }, true);
-        this.isDraggable = true;
-        this.isSelectable = true;
-        this.onPointerEnter = () => {
-            this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
-        };
-        this.onPointerLeave = () => {
-            this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
-        };
         this.circuit = circuit;
         this.ioNum = ioNum;
         this.type = (ioNum < circuit.funcState.funcData.inputCount) ? 'circuitInput' : 'circuitOutput';
         this.build();
-    }
-    get id() { return this.ioPin.id; }
-    // Restrict horizontal movement
-    setPos(v) {
-        v.x = this._pos.x;
-        super.setPos(v);
     }
     build() {
         this.createIOName();
@@ -55,4 +53,10 @@ export default class CircuitIOView extends GUIChildElement {
     toFront() {
         this.parentContainer.DOMElement.appendChild(this.DOMElement);
     }
+    onPointerEnter = () => {
+        this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
+    };
+    onPointerLeave = () => {
+        this.DOMElement.style.backgroundColor = this.gui.style.colorBlock;
+    };
 }

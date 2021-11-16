@@ -7,8 +7,14 @@ const lineStyle = {
 };
 const sizePadding = 10;
 export default class TraceLayerRectangular {
+    svg;
+    scale;
+    cellOffset;
+    traces = [];
+    get size() {
+        return vec2(this.svg.clientWidth, this.svg.clientHeight);
+    }
     constructor(parent, scale) {
-        this.traces = [];
         const svg = document.createElementNS(xmlns, 'svg');
         this.svg = svg;
         this.scale = scale;
@@ -20,9 +26,6 @@ export default class TraceLayerRectangular {
             pointerEvents: 'none'
         });
         parent.appendChild(svg);
-    }
-    get size() {
-        return vec2(this.svg.clientWidth, this.svg.clientHeight);
     }
     addLine(a, b, tx1, ty, tx2) {
         let segments;
@@ -42,7 +45,7 @@ export default class TraceLayerRectangular {
             segments = [
                 this.createSegment(a, va),
                 this.createSegment(va, vb),
-                this.createSegment(vb, b),
+                this.createSegment(vb, b), // horizontal 2
             ];
         }
         // 5 segments
@@ -59,7 +62,7 @@ export default class TraceLayerRectangular {
                 this.createSegment(v1a, v1b),
                 this.createSegment(v1b, v2a),
                 this.createSegment(v2a, v2b),
-                this.createSegment(v2b, b),
+                this.createSegment(v2b, b), // horizontal 3
             ];
         }
         this.traces.push({

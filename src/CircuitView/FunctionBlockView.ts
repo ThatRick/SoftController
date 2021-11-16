@@ -26,7 +26,7 @@ export default class FunctionBlockView extends GUIChildElement implements Circui
 
     type: ElementType = 'block'
     get id(): number { return this.state.id }
-    gui: CircuitView
+    declare gui: CircuitView
 
     isDraggable = true
     isSelectable = true

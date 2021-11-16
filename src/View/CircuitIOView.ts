@@ -11,7 +11,7 @@ export default class FunctionBlockView extends GUIChildElement
 {
     readonly pin: IOPinView
 
-    readonly gui: CircuitView
+    declare readonly gui: CircuitView
 
     constructor(io: IOPinInterface, posY: number, parentContainer: IContainerGUI )
     {

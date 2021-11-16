@@ -168,8 +168,8 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this.close()
         this._circuitBlock = new CircuitBlock({
             name: 'New circuit',
-            inputs: {},
-            outputs: {},
+            inputs: [],
+            outputs: [],
             circuit: {
                 blocks: [],
                 circuitOutputSources: {}

@@ -15,14 +15,39 @@ function logInfo(...args) { debugLogging && console.info('CPU:', ...args); }
 function logError(...args) { console.error('CPU:', ...args); }
 ;
 export default class VirtualController {
+    static version = 1;
+    getVersion() { return VirtualController.version; }
+    mem;
+    systemSector;
+    datablockTable;
+    taskList;
+    bytes;
+    words;
+    ints;
+    floats;
+    set id(value) { this.systemSector[0 /* id */] = value; }
+    set version(value) { this.systemSector[1 /* version */] = value; }
+    set totalMemSize(value) { this.systemSector[2 /* totalMemSize */] = value; }
+    set dataMemSize(value) { this.systemSector[3 /* dataMemSize */] = value; }
+    set datablockTablePtr(value) { this.systemSector[4 /* datablockTablePtr */] = value; }
+    set datablockTableLength(value) { this.systemSector[5 /* datablockTableLength */] = value; }
+    set datablockTableVersion(value) { this.systemSector[7 /* datablockTableVersion */] = value; }
+    set datablockTableLastUsedID(value) { this.systemSector[6 /* dataBlockTableLastUsedID */] = value; }
+    set taskListPtr(value) { this.systemSector[8 /* taskListPtr */] = value; }
+    set taskListLength(value) { this.systemSector[9 /* taskListLength */] = value; }
+    get id() { return this.systemSector[0 /* id */]; }
+    get version() { return this.systemSector[1 /* version */]; }
+    get totalMemSize() { return this.systemSector[2 /* totalMemSize */]; }
+    get dataMemSize() { return this.systemSector[3 /* dataMemSize */]; }
+    get datablockTablePtr() { return this.systemSector[4 /* datablockTablePtr */]; }
+    get datablockTableLength() { return this.systemSector[5 /* datablockTableLength */]; }
+    get datablockTableVersion() { return this.systemSector[7 /* datablockTableVersion */]; }
+    get datablockTableLastUsedID() { return this.systemSector[6 /* dataBlockTableLastUsedID */]; }
+    get taskListPtr() { return this.systemSector[8 /* taskListPtr */]; }
+    get taskListLength() { return this.systemSector[9 /* taskListLength */]; }
+    get freeMem() { return undefined; } // must sum unallocated datablocks
+    getSystemSector() { return this.systemSector.slice(); }
     constructor(arg, datablockTableLength = 1024, taskListLength = 16, id = 1) {
-        /***************************
-         *    MONITOR IO VALUES    *
-         ***************************/
-        this.monitoringEnabled = false;
-        this.monitoringInterval = 100;
-        this.monitoringBuffer = new ArrayBuffer(MonitorValueChangeStruct.STRUCT_BYTE_SIZE * MAX_MONITORED_IO_CHANGES);
-        this.monitoringDataIndex = 0;
         // arg = ArrayBuffer: Use existing ArrayBuffer as controller memory data
         if (typeof arg === 'object') {
             this.mem = arg;
@@ -65,29 +90,6 @@ export default class VirtualController {
             this.addDatablock(new ArrayBuffer(0), 0 /* UNDEFINED */);
         }
     }
-    getVersion() { return VirtualController.version; }
-    set id(value) { this.systemSector[0 /* id */] = value; }
-    set version(value) { this.systemSector[1 /* version */] = value; }
-    set totalMemSize(value) { this.systemSector[2 /* totalMemSize */] = value; }
-    set dataMemSize(value) { this.systemSector[3 /* dataMemSize */] = value; }
-    set datablockTablePtr(value) { this.systemSector[4 /* datablockTablePtr */] = value; }
-    set datablockTableLength(value) { this.systemSector[5 /* datablockTableLength */] = value; }
-    set datablockTableVersion(value) { this.systemSector[7 /* datablockTableVersion */] = value; }
-    set datablockTableLastUsedID(value) { this.systemSector[6 /* dataBlockTableLastUsedID */] = value; }
-    set taskListPtr(value) { this.systemSector[8 /* taskListPtr */] = value; }
-    set taskListLength(value) { this.systemSector[9 /* taskListLength */] = value; }
-    get id() { return this.systemSector[0 /* id */]; }
-    get version() { return this.systemSector[1 /* version */]; }
-    get totalMemSize() { return this.systemSector[2 /* totalMemSize */]; }
-    get dataMemSize() { return this.systemSector[3 /* dataMemSize */]; }
-    get datablockTablePtr() { return this.systemSector[4 /* datablockTablePtr */]; }
-    get datablockTableLength() { return this.systemSector[5 /* datablockTableLength */]; }
-    get datablockTableVersion() { return this.systemSector[7 /* datablockTableVersion */]; }
-    get datablockTableLastUsedID() { return this.systemSector[6 /* dataBlockTableLastUsedID */]; }
-    get taskListPtr() { return this.systemSector[8 /* taskListPtr */]; }
-    get taskListLength() { return this.systemSector[9 /* taskListLength */]; }
-    get freeMem() { return undefined; } // must sum unallocated datablocks
-    getSystemSector() { return this.systemSector.slice(); }
     /**************
      *    TICK    *
      **************/
@@ -143,7 +145,7 @@ export default class VirtualController {
             timeAccu_ms: offset_ms,
             cpuTime_ms: 0,
             cpuTimeInt_ms: 0,
-            runCount: 0,
+            runCount: 0, // counts number of calls
         };
         const buffer = new ArrayBuffer(TaskStruct.STRUCT_BYTE_SIZE);
         writeStruct(buffer, 0, TaskStruct, task);
@@ -190,6 +192,14 @@ export default class VirtualController {
         const taskIDs = taskRefs.map(ref => this.getDatablockID(ref));
         return taskIDs;
     }
+    /***************************
+     *    MONITOR IO VALUES    *
+     ***************************/
+    monitoringEnabled = false;
+    monitoringInterval = 100;
+    monitoringBuffer = new ArrayBuffer(MonitorValueChangeStruct.STRUCT_BYTE_SIZE * MAX_MONITORED_IO_CHANGES);
+    monitoringDataIndex = 0;
+    onControllerEvent;
     monitoringStart() {
         this.monitoringDataIndex = 0;
     }
@@ -860,4 +870,3 @@ export default class VirtualController {
         return Array.from(this.datablockTable.slice(0, this.datablockTableLastUsedID));
     }
 }
-VirtualController.version = 1;

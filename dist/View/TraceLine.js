@@ -2,12 +2,13 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import { Vec2 } from '../GUI/GUITypes.js';
 import { vec2 } from '../Lib/Vector2.js';
 export class TraceAnchorHandle extends GUIChildElement {
+    name;
+    traceLine;
+    type;
     constructor(name, traceLine, pos, size) {
         super(traceLine.circuitView.body.children, 'div', pos, size);
         this.name = name;
         this.traceLine = traceLine;
-        this.onPointerEnter = () => this.setStyle({ backgroundColor: this.traceLine.circuitView.style.colors.pinHighlight });
-        this.onPointerLeave = () => this.setStyle({ backgroundColor: 'transparent' });
         this.type = (name == 'horizontal') ? 'horizontal' : 'vertical';
         this.setStyle({ cursor: (this.type == 'horizontal') ? 'ns-resize' : 'ew-resize' });
     }
@@ -15,46 +16,14 @@ export class TraceAnchorHandle extends GUIChildElement {
         const value = (this.type == 'horizontal') ? pos.y : pos.x;
         this.traceLine.anchorHandleMoved(this.name, value);
     }
+    onPointerEnter = () => this.setStyle({ backgroundColor: this.traceLine.circuitView.style.colors.pinHighlight });
+    onPointerLeave = () => this.setStyle({ backgroundColor: 'transparent' });
 }
 export class TraceLine {
-    constructor(circuitView, sourcePinView, destPinView, anchors) {
-        this.circuitView = circuitView;
-        this.sourcePinView = sourcePinView;
-        this.destPinView = destPinView;
-        this.updateColorPending = false;
-        this.updatePositionPending = false;
-        this.pinViewGUIChildEventHandler = (event) => {
-            switch (event.type) {
-                case 0 /* PositionChanged */:
-                    this.updatePositionPending = true;
-                    this.circuitView.requestUpdate(this);
-                    break;
-                case 1 /* Removed */:
-                    this.delete();
-                    break;
-            }
-        };
-        this.pinViewEventHandler = (event) => {
-            this.updateColorPending = true;
-            this.circuitView.requestUpdate(this);
-        };
-        this.handles = {
-            vertical1: undefined,
-            horizontal: undefined,
-            vertical2: undefined
-        };
-        this.traceLayer = circuitView.traceLayer;
-        const sourceMinReach = 1;
-        const destMinReach = 1;
-        console.log('Creating trace line with anchors', anchors);
-        this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor(), anchors);
-        this.updateHandles();
-        this.updateDestPinValueVisibility();
-        this.sourcePinView.events.subscribe(this.pinViewGUIChildEventHandler);
-        this.destPinView.events.subscribe(this.pinViewGUIChildEventHandler);
-        this.sourcePinView.ioPinViewEvents.subscribe(this.pinViewEventHandler);
-        this.instanceID = TraceLine.instanceCounter++;
-    }
+    circuitView;
+    sourcePinView;
+    destPinView;
+    route;
     update() {
         if (this.updateColorPending)
             this.updateColor();
@@ -78,6 +47,25 @@ export class TraceLine {
         this.updatePositionPending = true;
         this.circuitView.requestUpdate(this);
     }
+    static instanceCounter = 1;
+    constructor(circuitView, sourcePinView, destPinView, anchors) {
+        this.circuitView = circuitView;
+        this.sourcePinView = sourcePinView;
+        this.destPinView = destPinView;
+        this.traceLayer = circuitView.traceLayer;
+        const sourceMinReach = 1;
+        const destMinReach = 1;
+        console.log('Creating trace line with anchors', anchors);
+        this.route = this.traceLayer.addTrace(sourcePinView.absPos, destPinView.absPos, sourceMinReach, destMinReach, this.getColor(), anchors);
+        this.updateHandles();
+        this.updateDestPinValueVisibility();
+        this.sourcePinView.events.subscribe(this.pinViewGUIChildEventHandler);
+        this.destPinView.events.subscribe(this.pinViewGUIChildEventHandler);
+        this.sourcePinView.ioPinViewEvents.subscribe(this.pinViewEventHandler);
+        this.instanceID = TraceLine.instanceCounter++;
+    }
+    updateColorPending = false;
+    updatePositionPending = false;
     updateColor() {
         if (this.route.color != this.sourcePinView.color) {
             this.traceLayer.updateColor(this.route, this.sourcePinView.color);
@@ -101,6 +89,28 @@ export class TraceLine {
         const hidden = (d.x > 0 && d.x < limitLength && d.y == 0);
         this.sourcePinView.setValueVisibility(!hidden);
     }
+    pinViewGUIChildEventHandler = (event) => {
+        switch (event.type) {
+            case 0 /* PositionChanged */:
+                this.updatePositionPending = true;
+                this.circuitView.requestUpdate(this);
+                break;
+            case 1 /* Removed */:
+                this.delete();
+                break;
+        }
+    };
+    pinViewEventHandler = (event) => {
+        this.updateColorPending = true;
+        this.circuitView.requestUpdate(this);
+    };
+    instanceID;
+    traceLayer;
+    handles = {
+        vertical1: undefined,
+        horizontal: undefined,
+        vertical2: undefined
+    };
     getColor() {
         return this.sourcePinView.color;
     }
@@ -179,4 +189,3 @@ export class TraceLine {
         }
     }
 }
-TraceLine.instanceCounter = 1;

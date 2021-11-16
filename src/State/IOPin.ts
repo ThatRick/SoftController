@@ -16,9 +16,9 @@ export interface IOPinSource
 
 export interface IOPinDefinition
 {
+    name:       string
     value:      number
-    dataType:   IODataType
-    name?:      string
+    datatype:   IODataType
 }
 
 export interface IOPinInstanceDefinition

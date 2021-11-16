@@ -4,12 +4,14 @@ function logInfo(...args) { debugLogging && console.info('LINK: ', ...args); }
 function logError(...args) { console.error('LINK: ', ...args); }
 export default class VirtualControllerLink {
     constructor() {
-        this._msgID = 1;
-        this.messagesPromises = new Map();
         this.worker = new Worker('./VirtualController/VirtualControllerWorker.js', { type: 'module' });
         this.worker.onmessage = (e) => this.receiveMessage(e);
     }
+    onEventReceived;
+    worker;
+    _msgID = 1;
     getMessageID() { return this._msgID++; }
+    messagesPromises = new Map();
     sendMessage(code, params, resolve, reject) {
         const id = this.getMessageID();
         const message = { id, code, params };

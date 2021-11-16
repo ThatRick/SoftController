@@ -4,6 +4,10 @@ import * as HTML from '../Lib/HTML.js';
 const DEBUG = false;
 const VISUAL_DEBUG = false;
 export default class CircuitGrid {
+    circuit;
+    grid;
+    visualMap;
+    ctx;
     constructor(circuit) {
         this.circuit = circuit;
         this.visualMap = HTML.domElement(circuit.DOMElement, 'canvas', {

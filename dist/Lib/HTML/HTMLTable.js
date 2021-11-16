@@ -1,9 +1,9 @@
 import { domElement, Element } from './HTMLCommon.js';
 export class Table extends Element {
+    rows = [];
+    cells = [];
     constructor(options) {
         super();
-        this.rows = [];
-        this.cells = [];
         this.DOMElement = domElement(options.parentElement, 'table', options.tableStyle);
         for (let y = 0; y < options.rows; y++) {
             const row = domElement(this.DOMElement, 'tr', options.rowStyle);

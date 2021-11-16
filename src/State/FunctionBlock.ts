@@ -13,14 +13,14 @@ import { IOPin, IOPinDefinition, IOPinInstanceDefinition, IOPinInterface } from 
 export interface FunctionTypeDefinition
 {
     name:               string
-    inputs:             { [name: string]: IOPinDefinition }
-    outputs:            { [name: string]: IOPinDefinition }
+    inputs:             IOPinDefinition[]
+    outputs:            IOPinDefinition[]
     symbol?:            string
     description?:       string
     visualStyle?:       BlockVisualStyle
     variableInputs?:    VariableIOCountDefinition
     variableOutputs?:   VariableIOCountDefinition
-    statics?:           { [name: string]: number }
+    staticVariables?:   { [name: string]: number }
     circuit?:           CircuitDefinition
 }
 
@@ -132,7 +132,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         if (addition > 0) {    
             const initialInputs = Object.values(this.typeDef.inputs).map(input => {
                 const name = input.name ? splitToStringAndNumber(input.name || '')[0] : ''
-                return { name, value: input.value, dataType: input.dataType }
+                return { name, value: input.value, dataType: input.datatype }
             })
             const initialStruct = initialInputs.slice(staticInputsCount, staticInputsCount + structSize)
             const currentLastIndex = this.inputs.length - structSize
@@ -249,17 +249,17 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     constructor(typeDef: FunctionTypeDefinition)
     {
         this.typeDef = typeDef
-        this.inputs = Object.entries(typeDef.inputs).map(([name, input]) => {
-            return new IOPin('input', input.value, name, input.dataType, this )
+        this.inputs = typeDef.inputs.map(input => {
+            return new IOPin('input', input.value, input.name, input.datatype, this )
         })
-        this.outputs = Object.entries(typeDef.outputs).map(([name, output]) => {
-            return new IOPin('output', output.value, name, output.dataType, this )
+        this.outputs = typeDef.outputs.map(output => {
+            return new IOPin('output', output.value, output.name, output.datatype, this )
         })
         this._symbol = this.typeDef.symbol
         this._description = this.typeDef.description
         this.variableInputs = typeDef.variableInputs
         this.variableOutputs = typeDef.variableOutputs
-        this.statics = {...typeDef.statics}
+        this.staticVariables = {...typeDef.staticVariables}
         
         if (typeDef.circuit) {
             this.circuit = new Circuit(typeDef.circuit, this)
@@ -270,7 +270,7 @@ export abstract class FunctionBlock implements FunctionBlockInterface
 
     protected abstract run: (inputs: number[], outputs: number[], dt: number) => number | number[] | void
 
-    protected statics: {}
+    protected staticVariables: {}
 
     protected _typeName: FunctionTypeName
     protected _symbol: string

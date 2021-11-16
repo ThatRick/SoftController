@@ -8,17 +8,6 @@ function logError(...args) { console.error('Circuit View:', ...args); }
 export default class FunctionBlockPinView extends GUIChildElement {
     constructor(parent, funcState, ioNum, pos, isInternalCircuitIO = false) {
         super(parent, 'div', pos, vec2(1, 1));
-        this.isSelectable = true;
-        this.isDraggable = true;
-        this.onPointerEnter = (ev) => {
-            this.DOMElement.style.filter = this.gui.style.filterActive;
-        };
-        this.onPointerLeave = (ev) => {
-            this.DOMElement.style.filter = 'none';
-        };
-        this.onDoubleClicked = ev => {
-            this.togglePin();
-        };
         this.funcState = funcState;
         this.ioNum = ioNum;
         this.pinType = (ioNum < funcState.funcData.inputCount) ? 'inputPin' : 'outputPin';
@@ -27,12 +16,23 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.isInternalCircuitIO = isInternalCircuitIO;
         this.create();
     }
+    type;
+    isSelectable = true;
+    isDraggable = true;
+    funcState;
+    ioNum;
+    pinType;
+    pin;
+    valueField;
+    isInternalCircuitIO;
+    color;
     get traceColor() {
         const col = (this.inverted)
             ? (this.value == 0) ? this.gui.style.colorPinBinary1 : this.gui.style.colorPinBinary0
             : this.color;
         return col;
     }
+    _name;
     get name() { return this._name; }
     get dataType() { return getIODataType(this.flags); }
     get flags() { return this.funcState.funcData.ioFlags[this.ioNum]; }
@@ -240,4 +240,13 @@ export default class FunctionBlockPinView extends GUIChildElement {
         this.pin.style.outline = this.gui.style.blockOutlineUnselected;
         this.updatePin(false);
     }
+    onPointerEnter = (ev) => {
+        this.DOMElement.style.filter = this.gui.style.filterActive;
+    };
+    onPointerLeave = (ev) => {
+        this.DOMElement.style.filter = 'none';
+    };
+    onDoubleClicked = ev => {
+        this.togglePin();
+    };
 }

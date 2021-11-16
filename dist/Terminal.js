@@ -1,14 +1,11 @@
 import { getIODataType } from "./Controller/ControllerDataTypes.js";
 import { instructions } from "./Controller/ControllerInterface.js";
 export class ControllerTerminal {
+    div;
+    cpu;
     constructor(div, cpu) {
         this.div = div;
         this.cpu = cpu;
-        this.breakLine = '='.repeat(80);
-        /////////////////////////////////////
-        //  Align value by desimal point
-        //
-        this.defaultIntegerPadding = 9;
     }
     print(text) {
         const pre = document.createElement('pre');
@@ -20,6 +17,11 @@ export class ControllerTerminal {
             this.div.lastChild.remove();
         return;
     }
+    breakLine = '='.repeat(80);
+    /////////////////////////////////////
+    //  Align value by desimal point
+    //
+    defaultIntegerPadding = 9;
     alignValue(value, integerPartLen = this.defaultIntegerPadding, desimalPartLen = 7) {
         let [ints, decs] = value.toString().split('.');
         let str = ints.padStart(integerPartLen);

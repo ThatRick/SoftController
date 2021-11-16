@@ -1,35 +1,38 @@
 import * as HTML from '../Lib/HTML.js';
 import Vec2, { vec2 } from '../Lib/Vector2.js';
 export class CircuitMenuBar {
+    menu;
+    circuitView;
     constructor(parent) {
-        this.handleGuiEvent = (ev) => {
-            switch (ev.type) {
-                case 1 /* Rescaled */:
-                    this.menuItems.scaleTitle.setText('scale: ' + this.circuitView.scale.y);
-                    break;
-                case 0 /* Resized */:
-                    break;
-            }
-        };
-        this.handleCircuitViewEvent = (ev) => {
-            console.log('circuit menu bar received circuit view event');
-            switch (ev.type) {
-                case 0 /* CircuitLoaded */:
-                    break;
-                case 1 /* CircuitClosed */:
-                    break;
-                case 3 /* NameChanged */:
-                    this.menuItems.name.setText(this.circuitView.name);
-                    break;
-                case 2 /* RuntimeStateChanged */:
-                    this.menuItems.runtimeStatusText.setText(this.circuitView.ticker.isRunning ? 'Running' : 'Stopped');
-                    break;
-            }
-        };
         this.menu = new HTML.Menubar(parent, {
             overflow: 'visible'
         });
     }
+    handleGuiEvent = (ev) => {
+        switch (ev.type) {
+            case 1 /* Rescaled */:
+                this.menuItems.scaleTitle.setText('scale: ' + this.circuitView.scale.y);
+                break;
+            case 0 /* Resized */:
+                break;
+        }
+    };
+    handleCircuitViewEvent = (ev) => {
+        console.log('circuit menu bar received circuit view event');
+        switch (ev.type) {
+            case 0 /* CircuitLoaded */:
+                break;
+            case 1 /* CircuitClosed */:
+                break;
+            case 3 /* NameChanged */:
+                this.menuItems.name.setText(this.circuitView.name);
+                break;
+            case 2 /* RuntimeStateChanged */:
+                this.menuItems.runtimeStatusText.setText(this.circuitView.ticker.isRunning ? 'Running' : 'Stopped');
+                break;
+        }
+    };
+    menuItems;
     attachCircuitView(circuitView) {
         this.circuitView = circuitView;
         circuitView.events.subscribe(this.handleGuiEvent);

@@ -3,45 +3,7 @@ import { GUIChildElement } from '../GUI/GUIChildElement.js';
 import * as HTML from '../Lib/HTML.js';
 import IOPinView from './IOPinView.js';
 export default class FunctionBlockView extends GUIChildElement {
-    constructor(block, pos, parentContainer) {
-        super(parentContainer, 'div', pos, FunctionBlockView.getBlockSize(block), {
-            color: 'white',
-            boxSizing: 'border-box',
-            userSelect: 'none',
-            borderRadius: '2px',
-            cursor: 'grab'
-        }, true);
-        this._outputPinOffset = 0;
-        this.blockEventHandler = (ev) => {
-            switch (ev.type) {
-                case 0 /* InputCountChanged */:
-                case 1 /* OutputCountChanged */:
-                    this.setSize(FunctionBlockView.getBlockSize(this.block));
-                    if (this.visualStyle == 'minimal')
-                        this.createSymbol();
-                    else
-                        this.createIONames();
-                    this.changePinCount();
-                    break;
-                case 2 /* Removed */:
-                    this.delete();
-                    break;
-                case 7 /* CallIndexChanged */:
-                    this.callIndexIndicator.setText(this.block.callIndex.toString());
-                    break;
-                default:
-                // console.log('FunctionBlockView: Unhandled block event!')
-            }
-        };
-        this.onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.primaryHL });
-        this.onPointerLeave = () => this.setStyle({ backgroundColor: this.gui.style.colors.primary });
-        this.setStyle({
-            backgroundColor: this.gui.style.colors.primary
-        });
-        block.events.subscribe(this.blockEventHandler);
-        this.block = block;
-        this.create();
-    }
+    block;
     getPinForIO(io) {
         let foundPin;
         foundPin = this.inputPins.find(pin => pin.io == io);
@@ -61,7 +23,49 @@ export default class FunctionBlockView extends GUIChildElement {
         this.outputPins[0].setPos(vec2(this.size.x, this._outputPinOffset));
     }
     get outputPinOffset() { return this._outputPinOffset; }
+    constructor(block, pos, parentContainer) {
+        super(parentContainer, 'div', pos, FunctionBlockView.getBlockSize(block), {
+            color: 'white',
+            boxSizing: 'border-box',
+            userSelect: 'none',
+            borderRadius: '2px',
+            cursor: 'grab'
+        }, true);
+        this.setStyle({
+            backgroundColor: this.gui.style.colors.primary
+        });
+        block.events.subscribe(this.blockEventHandler);
+        this.block = block;
+        this.create();
+    }
+    inputPins;
+    outputPins;
+    _outputPinOffset = 0;
     get visualStyle() { return this.block.typeDef.visualStyle ?? 'full'; }
+    IONameTable;
+    titleElem;
+    callIndexIndicator;
+    blockEventHandler = (ev) => {
+        switch (ev.type) {
+            case 0 /* InputCountChanged */:
+            case 1 /* OutputCountChanged */:
+                this.setSize(FunctionBlockView.getBlockSize(this.block));
+                if (this.visualStyle == 'minimal')
+                    this.createSymbol();
+                else
+                    this.createIONames();
+                this.changePinCount();
+                break;
+            case 2 /* Removed */:
+                this.delete();
+                break;
+            case 7 /* CallIndexChanged */:
+                this.callIndexIndicator.setText(this.block.callIndex.toString());
+                break;
+            default:
+            // console.log('FunctionBlockView: Unhandled block event!')
+        }
+    };
     onRescale() {
         this.create();
     }
@@ -196,6 +200,8 @@ export default class FunctionBlockView extends GUIChildElement {
             }
         });
     }
+    onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.primaryHL });
+    onPointerLeave = () => this.setStyle({ backgroundColor: this.gui.style.colors.primary });
     static getBlockSize(block) {
         let w, title;
         switch (block.typeDef.visualStyle ?? 'full') {

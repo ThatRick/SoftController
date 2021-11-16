@@ -3,32 +3,23 @@ import { svgElement, svgElementWD, setSVGAttributes } from '../Lib/HTML.js';
 const xmlns = 'http://www.w3.org/2000/svg';
 const minReverseHorizontalYOffset = 3;
 export class TraceRoute {
-    constructor(params) {
-        Object.assign(this, params);
-    }
     get destPos() { return this.points[0]; }
     get sourcePos() { return this.points[this.points.length - 1]; }
     get midPoints() { return this.points.slice(1, this.points.length - 1); }
+    minSourceReach;
+    minDestReach;
+    points;
+    anchors;
+    color;
+    polylines;
+    trimmedPoints;
+    collisions;
+    jointDot;
+    constructor(params) {
+        Object.assign(this, params);
+    }
 }
 export default class TraceLayer {
-    //  Constructor
-    // -------------
-    constructor(parent, scale, style) {
-        this.traces = new Set();
-        const svg = document.createElementNS(xmlns, 'svg');
-        this.svg = svg;
-        this.scale = scale;
-        this.style = style;
-        this.calcCellOffset();
-        Object.assign(svg.style, {
-            position: 'absolute',
-            top: '0px', left: '0px',
-            width: '100%', height: '100%',
-            pointerEvents: 'none'
-        });
-        parent.appendChild(svg);
-        // this.createFilters()
-    }
     addTrace(sourcePos, destPos, minSourceReach, minDestReach, color, pathAnchors = {}) {
         const points = this.calculateRoutePoints(sourcePos, destPos, minSourceReach, minDestReach, pathAnchors);
         const polylines = this.createPolylines(points, color);
@@ -111,6 +102,25 @@ export default class TraceLayer {
             trace.polylines.forEach(polyline => polyline.style.strokeWidth = this.traceWidth + 'px');
         });
     }
+    svg;
+    traces = new Set();
+    //  Constructor
+    // -------------
+    constructor(parent, scale, style) {
+        const svg = document.createElementNS(xmlns, 'svg');
+        this.svg = svg;
+        this.scale = scale;
+        this.style = style;
+        this.calcCellOffset();
+        Object.assign(svg.style, {
+            position: 'absolute',
+            top: '0px', left: '0px',
+            width: '100%', height: '100%',
+            pointerEvents: 'none'
+        });
+        parent.appendChild(svg);
+        // this.createFilters()
+    }
     calcCellOffset() {
         const correction = (this.traceWidth % 2 == 1) ? -0.5 : 0;
         const offsetX = Math.round(this.scale.x / 2) + correction;
@@ -118,6 +128,9 @@ export default class TraceLayer {
         this.cellOffset = vec2(offsetX, offsetY);
     }
     get traceWidth() { return Math.round(this.style.traceWidth * this.scale.y); }
+    scale;
+    style;
+    cellOffset;
     calculateRoutePoints(sourcePos, destPos, sourceMinReach, destMinReach, anchors) {
         let { vertical1: verticalX1, horizontal: horizontalY, vertical2: verticalX2 } = anchors;
         const deltaX = destPos.x - sourcePos.x;
@@ -180,7 +193,7 @@ export default class TraceLayer {
                 vec2(verticalX1, horizontalY),
                 vec2(verticalX2, horizontalY),
                 vec2(verticalX2, sourcePos.y),
-                vec2(sourcePos),
+                vec2(sourcePos), //  5
             ];
         }
     }
@@ -278,6 +291,7 @@ export default class TraceLayer {
             stroke: color,
             strokeWidth: this.traceWidth,
             pointerEvents: 'none',
+            // filter: 'url(#traceFilter)'
         };
         // Line shadow. Does not work on straight horizontal line because effect bounds is relative to element size (def. -10%...120%)
         // const styleString = Object.entries(style).map(([key, value]) => `${key}: ${value};`).join(' ')

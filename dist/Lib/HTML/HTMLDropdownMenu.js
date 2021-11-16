@@ -3,6 +3,10 @@ import { Button } from './HTMLButton.js';
 import { Menu } from './HTMLMenu.js';
 const arrowDown = ' ⋁';
 export class DropdownMenu extends Element {
+    button;
+    menu;
+    getItems;
+    onItemSelected;
     constructor(name, options) {
         super();
         this.getItems = options.getItems;

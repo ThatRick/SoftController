@@ -16,9 +16,7 @@ export function domElement(parentDOM, tagName, style) {
     return elem;
 }
 export class Element {
-    constructor() {
-        this.style = defaultStyle;
-    }
+    DOMElement;
     remove() {
         this.DOMElement?.parentElement?.removeChild(this.DOMElement);
         this.DOMElement = null;
@@ -26,6 +24,7 @@ export class Element {
     setCSS(style) {
         Object.assign(this.DOMElement.style, style);
     }
+    style = defaultStyle;
 }
 export class Space extends Element {
     constructor(width) {

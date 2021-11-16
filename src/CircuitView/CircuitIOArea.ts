@@ -42,5 +42,5 @@ export default class IOArea extends GUIChildElement implements CircuitElement
     type: ElementType
     ioViews: CircuitIOView[] = []
     get id(): number { return this.circuit.funcState.id }
-    gui: CircuitView
+    declare gui: CircuitView
 }

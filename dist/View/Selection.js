@@ -3,11 +3,12 @@ import FunctionBlockView from './FunctionBlockView.js';
 import IOPinView from './IOPinView.js';
 import { TraceAnchorHandle } from './TraceLine.js';
 export default class CircuitSelection {
-    constructor(style) {
-        this.style = style;
-        this.type = null;
-        this.blocks = new Set();
-    }
+    style;
+    type = null;
+    blocks = new Set();
+    circuitIO;
+    pin;
+    anchor;
     get isMulti() { return this.blocks.size > 1; }
     get singleBlock() { return (this.blocks.size == 1) ? this.blocks.values().next().value : null; }
     has(elem) {
@@ -64,6 +65,9 @@ export default class CircuitSelection {
             this.unselectCircuitIO();
         if (this.anchor)
             this.unselectAnchor();
+    }
+    constructor(style) {
+        this.style = style;
     }
     selectBlock(block) {
         block.setStyle({ boxShadow: `0px 0px 0px 1px ${this.style.colors.selection} inset` });

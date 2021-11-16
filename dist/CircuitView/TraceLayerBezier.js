@@ -11,7 +11,6 @@ function logInfo(...args) { debugLogging && console.info('Trace layer:', ...args
 function logError(...args) { console.error('Trace layer:', ...args); }
 export default class TraceBezierLayer {
     constructor(parent, scale, style) {
-        this.traces = new Map();
         const svg = document.createElementNS(xmlns, 'svg');
         this.svg = svg;
         this.scale = scale;
@@ -27,6 +26,13 @@ export default class TraceBezierLayer {
         });
         parent.appendChild(svg);
     }
+    svg;
+    scale;
+    style;
+    cellOffset;
+    minControlOffset;
+    maxControlOffset;
+    traces = new Map();
     scaledPinEndPos(pos) { return Vec2.mul(pos, this.scale).add(this.cellOffset).round(); }
     addTrace(id, outputPos, inputPos, color, pending = false) {
         logInfo('add', parseID(id));
@@ -61,6 +67,7 @@ export default class TraceBezierLayer {
         const trace = this.traces.get(id);
         this.svg.removeChild(trace);
     }
+    onTraceSelected;
     get size() {
         return vec2(this.svg.clientWidth, this.svg.clientHeight);
     }

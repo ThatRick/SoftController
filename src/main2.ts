@@ -17,13 +17,13 @@ const myProg: CircuitViewDefinition =
 {
     definition: {
         name: 'Test circuit 1',
-        inputs: {
-            meas: { value: 123, dataType: 'FLOAT' },
-            fault: { value: 0, dataType: 'BINARY' }
-        },
-        outputs: {
-            out: { value: 0, dataType: 'FLOAT' }
-        },
+        inputs: [
+            { name: 'meas',  value: 123, datatype: 'FLOAT' },
+            { name: 'fault', value: 0, datatype: 'BINARY' }
+        ],
+        outputs: [
+            { name: 'out',   value: 0, datatype: 'FLOAT' }
+        ],
         circuit: {
             blocks: [
                 {

@@ -8,14 +8,29 @@ export const ConditionalLibDefinitions = createFunctionCollection(
         symbol: 'SEL',
         visualStyle: 'name on first row min',
         description: 'Select between two values',
-        inputs: {
-            sel: { value: 0, dataType: 'BINARY' },
-            '1 ': { value: 0, dataType: 'FLOAT' },
-            '0 ': { value: 0, dataType: 'FLOAT' },
-        },
-        outputs: {
-            out: { value: 0, dataType: 'FLOAT' }
-        }
+        inputs: [
+            { name: 'sel',  value: 0, datatype: 'BINARY' },
+            { name: '0',    value: 0, datatype: 'FLOAT' },
+            { name: '1',    value: 0, datatype: 'FLOAT' },
+        ],
+        outputs: [
+            { name: 'out',  value: 0, datatype: 'FLOAT' }
+        ]
+    },
+    Mux: {
+        name: 'Multiplexer',
+        symbol: 'MUX',
+        visualStyle: 'name on first row min',
+        description: 'Select input based on index',
+        inputs: [
+            { name: 'index', value: 0, datatype: 'INTEGER' },
+            { name: '0',     value: 0, datatype: 'FLOAT' },
+            { name: '1',     value: 0, datatype: 'FLOAT' },
+            { name: '2',     value: 0, datatype: 'FLOAT' },
+        ],
+        outputs: [
+            { name: 'out',   value: 0, datatype: 'FLOAT' }
+        ]
     }
 })
 
@@ -26,8 +41,14 @@ class Select extends FunctionBlock
     protected run = ([sel, in1, in0]) => sel ? in1 : in0
 }
 
+class Mux extends FunctionBlock
+{
+    constructor() { super(ConditionalLibDefinitions.Mux) }
+    protected run = ([index, ...values], [output]) => (index >= 0 && index < values.length) ? values[Math.trunc(index)] : output
+}
 
 export const conditionalLib =
 {
-    Select
+    Select,
+    Mux
 }

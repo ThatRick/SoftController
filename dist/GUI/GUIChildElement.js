@@ -3,14 +3,18 @@ import { vec2 } from '../Lib/Vector2.js';
 import GUIContainer from './GUIContainer.js';
 import { Vec2 } from './GUITypes.js';
 export class GUIChildElement {
+    DOMElement;
+    parentContainer;
+    children;
+    isDraggable;
+    isSelectable;
+    isMultiSelectable;
+    gui;
+    events = new EventEmitter(this);
     ////////////////////////////
     //      Constructor
     ////////////////////////////
     constructor(parent, elem, pos, size, style, hasChildren = false) {
-        this.events = new EventEmitter(this);
-        this._posHasChanged = false;
-        this._initUpdate = true;
-        this._sizeHasChanged = false;
         this._pos = vec2(pos);
         this._size = vec2(size);
         if (typeof elem == 'object') {
@@ -29,6 +33,11 @@ export class GUIChildElement {
             this.children = new GUIContainer(this);
         this.update(true);
     }
+    // Position
+    _pos;
+    _posScaled;
+    _posHasChanged = false;
+    _initUpdate = true;
     setPos(p) {
         if (this._pos.equal(p))
             return;
@@ -51,6 +60,10 @@ export class GUIChildElement {
     pointerScreenPos() {
         return Vec2.sub(this.gui.pointer.screenPos, Vec2.mul(this.absPos, this.gui.scale));
     }
+    // Size
+    _size;
+    _sizeScaled;
+    _sizeHasChanged = false;
     setSize(s) {
         if (this._size.equal(s))
             return;
@@ -104,4 +117,14 @@ export class GUIChildElement {
         this.events.emit(1 /* Removed */);
         this.events.clear();
     }
+    // Event receivers
+    onPointerEnter;
+    onPointerLeave;
+    onPointerDown;
+    onPointerMove;
+    onPointerUp;
+    onClicked;
+    onDragStarted;
+    onDragging;
+    onDragEnded;
 }

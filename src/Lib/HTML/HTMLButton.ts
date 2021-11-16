@@ -2,7 +2,7 @@ import { domElement, Element } from './HTMLCommon.js'
 
 export class Button extends Element
 {
-    DOMElement: HTMLDivElement
+    declare DOMElement: HTMLDivElement
     onClick?: (ev: MouseEvent) => void
     onDown?: (ev: PointerEvent) => void
     onUp?: (ev: PointerEvent) => void

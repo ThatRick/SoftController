@@ -1,8 +1,11 @@
 import { domElement, Element } from './HTMLCommon.js';
 export class Button extends Element {
+    onClick;
+    onDown;
+    onUp;
+    backgroundColor = this.style.colors.base;
     constructor(text, parent, style) {
         super();
-        this.backgroundColor = this.style.colors.base;
         this.DOMElement = domElement(null, 'div', {
             color: 'white',
             paddingLeft: '3px',
@@ -51,6 +54,8 @@ export class ActionButton extends Button {
     }
 }
 export class ToggleButton extends Button {
+    state;
+    colors;
     constructor(text, toggle, initState = false, parent) {
         super(text, parent);
         this.state = initState;

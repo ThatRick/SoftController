@@ -28,7 +28,7 @@ export default class FunctionBlockPinView extends GUIChildElement implements Cir
     }
     
     type: ElementType
-    gui: CircuitView
+    declare gui: CircuitView
     
     isSelectable = true
     isDraggable = true

@@ -1,9 +1,11 @@
 import VirtualController from './VirtualControllerCPU.js';
 import { EventID } from '../Controller/ControllerInterface.js';
 class Ticker {
+    cpu;
     constructor(cpu) {
         this.cpu = cpu;
     }
+    timer;
     start(interval) {
         if (this.timer)
             this.stop();

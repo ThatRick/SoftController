@@ -5,32 +5,27 @@ import * as HTML from '../Lib/HTML.js';
 import { formatValue } from './Common.js';
 import { EventEmitter } from '../Lib/Events.js';
 export default class IOPinView extends GUIChildElement {
+    get type() { return this.io.type; }
+    direction;
+    io;
+    isCircuitIO;
+    get color() { return this.pinColor; }
+    set backgroundColor(color) {
+        this._backgroundColor = color;
+        this.setStyle({ backgroundColor: color });
+    }
+    ioPinViewEvents = new EventEmitter(this);
+    setValueVisibility(visible) {
+        if (!this.valueField)
+            return;
+        this.valueField.style.visibility = (visible) ? 'visible' : 'hidden';
+    }
+    getValue() { return this.valueField?.textContent; }
     //////////////////////////////////////////////
     //              Constructor
     //////////////////////////////////////////////
     constructor(io, pos, parentContainer) {
         super(parentContainer, 'div', pos, vec2(1, 1), { cursor: 'crosshair' });
-        this.ioPinViewEvents = new EventEmitter(this);
-        this._backgroundColor = 'transparent';
-        this.ioEventHandler = (ev) => {
-            switch (ev.type) {
-                case IOPinEventType.ValueChanged:
-                    this.requestUpdate();
-                    break;
-                case IOPinEventType.SourceChanged:
-                    break;
-                case IOPinEventType.InvertionChanged:
-                    this.updateStyle();
-                    break;
-                case IOPinEventType.Removed:
-                    this.delete();
-                    break;
-                default:
-                    console.error('FunctionBlockView: Unhandled block event!');
-            }
-        };
-        this.onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.pinHighlight });
-        this.onPointerLeave = () => this.setStyle({ backgroundColor: this._backgroundColor });
         this.DOMElement.className = 'hoverBackground';
         this.io = io;
         this.isCircuitIO = (io.block.circuit != null);
@@ -38,18 +33,6 @@ export default class IOPinView extends GUIChildElement {
         io.events.subscribe(this.ioEventHandler);
         this.init();
     }
-    get type() { return this.io.type; }
-    get color() { return this.pinColor; }
-    set backgroundColor(color) {
-        this._backgroundColor = color;
-        this.setStyle({ backgroundColor: color });
-    }
-    setValueVisibility(visible) {
-        if (!this.valueField)
-            return;
-        this.valueField.style.visibility = (visible) ? 'visible' : 'hidden';
-    }
-    getValue() { return this.valueField?.textContent; }
     //////////////////////////////////////////////
     //               Protected
     //////////////////////////////////////////////
@@ -86,6 +69,27 @@ export default class IOPinView extends GUIChildElement {
             zIndex: '2'
         };
     }
+    _backgroundColor = 'transparent';
+    pin;
+    valueField;
+    pinColor;
+    ioEventHandler = (ev) => {
+        switch (ev.type) {
+            case IOPinEventType.ValueChanged:
+                this.requestUpdate();
+                break;
+            case IOPinEventType.SourceChanged:
+                break;
+            case IOPinEventType.InvertionChanged:
+                this.updateStyle();
+                break;
+            case IOPinEventType.Removed:
+                this.delete();
+                break;
+            default:
+                console.error('FunctionBlockView: Unhandled block event!');
+        }
+    };
     onUpdate() {
         if (this.valueField)
             this.valueField.textContent = formatValue(this.io.value);
@@ -163,4 +167,6 @@ export default class IOPinView extends GUIChildElement {
             boxSizing: 'border-box'
         };
     }
+    onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.pinHighlight });
+    onPointerLeave = () => this.setStyle({ backgroundColor: this._backgroundColor });
 }

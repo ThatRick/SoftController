@@ -11,7 +11,7 @@ export default class CircuitIOView extends GUIChildElement implements CircuitEle
 {
     type: ElementType
     get id(): number { return this.ioPin.id }
-    gui: CircuitView
+    declare gui: CircuitView
 
     isDraggable = true
     isSelectable = true

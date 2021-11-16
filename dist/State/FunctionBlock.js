@@ -2,28 +2,16 @@ import { EventEmitter } from "../Lib/Events.js";
 import Circuit from "./Circuit.js";
 import { IOPin } from "./IOPin.js";
 export class FunctionBlock {
-    //////////////  CONSTRUCTOR /////////////////
-    constructor(typeDef) {
-        this.events = new EventEmitter(this);
-        this.typeDef = typeDef;
-        this.inputs = Object.entries(typeDef.inputs).map(([name, input]) => {
-            return new IOPin('input', input.value, name, input.dataType, this);
-        });
-        this.outputs = Object.entries(typeDef.outputs).map(([name, output]) => {
-            return new IOPin('output', output.value, name, output.dataType, this);
-        });
-        this._symbol = this.typeDef.symbol;
-        this._description = this.typeDef.description;
-        this.variableInputs = typeDef.variableInputs;
-        this.variableOutputs = typeDef.variableOutputs;
-        this.statics = { ...typeDef.statics };
-        if (typeDef.circuit) {
-            this.circuit = new Circuit(typeDef.circuit, this);
-        }
-    }
     get typeName() { return this._typeName; }
     get symbol() { return this._symbol; }
     get description() { return this._description; }
+    inputs;
+    outputs;
+    circuit;
+    variableInputs;
+    variableOutputs;
+    typeDef;
+    events = new EventEmitter(this);
     get callIndex() { return this.parentCircuit?.getBlockIndex(this); }
     setCallIndex(n) {
         this.parentCircuit?.setBlockIndex(this, n);
@@ -56,7 +44,7 @@ export class FunctionBlock {
         if (addition > 0) {
             const initialInputs = Object.values(this.typeDef.inputs).map(input => {
                 const name = input.name ? splitToStringAndNumber(input.name || '')[0] : '';
-                return { name, value: input.value, dataType: input.dataType };
+                return { name, value: input.value, dataType: input.datatype };
             });
             const initialStruct = initialInputs.slice(staticInputsCount, staticInputsCount + structSize);
             const currentLastIndex = this.inputs.length - structSize;
@@ -159,6 +147,29 @@ export class FunctionBlock {
             ioNum += this.inputs.length;
         return ioNum;
     }
+    parentCircuit;
+    //////////////  CONSTRUCTOR /////////////////
+    constructor(typeDef) {
+        this.typeDef = typeDef;
+        this.inputs = typeDef.inputs.map(input => {
+            return new IOPin('input', input.value, input.name, input.datatype, this);
+        });
+        this.outputs = typeDef.outputs.map(output => {
+            return new IOPin('output', output.value, output.name, output.datatype, this);
+        });
+        this._symbol = this.typeDef.symbol;
+        this._description = this.typeDef.description;
+        this.variableInputs = typeDef.variableInputs;
+        this.variableOutputs = typeDef.variableOutputs;
+        this.staticVariables = { ...typeDef.staticVariables };
+        if (typeDef.circuit) {
+            this.circuit = new Circuit(typeDef.circuit, this);
+        }
+    }
+    staticVariables;
+    _typeName;
+    _symbol;
+    _description;
     updateInputs() {
         this.inputs.forEach(input => {
             if (input.sourceIO) {

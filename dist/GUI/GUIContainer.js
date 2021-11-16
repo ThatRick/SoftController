@@ -1,7 +1,10 @@
 export default class GUIContainer {
+    parent;
+    DOMElement;
+    elements = new Set();
+    gui;
     constructor(parent) {
         this.parent = parent;
-        this.elements = new Set();
         this.DOMElement = parent.DOMElement;
         this.gui = parent.gui;
     }

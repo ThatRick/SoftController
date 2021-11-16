@@ -8,13 +8,13 @@ export const LogicLibDefinitions = createFunctionCollection(
         symbol: '&',
         visualStyle: 'minimal',
         description: 'Logical AND function',
-        inputs: {
-            0: { value: 1, dataType: 'BINARY' },
-            1: { value: 1, dataType: 'BINARY' },
-        },
-        outputs: {
-            out: { value: 1, dataType: 'BINARY' },
-        },
+        inputs: [
+            { name: '0', value: 1, datatype: 'BINARY' },
+            { name: '1', value: 1, datatype: 'BINARY' },
+        ],
+        outputs: [
+            { name: 'out', value: 1, datatype: 'BINARY' },
+        ],
         variableInputs: {
             min: 2, max: 32, initialCount: 2
         }
@@ -25,13 +25,13 @@ export const LogicLibDefinitions = createFunctionCollection(
         symbol: '≥1',
         visualStyle: 'minimal',
         description: 'Logical OR function',
-        inputs: {
-            0: { value: 0, dataType: 'BINARY' },
-            1: { value: 0, dataType: 'BINARY' },
-        },
-        outputs: {
-            out: { value: 0, dataType: 'BINARY' },
-        },
+        inputs: [
+            { name: '0', value: 0, datatype: 'BINARY' },
+            { name: '1', value: 0, datatype: 'BINARY' },
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'BINARY' },
+        ],
         variableInputs: {
             min: 2, max: 32, initialCount: 2
         }
@@ -41,13 +41,13 @@ export const LogicLibDefinitions = createFunctionCollection(
         name: 'RS',
         visualStyle: 'no title min',
         description: 'Set-Reset flip-flop with dominant reset',
-        inputs: {
-            S: { value: 0, dataType: 'BINARY' },
-            R: { value: 0, dataType: 'BINARY' },
-        },
-        outputs: {
-            out: { value: 0, dataType: 'BINARY' },
-        }
+        inputs: [
+            { name: 'S', value: 0, datatype: 'BINARY' },
+            { name: 'R', value: 0, datatype: 'BINARY' },
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'BINARY' },
+        ]
     },
 
     RisingEdge: {
@@ -55,13 +55,13 @@ export const LogicLibDefinitions = createFunctionCollection(
         symbol: '_|‾',
         visualStyle: 'minimal',
         description: 'Rising signal edge detector (0 -> 1)',
-        inputs: {
-            input: { value: 0, dataType: 'BINARY' }
-        },
-        outputs: {
-            out: { value: 0, dataType: 'BINARY' }
-        },
-        statics: {
+        inputs: [
+            { name: 'input', value: 0, datatype: 'BINARY' }
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'BINARY' }
+        ],
+        staticVariables: {
             prev: 0
         }
     },
@@ -93,11 +93,11 @@ class RS extends FunctionBlock
 class RisingEdge extends FunctionBlock
 {
     constructor() { super(LogicLibDefinitions.RisingEdge) }
-    protected statics: typeof LogicLibDefinitions.RisingEdge.statics
+    declare protected staticVariables: typeof LogicLibDefinitions.RisingEdge.staticVariables
 
     protected run = ([input]) => {
-        const out = ( !this.statics.prev && input) ? 1 : 0
-        this.statics.prev = input
+        const out = ( !this.staticVariables.prev && input) ? 1 : 0
+        this.staticVariables.prev = input
         return out
     }
 }

@@ -1,12 +1,12 @@
 import { FunctionBlock } from "./FunctionBlock.js";
 import { logicLib } from './FunctionLib/LogicLib.js';
-import { arithmeticLib } from './FunctionLib/ArithmeticLib.js';
-import { branchingLib } from './FunctionLib/BranchingLib.js';
+import { mathLib } from './FunctionLib/MathLib.js';
+import { conditionalLib } from './FunctionLib/ConditionalLib.js';
 import { timerLib } from './FunctionLib/TimerLib.js';
 export const functionLib = {
     ...logicLib,
-    ...arithmeticLib,
-    ...branchingLib,
+    ...mathLib,
+    ...conditionalLib,
     ...timerLib
 };
 export const functionTypeNames = Object.keys(functionLib);
@@ -55,11 +55,11 @@ export function getFunctionBlock(instance) {
 export class CircuitBlock extends FunctionBlock {
     constructor(definition) {
         super(definition);
-        this.run = (inputs, outputs, dt) => {
-            this.circuit.update(dt);
-            this.updateOutputs();
-        };
     }
+    run = (inputs, outputs, dt) => {
+        this.circuit.update(dt);
+        this.updateOutputs();
+    };
     updateOutputs() {
         this.outputs.forEach(output => {
             if (output.sourceIO) {

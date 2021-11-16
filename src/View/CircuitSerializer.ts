@@ -77,20 +77,8 @@ export function generateCircuitViewDefinition(circuitView: CircuitView)
     const def: CircuitViewDefinition = {
         definition: {
             name: circuitView.name,
-            inputs: circuitView.circuitBlock.inputs.reduce((obj, input) => {
-                obj[input.name] = {
-                    dataType: input.datatype,
-                    value: input.value,
-                }
-                return obj
-            }, {}),
-            outputs: circuitView.circuitBlock.outputs.reduce((obj, output) => {
-                obj[output.name] = {
-                    dataType: output.datatype,
-                    value: output.value,
-                }
-                return obj
-            }, {}),
+            inputs: circuitView.circuitBlock.inputs,
+            outputs: circuitView.circuitBlock.outputs,
             circuit
         },
         size: {x: circuitView.size.x, y: circuitView.size.y},

@@ -31,6 +31,8 @@ export function svgElementWD(name, options = {}) {
     return elem;
 }
 export class SVGLine {
+    options;
+    line;
     constructor(startPos, endPos, options) {
         this.options = options;
         this.color = options.color ?? 'white';
@@ -48,6 +50,7 @@ export class SVGLine {
             parent: options.parent
         });
     }
+    color;
     setColor(color) {
         if (color == this.color)
             return;

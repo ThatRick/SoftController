@@ -28,7 +28,7 @@ export default class IOPinView extends GUIChildElement
 
     get color() { return this.pinColor }
 
-    gui: CircuitView
+    declare gui: CircuitView
 
     set backgroundColor(color: string) {
         this._backgroundColor = color

@@ -4,7 +4,7 @@ type TableCellIterator = (cell: HTMLTableCellElement, row: number, col: number) 
 
 export class Table extends Element
 {
-    DOMElement: HTMLTableElement
+    declare DOMElement: HTMLTableElement
     rows: HTMLTableRowElement[] = []
     cells: HTMLTableCellElement[][] = []
 

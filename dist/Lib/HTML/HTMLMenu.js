@@ -15,6 +15,8 @@ export class Menu extends Element {
         const newMenu = this.createMenu(items, this.options?.menuStyle, this.options?.itemStyle, this.options?.disabledItemStyle);
         this.options?.parent?.replaceChild(newMenu, this.DOMElement);
     }
+    options;
+    onItemSelected;
     createMenu(items, menuStyle, itemStyle, disabledItemStyle) {
         const menu = domElement(null, 'div', {
             position: 'absolute',

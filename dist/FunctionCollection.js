@@ -3,9 +3,9 @@ import { Arithmetic } from './FunctionLibrary/Arithmetic.js';
 import { Filters } from './FunctionLibrary/Filters.js';
 class FunctionCollection {
     constructor(libraries) {
-        this.libraryMap = new Map();
         libraries.forEach(lib => this.libraryMap.set(lib.id, lib));
     }
+    libraryMap = new Map();
     get libraries() {
         return Array.from(this.libraryMap.values());
     }

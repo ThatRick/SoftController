@@ -1,6 +1,7 @@
 import * as HTML from '../Lib/HTML.js';
 import { instructions } from '../FunctionCollection.js';
 export class CircuitMenuBar {
+    menu;
     constructor(parent) {
         this.menu = new HTML.Menubar(parent, {
             overflow: 'visible'

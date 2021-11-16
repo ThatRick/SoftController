@@ -16,15 +16,14 @@ var CircuitModificationType;
 ///////////////////////////////
 export class Circuit {
     constructor(funcData, circuitData) {
-        this.blocks = [];
-        this.blocksByOnlineDB = new Map();
-        this.immediateMode = false;
-        this.modifications = [];
-        this.onValidateOutputRefModification = [];
         this.funcState = new FunctionBlock(funcData, -1);
         this.funcState.circuit = this;
         this.circuitData = circuitData;
     }
+    funcState;
+    circuitData;
+    blocks = [];
+    blocksByOnlineDB = new Map();
     get onlineDB() { return this.funcState.onlineDB; }
     get cpu() { return this.funcState.cpu; }
     connectOnline(cpu, onlineDB) {
@@ -63,6 +62,10 @@ export class Circuit {
         this.immediateMode = state;
         return this.immediateMode;
     }
+    immediateMode = false;
+    modifications = [];
+    onValidateOutputRefModification = [];
+    onOnlineModificationDone;
     // Store circuit modifications
     pushOnlineModification(type, blockID, ioNum, onlineDB) {
         const modification = { type, blockID, ioNum, blockOnlineID: onlineDB };

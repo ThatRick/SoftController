@@ -1,8 +1,5 @@
 export class EventEmitter {
-    constructor(eventSource) {
-        this.eventSource = eventSource;
-        this.subscribers = new Map();
-    }
+    eventSource;
     subscribe(fn, eventMask) {
         const typeMask = eventMask ? eventMask.reduce((mask, type) => mask += (1 << type), 0) : null;
         this.subscribers.set(fn, typeMask);
@@ -24,4 +21,8 @@ export class EventEmitter {
     clear() {
         this.subscribers.clear();
     }
+    constructor(eventSource) {
+        this.eventSource = eventSource;
+    }
+    subscribers = new Map();
 }

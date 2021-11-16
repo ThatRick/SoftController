@@ -3,6 +3,28 @@ import { vec2 } from '../Lib/Vector2.js';
 import * as HTML from '../Lib/HTML.js';
 import FunctionBlockPinView from './FunctionBlockPinView.js';
 export default class FunctionBlockView extends GUIChildElement {
+    static isMinimal(state) {
+        return (state.func?.inputs[0].name == undefined);
+    }
+    static getBlockSize(state) {
+        const w = (FunctionBlockView.isMinimal(state) || state.func?.outputs[0].name == undefined) ? 3 : 6;
+        const h = Math.max(state.funcData.inputCount, state.funcData.outputCount);
+        return vec2(w, h);
+    }
+    type = 'block';
+    get id() { return this.state.id; }
+    isDraggable = true;
+    isSelectable = true;
+    isMultiSelectable = true;
+    state;
+    isMinimal;
+    inputPins = [];
+    outputPins = [];
+    name;
+    IONameTable;
+    callIndexView;
+    footerView;
+    get callIndex() { return this.state.parentCircuit?.getBlockCallIndex(this.id); }
     constructor(circuitView, pos, state) {
         super(circuitView, 'div', pos, FunctionBlockView.getBlockSize(state), {
             color: 'white',
@@ -13,20 +35,6 @@ export default class FunctionBlockView extends GUIChildElement {
                 ? circuitView.gui.style.colorBlockOnline
                 : circuitView.gui.style.colorBlock,
         }, true);
-        this.type = 'block';
-        this.isDraggable = true;
-        this.isSelectable = true;
-        this.isMultiSelectable = true;
-        this.inputPins = [];
-        this.outputPins = [];
-        this.onPointerEnter = () => {
-            this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
-        };
-        this.onPointerLeave = () => {
-            this.DOMElement.style.backgroundColor = (this.state.onlineDB)
-                ? this.gui.style.colorBlockOnline
-                : this.gui.style.colorBlock;
-        };
         this.state = state;
         this.isMinimal = FunctionBlockView.isMinimal(state);
         this.name = state.func?.name;
@@ -34,16 +42,6 @@ export default class FunctionBlockView extends GUIChildElement {
         this.build(this.gui);
         this.setInfoVisibility('hidden');
     }
-    static isMinimal(state) {
-        return (state.func?.inputs[0].name == undefined);
-    }
-    static getBlockSize(state) {
-        const w = (FunctionBlockView.isMinimal(state) || state.func?.outputs[0].name == undefined) ? 3 : 6;
-        const h = Math.max(state.funcData.inputCount, state.funcData.outputCount);
-        return vec2(w, h);
-    }
-    get id() { return this.state.id; }
-    get callIndex() { return this.state.parentCircuit?.getBlockCallIndex(this.id); }
     build(gui) {
         this.createIONames();
         this.createPinViews();
@@ -166,4 +164,12 @@ export default class FunctionBlockView extends GUIChildElement {
     toFront() {
         this.parentContainer.DOMElement.appendChild(this.DOMElement);
     }
+    onPointerEnter = () => {
+        this.DOMElement.style.backgroundColor = this.gui.style.colorBlockHover;
+    };
+    onPointerLeave = () => {
+        this.DOMElement.style.backgroundColor = (this.state.onlineDB)
+            ? this.gui.style.colorBlockOnline
+            : this.gui.style.colorBlock;
+    };
 }

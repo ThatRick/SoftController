@@ -1,5 +1,11 @@
 import { domElement, getInnerHeight } from './HTMLCommon.js';
 export class Menubar {
+    parent;
+    style;
+    menuItems;
+    parentHeight;
+    height;
+    DOMElement;
     constructor(parent, style, menuItems = []) {
         this.parent = parent;
         this.style = style;

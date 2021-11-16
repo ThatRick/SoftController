@@ -18,6 +18,8 @@ class BlockArea extends GUIChildElement {
     constructor(view) {
         super(view.children, 'div', vec2(view.style.IOAreaWidth, 0), Vec2.sub(view.size, vec2(view.style.IOAreaWidth * 2, 0)), {}, true);
     }
+    type;
+    id;
 }
 /////////////////////////////
 //      Circuit View
@@ -30,12 +32,6 @@ export default class CircuitView extends GUIView {
             fontFamily: 'system-ui',
             fontSize: Math.round(scale.y * style.fontSize) + 'px'
         });
-        this.gridMap = new CircuitGrid();
-        this.connectingTraceID = -1;
-        this.selectedElements = new Set();
-        this.selectedElementsInitPos = new WeakMap();
-        this.blocks = new Map();
-        this.traces = new Map();
         parent.style.backgroundColor = style.colorBackground;
         this.traceLayer = new TraceLayerBezier(this.DOMElement, this.scale, this.gui.style);
         this.blockArea = new BlockArea(this);
@@ -45,6 +41,21 @@ export default class CircuitView extends GUIView {
         window.onkeyup = this.onKeyUp.bind(this);
         this.pointer.attachEventHandler(CircuitPointerHandler(this));
     }
+    circuit;
+    gridMap = new CircuitGrid();
+    traceLayer;
+    blockArea;
+    inputArea;
+    outputArea;
+    connectingTraceID = -1;
+    funcPendingPlacement;
+    blockInPlacement;
+    selectedElements = new Set();
+    selectedElementsInitPos = new WeakMap();
+    selectionBox;
+    selectionBoxInitPos;
+    blocks = new Map();
+    traces = new Map();
     loadCircuit(circuit) {
         console.log('CircuitView: Load circuit');
         this.circuit = circuit;

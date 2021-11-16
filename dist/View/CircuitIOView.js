@@ -5,20 +5,9 @@ import IOPinView from './IOPinView.js';
 import CircuitView from './CircuitView.js';
 import { IOPinEventType } from '../State/IOPin.js';
 export default class FunctionBlockView extends GUIChildElement {
+    pin;
     constructor(io, posY, parentContainer) {
         super(parentContainer, 'div', vec2(0, posY), vec2(CircuitView.IO_AREA_WIDTH, 1), null, true);
-        this.ioEventHandler = (ev) => {
-            if (ev.type == IOPinEventType.NameChanged) {
-                this.nameElem.setText(this.pin.io.name);
-            }
-        };
-        this.guiChildEventHandler = (ev) => {
-            if (ev.type == 1 /* Removed */) {
-                this.delete();
-            }
-        };
-        this.onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.primaryHL });
-        this.onPointerLeave = () => this.setStyle({ backgroundColor: this.gui.style.colors.primary });
         this.setStyle({
             color: 'white',
             boxSizing: 'border-box',
@@ -34,6 +23,17 @@ export default class FunctionBlockView extends GUIChildElement {
         this.pin.io.events.subscribe(this.ioEventHandler, [IOPinEventType.NameChanged]);
         this.create();
     }
+    ioEventHandler = (ev) => {
+        if (ev.type == IOPinEventType.NameChanged) {
+            this.nameElem.setText(this.pin.io.name);
+        }
+    };
+    guiChildEventHandler = (ev) => {
+        if (ev.type == 1 /* Removed */) {
+            this.delete();
+        }
+    };
+    nameElem;
     onRescale() {
         this.create();
     }
@@ -55,4 +55,6 @@ export default class FunctionBlockView extends GUIChildElement {
             pointerEvents: 'none',
         });
     }
+    onPointerEnter = () => this.setStyle({ backgroundColor: this.gui.style.colors.primaryHL });
+    onPointerLeave = () => this.setStyle({ backgroundColor: this.gui.style.colors.primary });
 }

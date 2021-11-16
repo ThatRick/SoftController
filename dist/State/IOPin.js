@@ -9,15 +9,7 @@ export var IOPinEventType;
     IOPinEventType[IOPinEventType["Removed"] = 5] = "Removed";
 })(IOPinEventType || (IOPinEventType = {}));
 export class IOPin {
-    //////////////////////////////////////////////
-    constructor(type, value, name, datatype, block) {
-        this.events = new EventEmitter(this);
-        this.type = type;
-        this._value = value;
-        this._name = name;
-        this._datatype = datatype;
-        this._block = block;
-    }
+    type;
     get value() { return this._value; }
     get name() { return this._name; }
     get datatype() { return this._datatype; }
@@ -57,6 +49,7 @@ export class IOPin {
             this.events.emit(IOPinEventType.InvertionChanged);
         }
     }
+    events = new EventEmitter(this);
     remove() {
         this.events.emit(IOPinEventType.Removed);
         this.events.clear();
@@ -68,4 +61,19 @@ export class IOPin {
         const str = (this.name + ': ').padEnd(6) + this.value.toString().padStart(8) + ('  [' + this.datatype + ']').padEnd(10) + '  #' + this.ioNum + ' ' + connected + inverted;
         return str;
     }
+    //////////////////////////////////////////////
+    constructor(type, value, name, datatype, block) {
+        this.type = type;
+        this._value = value;
+        this._name = name;
+        this._datatype = datatype;
+        this._block = block;
+    }
+    //////////////////////////////////////////////
+    _value;
+    _name;
+    _datatype;
+    _block;
+    _sourcePin;
+    _inverted;
 }

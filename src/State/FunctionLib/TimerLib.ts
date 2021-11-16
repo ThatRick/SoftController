@@ -8,15 +8,15 @@ export const TimerLibDefinitions = createFunctionCollection(
         symbol: 'TON',
         visualStyle: 'name on first row',
         description: 'Delay set of output signal',
-        inputs: {
-            input: { value: 0, dataType: 'BINARY' },
-            t: { value: 10, dataType: 'FLOAT' },
-            res: { value: 0, dataType: 'BINARY' }
-        },
-        outputs: {
-            out: { value: 0, dataType: 'BINARY' },
-            left: { value: 0, dataType: 'FLOAT' }
-        }
+        inputs: [
+            { name: 'input', value: 0, datatype: 'BINARY' },
+            { name: 't',     value: 10, datatype: 'FLOAT' },
+            { name: 'res',   value: 0, datatype: 'BINARY' }
+        ],
+        outputs: [
+            { name: 'out',   value: 0, datatype: 'BINARY' },
+            { name: 'left',  value: 0, datatype: 'FLOAT' }
+        ]
     },
 
     DelayOff: {
@@ -24,15 +24,15 @@ export const TimerLibDefinitions = createFunctionCollection(
         symbol: 'TOFF',
         visualStyle: 'name on first row',
         description: 'Delay reset of output signal',
-        inputs: {
-            input: { value: 1, dataType: 'BINARY' },
-            t: { value: 10, dataType: 'FLOAT' },
-            res: { value: 0, dataType: 'BINARY' }
-        },
-        outputs: {
-            out: { value: 1, dataType: 'BINARY' },
-            left: { value: 0, dataType: 'FLOAT' }
-        }
+        inputs: [
+            { name: 'input', value: 1, datatype: 'BINARY' },
+            { name: 't',     value: 10, datatype: 'FLOAT' },
+            { name: 'res',   value: 0, datatype: 'BINARY' }
+        ],
+        outputs: [
+            { name: 'out',   value: 1, datatype: 'BINARY' },
+            { name: 'left',  value: 0, datatype: 'FLOAT' }
+        ]
     },
 
     Pulse: {
@@ -40,16 +40,16 @@ export const TimerLibDefinitions = createFunctionCollection(
         symbol: 'Pulse',
         visualStyle: 'name on first row',
         description: 'Output pulse on input rising edge',
-        inputs: {
-            input: { value: 1, dataType: 'BINARY' },
-            t: { value: 10, dataType: 'FLOAT' },
-            res: { value: 0, dataType: 'BINARY' }
-        },
-        outputs: {
-            out: { value: 1, dataType: 'BINARY' },
-            left: { value: 0, dataType: 'FLOAT' }
-        },
-        statics: {
+        inputs: [
+            { name: 'input', value: 0, datatype: 'BINARY' },
+            { name: 't',     value: 10, datatype: 'FLOAT' },
+            { name: 'res',   value: 0, datatype: 'BINARY' }
+        ],
+        outputs: [
+            { name: 'out',   value: 0, datatype: 'BINARY' },
+            { name: 'left',  value: 0, datatype: 'FLOAT' }
+        ],
+        staticVariables: {
             prevInput: 0
         }
     }
@@ -119,14 +119,14 @@ class DelayOff extends FunctionBlock
 class Pulse extends FunctionBlock
 {
     constructor() { super(TimerLibDefinitions.Pulse) }
-    protected statics: typeof TimerLibDefinitions.Pulse.statics
+    declare protected staticVariables: typeof TimerLibDefinitions.Pulse.staticVariables
 
     protected run = ([input, t, res], [out, left], dt) => {
         if (res) {
             out = 0
             left = 0
         }
-        else if (input && !this.statics.prevInput) {
+        else if (input && !this.staticVariables.prevInput) {
             out = 1
             left = t - dt
         }
@@ -137,7 +137,7 @@ class Pulse extends FunctionBlock
         else if (left > 0) {
             left -= dt
         }
-        this.statics.prevInput = input
+        this.staticVariables.prevInput = input
         return [out, left]
     }
 }

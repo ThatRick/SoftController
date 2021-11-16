@@ -3,32 +3,11 @@ import GUIContainer from './GUIContainer.js';
 import GUIPointer from './GUIPointer.js';
 import { EventEmitter } from '../Lib/Events.js';
 export default class GUIView {
-    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
-    //                CONSTRUCTOR  
-    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
-    constructor(parentDOM, size, scale, style, css) {
-        this.parentDOM = parentDOM;
-        this.gui = this;
-        this.pos = vec2(0, 0);
-        this.absPos = vec2(0, 0);
-        this.events = new EventEmitter(this);
-        this.eventTargetMap = new WeakMap();
-        this.updateRequests = new Set();
-        this.DOMElement = document.createElement('div');
-        parentDOM.appendChild(this.DOMElement);
-        const defaultStyle = {
-            position: 'relative',
-            top: '0px',
-            left: '0px',
-        };
-        Object.assign(this.DOMElement.style, defaultStyle, css);
-        this._size = Object.freeze(size.copy());
-        this._scale = Object.freeze(scale.copy());
-        this._style = Object.freeze(style);
-        this.children = new GUIContainer(this);
-        this.pointer = new GUIPointer(this);
-        requestAnimationFrame(this.update.bind(this));
-    }
+    parentDOM;
+    DOMElement;
+    gui = this;
+    pos = vec2(0, 0);
+    absPos = vec2(0, 0);
     get size() { return this._size; }
     get scale() { return this._scale; }
     get style() { return this._style; }
@@ -58,10 +37,41 @@ export default class GUIView {
     parentMoved() {
         this.children?.parentMoved();
     }
+    pointer;
+    events = new EventEmitter(this);
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    //                CONSTRUCTOR  
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    constructor(parentDOM, size, scale, style, css) {
+        this.parentDOM = parentDOM;
+        this.DOMElement = document.createElement('div');
+        parentDOM.appendChild(this.DOMElement);
+        const defaultStyle = {
+            position: 'relative',
+            top: '0px',
+            left: '0px',
+        };
+        Object.assign(this.DOMElement.style, defaultStyle, css);
+        this._size = Object.freeze(size.copy());
+        this._scale = Object.freeze(scale.copy());
+        this._style = Object.freeze(style);
+        this.children = new GUIContainer(this);
+        this.pointer = new GUIPointer(this);
+        requestAnimationFrame(this.update.bind(this));
+    }
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    //            PRIVATE & PROTECTED  
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    _scale;
+    _size;
+    _style;
     _resize() {
         this.DOMElement.style.width = this._size.x * this._scale.x + 'px';
         this.DOMElement.style.height = this._size.y * this._scale.y + 'px';
     }
+    children;
+    eventTargetMap = new WeakMap();
+    updateRequests = new Set();
     update() {
         this.pointer.update();
         this.updateRequests.forEach(elem => {
@@ -97,4 +107,16 @@ export default class GUIView {
     requestUpdate(obj) {
         this.updateRequests.add(obj);
     }
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    //   Pointer events
+    //¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤¤
+    onPointerEnter;
+    onPointerDown;
+    onPointerMove;
+    onPointerUp;
+    onClicked;
+    onDoubleClicked;
+    onDragStarted;
+    onDragging;
+    onDragEnded;
 }

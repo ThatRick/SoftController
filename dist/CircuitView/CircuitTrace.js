@@ -1,4 +1,7 @@
 export class CircuitTrace {
+    layer;
+    outputPin;
+    inputPin;
     constructor(layer, outputPin, inputPin) {
         this.layer = layer;
         this.outputPin = outputPin;
@@ -16,6 +19,7 @@ export class CircuitTrace {
             this.validate();
         }
     }
+    id;
     validate() {
         this.inputPin.onPinUpdated = this.updateColor.bind(this);
         this.updateColor();

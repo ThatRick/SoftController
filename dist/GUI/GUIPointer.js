@@ -1,21 +1,32 @@
 import { vec2 } from '../lib/Vector2.js';
 const DOUBLE_CLICK_INTERVAL = 400;
 export default class GUIPointer {
+    view;
+    isDown = false;
+    isDragging = false;
+    eventTarget;
+    targetElem;
+    downEventTarget;
+    downTargetElem;
+    screenPos = vec2(0);
+    screenDownPos = vec2(0);
+    screenDragOffset = vec2(0);
+    scaledPos = vec2(0);
+    scaledDownPos = vec2(0);
+    scaledDragOffset = vec2(0);
+    buttons = 0;
+    update() {
+        if (this.latestMovementEvent) {
+            this.updatePointerPosition(this.latestMovementEvent);
+            this.latestMovementEvent = null;
+        }
+    }
+    attachEventHandler(handler) {
+        this.eventHandler = handler;
+        this.setupEventListeners();
+    }
     constructor(view, eventHandler) {
         this.view = view;
-        this.isDown = false;
-        this.isDragging = false;
-        this.screenPos = vec2(0);
-        this.screenDownPos = vec2(0);
-        this.screenDragOffset = vec2(0);
-        this.scaledPos = vec2(0);
-        this.scaledDownPos = vec2(0);
-        this.scaledDragOffset = vec2(0);
-        this.buttons = 0;
-        this.eventDownPos = vec2(0);
-        this.screenLocalPos = vec2(0);
-        this.dragHyst = 2;
-        this.doubleClickPending = false;
         console.log('construct GUIPointer', eventHandler);
         this.eventHandler = eventHandler || view;
         const bounds = view.DOMElement.getBoundingClientRect();
@@ -32,16 +43,15 @@ export default class GUIPointer {
         //     })
         // }
     }
-    update() {
-        if (this.latestMovementEvent) {
-            this.updatePointerPosition(this.latestMovementEvent);
-            this.latestMovementEvent = null;
-        }
-    }
-    attachEventHandler(handler) {
-        this.eventHandler = handler;
-        this.setupEventListeners();
-    }
+    markers;
+    eventHandler;
+    latestMovementEvent;
+    viewOffset;
+    scrollOffset;
+    eventDownPos = vec2(0);
+    screenLocalPos = vec2(0);
+    dragHyst = 2;
+    doubleClickPending = false;
     updatePointerPosition(ev) {
         const view = this.view;
         const handler = this.eventHandler;

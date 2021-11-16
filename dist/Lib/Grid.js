@@ -1,8 +1,6 @@
 import { vec2 } from './Vector2.js';
 export default class Grid {
-    constructor() {
-        this.cells = []; // [y][x]
-    }
+    cells = []; // [y][x]
     setCell(pos, cell) {
         if (this.cells[pos.y] == undefined)
             this.cells[pos.y] = [];

@@ -12,7 +12,6 @@ export default class IOArea extends GUIChildElement {
             backgroundColor: view.style.colorPanel,
             ...HTML.backgroundLinesStyle(Vec2.mul(vec2(view.style.IOAreaWidth, 1), view.scale), view.style.colorPanelLines)
         }, true);
-        this.ioViews = [];
         this.type = type;
     }
     createCircuitIOViews(circuit) {
@@ -31,5 +30,8 @@ export default class IOArea extends GUIChildElement {
             this.ioViews.push(new CircuitIOView(this.children, circuit, ioNum, vec2(0, ioNum + 2)));
         }
     }
+    circuit;
+    type;
+    ioViews = [];
     get id() { return this.circuit.funcState.id; }
 }

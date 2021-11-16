@@ -1,8 +1,6 @@
-import { FunctionBlock } from "../FunctionBlock.js"
-import { createFunctionCollection } from './CommonLib.js'
-
-export const MathLibDefinitions = createFunctionCollection (
-{
+import { FunctionBlock } from "../FunctionBlock.js";
+import { createFunctionCollection } from './CommonLib.js';
+export const MathLibDefinitions = createFunctionCollection({
     ADD: {
         name: 'Addition',
         symbol: '+',
@@ -19,7 +17,6 @@ export const MathLibDefinitions = createFunctionCollection (
             min: 2, max: 32, initialCount: 2
         }
     },
-
     SUB: {
         name: 'Substract',
         symbol: '-',
@@ -33,7 +30,6 @@ export const MathLibDefinitions = createFunctionCollection (
             { name: 'out', value: 0, datatype: 'FLOAT' },
         ],
     },
-
     MUL: {
         name: 'Multiply',
         symbol: 'x',
@@ -50,7 +46,6 @@ export const MathLibDefinitions = createFunctionCollection (
             min: 2, max: 32, initialCount: 2
         }
     },
-
     DIV: {
         name: 'Division',
         symbol: '÷',
@@ -65,38 +60,26 @@ export const MathLibDefinitions = createFunctionCollection (
             { name: 'err', value: 0, datatype: 'BINARY' },
         ],
     },
-})
-
-
-class ADD extends FunctionBlock
-{
-    constructor() { super(MathLibDefinitions.ADD) }
-    protected run = (inputs: number[]) => inputs.reduce((output, input) => output += input, 0)
+});
+class ADD extends FunctionBlock {
+    constructor() { super(MathLibDefinitions.ADD); }
+    run = (inputs) => inputs.reduce((output, input) => output += input, 0);
 }
-
-class SUB extends FunctionBlock
-{
-    constructor() { super(MathLibDefinitions.SUB) }
-    protected run = ([a, b]) => a - b
+class SUB extends FunctionBlock {
+    constructor() { super(MathLibDefinitions.SUB); }
+    run = ([a, b]) => a - b;
 }
-
-class MUL extends FunctionBlock
-{
-    constructor() { super(MathLibDefinitions.MUL) }
-    protected run = (inputs: number[]) => inputs.reduce((output, input) => output *= input, 1)
+class MUL extends FunctionBlock {
+    constructor() { super(MathLibDefinitions.MUL); }
+    run = (inputs) => inputs.reduce((output, input) => output *= input, 1);
 }
-
-class DIV extends FunctionBlock
-{
-    constructor() { super(MathLibDefinitions.DIV) }
-    protected run = ([a, b]) => (b == 0) ? [0, 1] : [a / b, 0]
+class DIV extends FunctionBlock {
+    constructor() { super(MathLibDefinitions.DIV); }
+    run = ([a, b]) => (b == 0) ? [0, 1] : [a / b, 0];
 }
-
-
-export const mathLib =
-{
+export const mathLib = {
     ADD,
     SUB,
     MUL,
     DIV
-}
+};

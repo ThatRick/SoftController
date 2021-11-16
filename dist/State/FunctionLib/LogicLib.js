@@ -6,13 +6,13 @@ export const LogicLibDefinitions = createFunctionCollection({
         symbol: '&',
         visualStyle: 'minimal',
         description: 'Logical AND function',
-        inputs: {
-            0: { value: 1, dataType: 'BINARY' },
-            1: { value: 1, dataType: 'BINARY' },
-        },
-        outputs: {
-            out: { value: 1, dataType: 'BINARY' },
-        },
+        inputs: [
+            { name: '0', value: 1, datatype: 'BINARY' },
+            { name: '1', value: 1, datatype: 'BINARY' },
+        ],
+        outputs: [
+            { name: 'out', value: 1, datatype: 'BINARY' },
+        ],
         variableInputs: {
             min: 2, max: 32, initialCount: 2
         }
@@ -22,13 +22,13 @@ export const LogicLibDefinitions = createFunctionCollection({
         symbol: '≥1',
         visualStyle: 'minimal',
         description: 'Logical OR function',
-        inputs: {
-            0: { value: 0, dataType: 'BINARY' },
-            1: { value: 0, dataType: 'BINARY' },
-        },
-        outputs: {
-            out: { value: 0, dataType: 'BINARY' },
-        },
+        inputs: [
+            { name: '0', value: 0, datatype: 'BINARY' },
+            { name: '1', value: 0, datatype: 'BINARY' },
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'BINARY' },
+        ],
         variableInputs: {
             min: 2, max: 32, initialCount: 2
         }
@@ -37,61 +37,53 @@ export const LogicLibDefinitions = createFunctionCollection({
         name: 'RS',
         visualStyle: 'no title min',
         description: 'Set-Reset flip-flop with dominant reset',
-        inputs: {
-            S: { value: 0, dataType: 'BINARY' },
-            R: { value: 0, dataType: 'BINARY' },
-        },
-        outputs: {
-            out: { value: 0, dataType: 'BINARY' },
-        }
+        inputs: [
+            { name: 'S', value: 0, datatype: 'BINARY' },
+            { name: 'R', value: 0, datatype: 'BINARY' },
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'BINARY' },
+        ]
     },
     RisingEdge: {
         name: 'Rising edge',
         symbol: '_|‾',
         visualStyle: 'minimal',
         description: 'Rising signal edge detector (0 -> 1)',
-        inputs: {
-            input: { value: 0, dataType: 'BINARY' }
-        },
-        outputs: {
-            out: { value: 0, dataType: 'BINARY' }
-        },
-        statics: {
+        inputs: [
+            { name: 'input', value: 0, datatype: 'BINARY' }
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'BINARY' }
+        ],
+        staticVariables: {
             prev: 0
         }
     },
 });
 class AND extends FunctionBlock {
-    constructor() {
-        super(LogicLibDefinitions.AND);
-        this.run = (inputs) => inputs.reduce((output, input) => output *= input, 1) ? 1 : 0;
-    }
+    constructor() { super(LogicLibDefinitions.AND); }
+    run = (inputs) => inputs.reduce((output, input) => output *= input, 1) ? 1 : 0;
 }
 class OR extends FunctionBlock {
-    constructor() {
-        super(LogicLibDefinitions.OR);
-        this.run = (inputs) => inputs.reduce((output, input) => output += input, 0) ? 1 : 0;
-    }
+    constructor() { super(LogicLibDefinitions.OR); }
+    run = (inputs) => inputs.reduce((output, input) => output += input, 0) ? 1 : 0;
 }
 class RS extends FunctionBlock {
-    constructor() {
-        super(LogicLibDefinitions.RS);
-        this.run = ([S, R], [out]) => {
-            S && (out = 1);
-            R && (out = 0);
-            return out;
-        };
-    }
+    constructor() { super(LogicLibDefinitions.RS); }
+    run = ([S, R], [out]) => {
+        S && (out = 1);
+        R && (out = 0);
+        return out;
+    };
 }
 class RisingEdge extends FunctionBlock {
-    constructor() {
-        super(LogicLibDefinitions.RisingEdge);
-        this.run = ([input]) => {
-            const out = (!this.statics.prev && input) ? 1 : 0;
-            this.statics.prev = input;
-            return out;
-        };
-    }
+    constructor() { super(LogicLibDefinitions.RisingEdge); }
+    run = ([input]) => {
+        const out = (!this.staticVariables.prev && input) ? 1 : 0;
+        this.staticVariables.prev = input;
+        return out;
+    };
 }
 export const logicLib = {
     AND,

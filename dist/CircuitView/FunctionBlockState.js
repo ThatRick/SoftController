@@ -15,18 +15,27 @@ export var FunctionModificationType;
 //      Function Block
 ///////////////////////////////
 export class FunctionBlock {
+    funcData;
+    id;
     constructor(funcData, id, parentCircuit) {
         this.funcData = funcData;
         this.id = id;
-        this.onIOUpdated = [];
-        this.onValidateValueModification = [];
-        this.onValidateFlagsModification = [];
-        this.onValidateInputRefModification = [];
-        this.modifications = [];
         this.isCircuit = (funcData.library == 0);
         this.func = (this.isCircuit) ? null : instructions.getFunction(funcData.library, funcData.opcode);
         this.parentCircuit = parentCircuit;
     }
+    func;
+    isCircuit;
+    circuit;
+    parentCircuit;
+    cpu;
+    onlineDB;
+    onIOUpdated = [];
+    onStateUpdated;
+    onValidateValueModification = [];
+    onValidateFlagsModification = [];
+    onValidateInputRefModification = [];
+    modifications = [];
     ////////////////////////////////////////////
     //      Updates from Controller
     ////////////////////////////////////////////

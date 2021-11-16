@@ -35,7 +35,7 @@ class BlockArea extends GUIChildElement implements CircuitElement
     }
     type: 'blockArea'
     id: ID
-    gui: CircuitView
+    declare gui: CircuitView
 }
 
 
