@@ -1,8 +1,8 @@
-import { BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionInstanceDefinition } from "./FunctionBlock.js";
-import { IOPinInterface, IOPinSource } from './IOPin.js';
-import { FunctionTypeName, getFunctionBlock } from './FunctionLib.js'
-import { Subscriber } from "./CommonTypes.js";
-import { EventEmitter } from "../Lib/Events.js";
+import { BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionInstanceDefinition } from "./FunctionBlock.js"
+import { IOPinSource } from './IOPin.js'
+import { getFunctionBlock } from './FunctionLib.js'
+import { EventEmitter } from "../Lib/Events.js"
+import { OnlineConnectionInterface } from "./OnlineConnection.js"
 
 ///////////////////////////////
 //          Circuit
@@ -31,12 +31,16 @@ export interface CircuitDefinition
 export interface CircuitInterface
 {
     readonly blocks: FunctionBlockInterface[]
+    readonly mode: 'online' | 'offline'
+
     addBlock(blockDef: FunctionInstanceDefinition, index?: number)
     removeBlock(block: FunctionBlockInterface)
     update(dt: number)
     remove()
     getBlockIndex(block: FunctionBlockInterface): number
     setBlockIndex(block: FunctionBlockInterface, newIndex: number)
+
+    setMode(mode: 'online' | 'offline', onlineConnection?: OnlineConnectionInterface): void
 }
 
 export default class Circuit implements CircuitInterface
@@ -100,6 +104,18 @@ export default class Circuit implements CircuitInterface
         this.events = null
     }
 
+    get mode() { return this._mode }
+    
+    setMode(mode: 'online' | 'offline', onlineConnection?: OnlineConnectionInterface) {
+        this._onlineConnection ??= onlineConnection
+        if (mode == 'offline' ||
+            mode == 'online' && this._onlineConnection) {
+            this._mode = mode
+        }
+    }
+
+    blocks: FunctionBlock[]
+
     events = new EventEmitter<CircuitEvent>(this)
 
     constructor(def: CircuitDefinition, circuitBlock: FunctionBlock)
@@ -110,7 +126,7 @@ export default class Circuit implements CircuitInterface
         // Set this as parent circuit
         blocks.forEach(block => block.parentCircuit = this)
 
-        // Set block input sources
+        // Connect block input sources if defined
         def.blocks.forEach((block, blockIndex) => {
             if (block.inputs) {
                 Object.entries(block.inputs).forEach(([inputName, inputDef]) => {
@@ -119,12 +135,12 @@ export default class Circuit implements CircuitInterface
                         if (!input) console.error('Invalid input name in block instance definition:', inputName)
                         else {
                             const { blockNum, outputNum, inverted=false } = inputDef.source
-                            // Connect to circuit input (blockNum = -1) or block output (blockNum = 0..n)
+                            // Connect to circuit input when blockNum = -1 or block output when blockNum >= 0
                             const sourcePin = (blockNum == -1)
                                 ? circuitBlock.inputs[outputNum]
                                 : blocks[blockNum].outputs[outputNum]
                             input.setSource(sourcePin)
-                            input.setInverted(inverted)
+                            input.setInversion(inverted)
                         }
                     }
                 })
@@ -141,7 +157,7 @@ export default class Circuit implements CircuitInterface
                     ? circuitBlock.inputs[outputNum]
                     : blocks[blockNum].outputs[outputNum]
                 output.setSource(sourcePin)
-                output.setInverted(inverted)
+                output.setInversion(inverted)
             }
         })
         this.blocks = blocks
@@ -151,6 +167,6 @@ export default class Circuit implements CircuitInterface
 
     protected circuitBlock: FunctionBlock
 
-    blocks: FunctionBlock[]
-
+    protected _mode: 'online' | 'offline' = 'offline'
+    protected _onlineConnection: OnlineConnectionInterface
 }

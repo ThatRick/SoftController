@@ -13,7 +13,7 @@ export const defaultStyle = {
         IOAreaBackground: '#606070',
         gridLines: '#555565',
         float: '#90B090',
-        integer: '#88A',
+        integer: '#88E',
         binary: '#AAA',
         binaryOff: '#887',
         binaryOn: '#DDB',

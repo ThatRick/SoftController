@@ -2,11 +2,12 @@ import { FunctionBlock, FunctionInstanceDefinition, FunctionTypeDefinition } fro
 
 export type BlockVisualStyle =
     | 'full'
+    | 'narrow'
     | 'no title'
     | 'no title min'
     | 'name on first row'
     | 'name on first row min'
-    | 'minimal'
+    | 'symbol'
 
 
 export function createFunctionCollection <T extends {[name: string]: FunctionTypeDefinition }>(def: T) { return def }

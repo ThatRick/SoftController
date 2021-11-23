@@ -4,12 +4,12 @@ export const ConditionalLibDefinitions = createFunctionCollection({
     Select: {
         name: 'Select',
         symbol: 'SEL',
-        visualStyle: 'name on first row min',
+        visualStyle: 'no title min',
         description: 'Select between two values',
         inputs: [
-            { name: 'sel', value: 0, datatype: 'BINARY' },
-            { name: '1', value: 0, datatype: 'FLOAT' },
             { name: '0', value: 0, datatype: 'FLOAT' },
+            { name: '1', value: 0, datatype: 'FLOAT' },
+            { name: 'sel', value: 0, datatype: 'BINARY' },
         ],
         outputs: [
             { name: 'out', value: 0, datatype: 'FLOAT' }
@@ -19,12 +19,12 @@ export const ConditionalLibDefinitions = createFunctionCollection({
         name: 'Multiplexer',
         symbol: 'MUX',
         visualStyle: 'name on first row min',
-        description: 'Select input based on index',
+        description: 'Select output value based on index',
         inputs: [
             { name: 'index', value: 0, datatype: 'INTEGER' },
             { name: '0', value: 0, datatype: 'FLOAT' },
-            { name: '1', value: 0, datatype: 'FLOAT' },
-            { name: '2', value: 0, datatype: 'FLOAT' },
+            { name: '1', value: 1, datatype: 'FLOAT' },
+            { name: '2', value: 2, datatype: 'FLOAT' },
         ],
         outputs: [
             { name: 'out', value: 0, datatype: 'FLOAT' }
@@ -33,25 +33,47 @@ export const ConditionalLibDefinitions = createFunctionCollection({
             min: 2, max: 32, initialCount: 3
         }
     },
+    MuxBool: {
+        name: 'Mux bool',
+        symbol: 'MUXB',
+        visualStyle: 'no title',
+        description: 'Select output value based on boolean selectors',
+        inputs: [
+            { name: '0', value: 2, datatype: 'FLOAT' },
+            { name: 's0', value: 0, datatype: 'BINARY' },
+            { name: '1', value: 4, datatype: 'FLOAT' },
+            { name: 's1', value: 0, datatype: 'BINARY' },
+            { name: '2', value: 8, datatype: 'FLOAT' },
+            { name: 's2', value: 0, datatype: 'BINARY' },
+        ],
+        outputs: [
+            { name: 'mux', value: 0, datatype: 'FLOAT' },
+            { name: 'en', value: 0, datatype: 'BINARY' }
+        ],
+        variableInputs: {
+            min: 2, max: 32, initialCount: 3, structSize: 2
+        }
+    },
     Compare: {
         name: 'Compare',
         symbol: 'CMP',
-        visualStyle: 'no title min',
+        visualStyle: 'no title',
         description: 'Compare two values',
         inputs: [
-            { name: 'A', value: 0, datatype: 'FLOAT' },
-            { name: 'B', value: 0, datatype: 'FLOAT' },
+            { name: 'a', value: 0, datatype: 'FLOAT' },
+            { name: 'b', value: 0, datatype: 'FLOAT' },
+            { name: 'tol', value: 0, datatype: 'FLOAT' },
         ],
         outputs: [
             { name: '>', value: 0, datatype: 'BINARY' },
-            { name: '=', value: 0, datatype: 'BINARY' },
+            { name: '=', value: 1, datatype: 'BINARY' },
             { name: '<', value: 0, datatype: 'BINARY' },
         ]
     },
     Greater: {
         name: 'Greater',
         symbol: '>',
-        visualStyle: 'minimal',
+        visualStyle: 'symbol',
         description: 'Greater than value',
         inputs: [
             { name: 'A', value: 0, datatype: 'FLOAT' },
@@ -64,7 +86,7 @@ export const ConditionalLibDefinitions = createFunctionCollection({
     Less: {
         name: 'Less',
         symbol: '<',
-        visualStyle: 'minimal',
+        visualStyle: 'symbol',
         description: 'Less than value',
         inputs: [
             { name: 'A', value: 0, datatype: 'FLOAT' },
@@ -77,7 +99,7 @@ export const ConditionalLibDefinitions = createFunctionCollection({
     Equal: {
         name: 'Equal',
         symbol: '=',
-        visualStyle: 'minimal',
+        visualStyle: 'symbol',
         description: 'Equal to value',
         inputs: [
             { name: 'A', value: 0, datatype: 'FLOAT' },
@@ -103,18 +125,54 @@ export const ConditionalLibDefinitions = createFunctionCollection({
             { name: '', value: 0, datatype: 'BINARY' },
         ]
     },
+    Move: {
+        name: 'Move',
+        symbol: 'MOV',
+        visualStyle: 'name on first row min',
+        description: 'Copy input to output if condition is true',
+        inputs: [
+            { name: 'input', value: 0, datatype: 'FLOAT' },
+            { name: 'cnd', value: 0, datatype: 'BINARY' },
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'FLOAT' },
+        ]
+    },
+    Pass: {
+        name: 'Pass',
+        symbol: '▷',
+        visualStyle: 'symbol',
+        description: 'Pass value through',
+        inputs: [
+            { name: 'input', value: 0, datatype: 'FLOAT' },
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'FLOAT' },
+        ]
+    },
 });
 class Select extends FunctionBlock {
     constructor() { super(ConditionalLibDefinitions.Select); }
-    run = ([sel, in1, in0]) => sel ? in1 : in0;
+    run = ([in0, in1, sel]) => sel ? in1 : in0;
 }
 class Mux extends FunctionBlock {
     constructor() { super(ConditionalLibDefinitions.Mux); }
     run = ([index, ...values], [output]) => (index >= 0 && index < values.length) ? values[Math.trunc(index)] : output;
 }
+class MuxBool extends FunctionBlock {
+    constructor() { super(ConditionalLibDefinitions.MuxBool); }
+    run = (inputs, [out]) => {
+        for (let i = -2; i >= -inputs.length; i -= 2) {
+            const [value, sel] = inputs.slice(i);
+            if (sel)
+                return [value, 1];
+        }
+        return [out, 0];
+    };
+}
 class Compare extends FunctionBlock {
     constructor() { super(ConditionalLibDefinitions.Compare); }
-    run = ([A, B]) => [+(A > B), +(A == B), +(A < B)];
+    run = ([a, b, hys]) => [+(a > b + hys), +(Math.abs(a - b) <= hys), +(a < b - hys)];
 }
 class Greater extends FunctionBlock {
     constructor() { super(ConditionalLibDefinitions.Greater); }
@@ -132,12 +190,23 @@ class Limit extends FunctionBlock {
     constructor() { super(ConditionalLibDefinitions.Limit); }
     run = ([input, H, L]) => [Math.max(L, Math.min(H, input)), +(input >= H), +(input <= L)];
 }
+class Move extends FunctionBlock {
+    constructor() { super(ConditionalLibDefinitions.Move); }
+    run = ([input, cnd]) => cnd ? input : null;
+}
+class Pass extends FunctionBlock {
+    constructor() { super(ConditionalLibDefinitions.Pass); }
+    run = ([input]) => input;
+}
 export const conditionalLib = {
     Select,
     Mux,
+    MuxBool,
     Compare,
     Greater,
     Less,
     Equal,
-    Limit
+    Limit,
+    Move,
+    Pass
 };

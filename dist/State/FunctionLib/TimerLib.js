@@ -4,7 +4,7 @@ export const TimerLibDefinitions = createFunctionCollection({
     DelayOn: {
         name: 'Delay on',
         symbol: 'TON',
-        visualStyle: 'name on first row',
+        visualStyle: 'name on first row min',
         description: 'Delay set of output signal',
         inputs: [
             { name: 'input', value: 0, datatype: 'BINARY' },
@@ -13,13 +13,13 @@ export const TimerLibDefinitions = createFunctionCollection({
         ],
         outputs: [
             { name: 'out', value: 0, datatype: 'BINARY' },
-            { name: 'left', value: 0, datatype: 'FLOAT' }
+            { name: '', value: 0, datatype: 'FLOAT' }
         ]
     },
     DelayOff: {
         name: 'Delay off',
         symbol: 'TOFF',
-        visualStyle: 'name on first row',
+        visualStyle: 'name on first row min',
         description: 'Delay reset of output signal',
         inputs: [
             { name: 'input', value: 1, datatype: 'BINARY' },
@@ -28,13 +28,13 @@ export const TimerLibDefinitions = createFunctionCollection({
         ],
         outputs: [
             { name: 'out', value: 1, datatype: 'BINARY' },
-            { name: 'left', value: 0, datatype: 'FLOAT' }
+            { name: '', value: 0, datatype: 'FLOAT' }
         ]
     },
     Pulse: {
         name: 'Pulse',
         symbol: 'Pulse',
-        visualStyle: 'name on first row',
+        visualStyle: 'name on first row min',
         description: 'Output pulse on input rising edge',
         inputs: [
             { name: 'input', value: 0, datatype: 'BINARY' },
@@ -43,7 +43,7 @@ export const TimerLibDefinitions = createFunctionCollection({
         ],
         outputs: [
             { name: 'out', value: 0, datatype: 'BINARY' },
-            { name: 'left', value: 0, datatype: 'FLOAT' }
+            { name: '', value: 0, datatype: 'FLOAT' }
         ],
         staticVariables: {
             prevInput: 0

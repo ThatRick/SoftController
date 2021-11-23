@@ -16,7 +16,7 @@ export function generateCircuitViewDefinition(circuitView) {
             inverted: input.inverted
         };
     }
-    const circuit = {
+    const circuitDef = {
         blocks: circuitView.circuit.blocks.map(block => ({
             typeName: block.typeName,
             inputs: block.inputs.reduce((obj, input) => {
@@ -61,12 +61,12 @@ export function generateCircuitViewDefinition(circuitView) {
         }
     });
     const def = {
-        definition: {
+        blockDef: {
             name: circuitView.name,
             inputs: circuitView.circuitBlock.inputs,
             outputs: circuitView.circuitBlock.outputs,
-            circuit
         },
+        circuitDef,
         size: { x: circuitView.size.x, y: circuitView.size.y },
         positions: {
             blocks: circuitView.circuit.blocks.map(block => {

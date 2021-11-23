@@ -1,5 +1,4 @@
 import { EventEmitter } from "../Lib/Events.js";
-import Circuit from "./Circuit.js";
 import { IOPin } from "./IOPin.js";
 export class FunctionBlock {
     get typeName() { return this._typeName; }
@@ -7,7 +6,7 @@ export class FunctionBlock {
     get description() { return this._description; }
     inputs;
     outputs;
-    circuit;
+    //readonly    circuit?:           CircuitInterface
     variableInputs;
     variableOutputs;
     typeDef;
@@ -43,16 +42,17 @@ export class FunctionBlock {
         // Add inputs
         if (addition > 0) {
             const initialInputs = Object.values(this.typeDef.inputs).map(input => {
-                const name = input.name ? splitToStringAndNumber(input.name || '')[0] : '';
-                return { name, value: input.value, dataType: input.datatype };
+                const emptyName = (input.name == '');
+                const name = (input.name) ? splitToStringAndNumber(input.name || '')[0] : '';
+                return { name, value: input.value, dataType: input.datatype, emptyName };
             });
             const initialStruct = initialInputs.slice(staticInputsCount, staticInputsCount + structSize);
             const currentLastIndex = this.inputs.length - structSize;
             const numberingStart = splitToStringAndNumber(this.inputs[currentLastIndex].name)[1] + 1;
             for (let i = 0; i < addition; i++) {
-                const numbering = numberingStart + i;
-                const newInputs = initialStruct.map(({ name, value, dataType }) => {
-                    return new IOPin('input', value, name + numbering, dataType, this);
+                const numbering = (numberingStart + i).toString();
+                const newInputs = initialStruct.map(({ name, value, dataType, emptyName }) => {
+                    return new IOPin('input', value, emptyName ? '' : name + numbering, dataType, this);
                 });
                 newInputs.forEach(input => {
                     this.inputs.push(input);
@@ -102,7 +102,9 @@ export class FunctionBlock {
         const inputs = this.inputs.map(input => input.value);
         const outputs = this.outputs.map(outputs => outputs.value);
         let ret = this.run(inputs, outputs, dt);
-        if (typeof ret == 'object') {
+        if (ret === null)
+            return;
+        else if (typeof ret == 'object') {
             ret.forEach((value, i) => this.outputs[i].setValue(value));
         }
         else if (typeof ret == 'number') {
@@ -112,9 +114,6 @@ export class FunctionBlock {
     remove() {
         this.inputs.forEach(input => input.remove());
         this.outputs.forEach(output => output.remove());
-        if (this.circuit) {
-            this.circuit.remove();
-        }
         if (this.parentCircuit) {
             this.parentCircuit.removeBlock(this);
         }
@@ -162,9 +161,6 @@ export class FunctionBlock {
         this.variableInputs = typeDef.variableInputs;
         this.variableOutputs = typeDef.variableOutputs;
         this.staticVariables = { ...typeDef.staticVariables };
-        if (typeDef.circuit) {
-            this.circuit = new Circuit(typeDef.circuit, this);
-        }
     }
     staticVariables;
     _typeName;

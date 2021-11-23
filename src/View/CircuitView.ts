@@ -18,10 +18,12 @@ import CircuitGrid from './CircuitGrid.js'
 import CircuitIOView from './CircuitIOView.js'
 import { exportToFile, generateCircuitViewDefinition } from './CircuitSerializer.js'
 import { IODataType } from '../State/CommonTypes.js'
+import { CircuitDefinition } from '../State/Circuit.js'
 
 export interface CircuitViewDefinition
 {
-    definition: FunctionTypeDefinition
+    blockDef: FunctionTypeDefinition
+    circuitDef: CircuitDefinition
     size: IVec2
     positions: {
         blocks: IVec2[]
@@ -169,12 +171,12 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         this._circuitBlock = new CircuitBlock({
             name: 'New circuit',
             inputs: [],
-            outputs: [],
-            circuit: {
-                blocks: [],
-                circuitOutputSources: {}
-            }
-        })
+            outputs: []
+        },{
+            blocks: [],
+            circuitOutputSources: {}
+        }
+        )
     }
 
     export() {
@@ -183,10 +185,10 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
     }
 
     loadCircuitDefinition(circuitViewDefinition: CircuitViewDefinition) {
-        const { definition, positions, size } = circuitViewDefinition
+        const { blockDef, circuitDef, positions, size } = circuitViewDefinition
         this.resize(vec2(size))
 
-        this._circuitBlock = new CircuitBlock(definition)
+        this._circuitBlock = new CircuitBlock(blockDef, circuitDef)
         
         // Create circuit IO views
         this.createCircuitIOViews(circuitViewDefinition)
@@ -212,7 +214,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
             const anchors = positions.traces?.find(trace => (trace.blockNum == -1 && trace.inputNum == index ))?.anchors
             if (destIO.sourceIO) this.createConnectionTrace(destIO, anchors)
         })
-        this.name = definition.name
+        this.name = blockDef.name
         this.circuitViewEvents.emit(CircuitViewEventType.CircuitLoaded)
 
         this.insertionIndex = this.circuit.blocks.length
@@ -319,7 +321,7 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
 
     selection = new CircuitSelection(this.style)
     
-    get circuitBlock(): FunctionBlockInterface { return this._circuitBlock }
+    get circuitBlock(): CircuitBlock { return this._circuitBlock }
     
     get circuit() { return this._circuitBlock?.circuit }
 
@@ -424,5 +426,5 @@ export default class CircuitView extends GUIView<GUIChildElement, Style>
         })
     }
 
-    protected _circuitBlock: FunctionBlock
+    protected _circuitBlock: CircuitBlock
 }

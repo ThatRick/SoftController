@@ -45,35 +45,37 @@ export interface IOPinEvent
 
 export interface IOPinInterface
 {
-    readonly type: 'input' | 'output'
-    readonly value: number
-    readonly name: string
-    readonly datatype: IODataType
-    readonly ioNum: number
-    readonly block: FunctionBlockInterface
+    readonly type:      'input' | 'output'
+    readonly value:     number
+    readonly name:      string
+    readonly datatype:  IODataType
+    readonly ioNum:     number
+    readonly block:     FunctionBlockInterface
     readonly sourceIO?: IOPinInterface
     readonly inverted?: boolean
-    readonly events: EventEmitter<IOPinEvent>
+    readonly events:    EventEmitter<IOPinEvent>
 
     setValue(n: number): void
     setName(name: string): void
     setDatatype(type: IODataType): void
     setSource(source: IOPinInterface)
-    setInverted(inverted: boolean)
+    setInversion(inverted: boolean)
     remove(): void
 }
 
 
 export class IOPin implements IOPinInterface
 {
-    readonly type: 'input' | 'output'
-    get value() { return this._value }
-    get name() { return this._name }
-    get datatype() { return this._datatype }
-    get block() { return this._block }
-    get ioNum() { return this._block.getIONum(this) }
-    get sourceIO() { return this._sourcePin }
-    get inverted() { return this._inverted }
+    readonly type:  'input' | 'output'
+    get value()     { return this._value }
+    get name()      { return this._name }
+    get datatype()  { return this._datatype }
+    get block()     { return this._block }
+    get ioNum()     { return this._block.getIONum(this) }
+    get sourceIO()  { return this._sourcePin }
+    get inverted()  { return this._inverted }
+
+    events = new EventEmitter<IOPinEvent>(this)
 
     setValue(value: number) {
         if (this._value != value) {
@@ -96,23 +98,22 @@ export class IOPin implements IOPinInterface
     setSource(source: IOPinInterface) {
         if (this._sourcePin != source) {
             this._sourcePin = source
-            if (!source) this.setInverted(false)
+            if (!source) this.setInversion(false)
             this.events.emit(IOPinEventType.SourceChanged)
         }
     }
-    setInverted(inverted: boolean) {
+    setInversion(inverted: boolean) {
         if (this._inverted != inverted) {
             this._inverted = inverted
             this.events.emit(IOPinEventType.InvertionChanged)
         }
     }
-
-    events = new EventEmitter<IOPinEvent>(this)
-
     remove() {
         this.events.emit(IOPinEventType.Removed)
         this.events.clear()
+        this.events = null
         this._sourcePin = null
+        this._block = null
     }
 
     toString() {

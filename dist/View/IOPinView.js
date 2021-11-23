@@ -24,11 +24,11 @@ export default class IOPinView extends GUIChildElement {
     //////////////////////////////////////////////
     //              Constructor
     //////////////////////////////////////////////
-    constructor(io, pos, parentContainer) {
+    constructor(io, pos, parentContainer, isCircuitIO = false) {
         super(parentContainer, 'div', pos, vec2(1, 1), { cursor: 'crosshair' });
         this.DOMElement.className = 'hoverBackground';
         this.io = io;
-        this.isCircuitIO = (io.block.circuit != null);
+        this.isCircuitIO = isCircuitIO;
         this.direction = ((this.type == 'input' && !this.isCircuitIO) || (this.type == 'output' && this.isCircuitIO)) ? 'left' : 'right';
         io.events.subscribe(this.ioEventHandler);
         this.init();

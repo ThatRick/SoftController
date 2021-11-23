@@ -1,4 +1,5 @@
 import { FunctionBlock } from "./FunctionBlock.js";
+import Circuit from "./Circuit.js";
 import { logicLib } from './FunctionLib/LogicLib.js';
 import { mathLib } from './FunctionLib/MathLib.js';
 import { conditionalLib } from './FunctionLib/ConditionalLib.js';
@@ -53,8 +54,14 @@ export function getFunctionBlock(instance) {
     return block;
 }
 export class CircuitBlock extends FunctionBlock {
-    constructor(definition) {
-        super(definition);
+    circuit;
+    constructor(blockDef, circuitDef) {
+        super(blockDef);
+        this.circuit = new Circuit(circuitDef, this);
+    }
+    remove() {
+        super.remove();
+        this.circuit.remove();
     }
     run = (inputs, outputs, dt) => {
         this.circuit.update(dt);

@@ -114,11 +114,10 @@ export default class CircuitView extends GUIView {
         this._circuitBlock = new CircuitBlock({
             name: 'New circuit',
             inputs: [],
-            outputs: [],
-            circuit: {
-                blocks: [],
-                circuitOutputSources: {}
-            }
+            outputs: []
+        }, {
+            blocks: [],
+            circuitOutputSources: {}
         });
     }
     export() {
@@ -126,9 +125,9 @@ export default class CircuitView extends GUIView {
         exportToFile(circViewDef, this.name + '.json');
     }
     loadCircuitDefinition(circuitViewDefinition) {
-        const { definition, positions, size } = circuitViewDefinition;
+        const { blockDef, circuitDef, positions, size } = circuitViewDefinition;
         this.resize(vec2(size));
-        this._circuitBlock = new CircuitBlock(definition);
+        this._circuitBlock = new CircuitBlock(blockDef, circuitDef);
         // Create circuit IO views
         this.createCircuitIOViews(circuitViewDefinition);
         // Create function block views
@@ -154,7 +153,7 @@ export default class CircuitView extends GUIView {
             if (destIO.sourceIO)
                 this.createConnectionTrace(destIO, anchors);
         });
-        this.name = definition.name;
+        this.name = blockDef.name;
         this.circuitViewEvents.emit(0 /* CircuitLoaded */);
         this.insertionIndex = this.circuit.blocks.length;
         this.ticker?.stop();

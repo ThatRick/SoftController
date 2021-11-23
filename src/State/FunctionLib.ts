@@ -1,4 +1,5 @@
 import { FunctionBlock, FunctionInstanceDefinition, FunctionTypeDefinition } from "./FunctionBlock.js"
+import Circuit, { CircuitDefinition } from "./Circuit.js"
 
 import { logicLib } from './FunctionLib/LogicLib.js'
 import { mathLib } from './FunctionLib/MathLib.js'
@@ -63,13 +64,23 @@ export function getFunctionBlock(instance: FunctionInstanceDefinition)
 
 export class CircuitBlock extends FunctionBlock
 {
-    constructor(definition: FunctionTypeDefinition) { 
-        super(definition)
+    readonly circuit: Circuit
+    constructor(blockDef: FunctionTypeDefinition, circuitDef: CircuitDefinition)
+    { 
+        super(blockDef)
+        this.circuit = new Circuit(circuitDef, this)
     }
+
+    remove() {
+        super.remove()
+        this.circuit.remove()
+    }
+
     protected run = (inputs, outputs, dt: number) => {
         this.circuit.update(dt)
         this.updateOutputs()
     }
+
     protected updateOutputs() {
         this.outputs.forEach(output => {
             if (output.sourceIO) {

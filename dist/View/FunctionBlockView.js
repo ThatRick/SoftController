@@ -50,7 +50,7 @@ export default class FunctionBlockView extends GUIChildElement {
             case 0 /* InputCountChanged */:
             case 1 /* OutputCountChanged */:
                 this.setSize(FunctionBlockView.getBlockSize(this.block));
-                if (this.visualStyle == 'minimal')
+                if (this.visualStyle == 'symbol')
                     this.createSymbol();
                 else
                     this.createIONames();
@@ -70,9 +70,9 @@ export default class FunctionBlockView extends GUIChildElement {
         this.create();
     }
     create() {
-        if (this.visualStyle == 'full' || this.visualStyle.startsWith('name on first row'))
+        if (this.visualStyle == 'full' || this.visualStyle == 'narrow' || this.visualStyle.startsWith('name on first row'))
             this.createTitle();
-        if (this.visualStyle == 'minimal')
+        if (this.visualStyle == 'symbol')
             this.createSymbol();
         else
             this.createIONames();
@@ -209,6 +209,10 @@ export default class FunctionBlockView extends GUIChildElement {
                 w = 5;
                 title = 1;
                 break;
+            case 'narrow':
+                w = 3;
+                title = 1;
+                break;
             case 'no title':
                 w = 3;
                 title = 0;
@@ -225,7 +229,7 @@ export default class FunctionBlockView extends GUIChildElement {
                 w = 2;
                 title = 0;
                 break;
-            case 'minimal':
+            case 'symbol':
                 w = 2;
                 title = 0;
                 break;

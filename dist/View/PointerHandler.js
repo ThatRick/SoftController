@@ -86,7 +86,7 @@ export default function CircuitPointerHandler(circuitView) {
             selection.unselectAll();
             if (pin.io.datatype == 'BINARY') {
                 if (pin.io.sourceIO) {
-                    pin.io.setInverted(!pin.io.inverted);
+                    pin.io.setInversion(!pin.io.inverted);
                 }
                 else {
                     pin.io.setValue(pin.io.value ? 0 : 1);
@@ -344,7 +344,7 @@ export default function CircuitPointerHandler(circuitView) {
             }
             if (connectionMoveInputValid) {
                 connectionDropTargetPin.io.setSource(selection.pin.io.sourceIO);
-                connectionDropTargetPin.io.setInverted(selection.pin.io.inverted);
+                connectionDropTargetPin.io.setInversion(selection.pin.io.inverted);
                 selection.pin.io.setSource(null);
             }
             if (connectionMoveOutputValid) {

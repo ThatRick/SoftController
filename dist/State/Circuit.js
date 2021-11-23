@@ -54,6 +54,15 @@ export default class Circuit {
         this.circuitBlock = null;
         this.events = null;
     }
+    get mode() { return this._mode; }
+    setMode(mode, onlineConnection) {
+        this._onlineConnection ??= onlineConnection;
+        if (mode == 'offline' ||
+            mode == 'online' && this._onlineConnection) {
+            this._mode = mode;
+        }
+    }
+    blocks;
     events = new EventEmitter(this);
     constructor(def, circuitBlock) {
         this.circuitBlock = circuitBlock;
@@ -61,7 +70,7 @@ export default class Circuit {
         const blocks = def.blocks.map(funcDef => getFunctionBlock(funcDef));
         // Set this as parent circuit
         blocks.forEach(block => block.parentCircuit = this);
-        // Set block input sources
+        // Connect block input sources if defined
         def.blocks.forEach((block, blockIndex) => {
             if (block.inputs) {
                 Object.entries(block.inputs).forEach(([inputName, inputDef]) => {
@@ -71,12 +80,12 @@ export default class Circuit {
                             console.error('Invalid input name in block instance definition:', inputName);
                         else {
                             const { blockNum, outputNum, inverted = false } = inputDef.source;
-                            // Connect to circuit input (blockNum = -1) or block output (blockNum = 0..n)
+                            // Connect to circuit input when blockNum = -1 or block output when blockNum >= 0
                             const sourcePin = (blockNum == -1)
                                 ? circuitBlock.inputs[outputNum]
                                 : blocks[blockNum].outputs[outputNum];
                             input.setSource(sourcePin);
-                            input.setInverted(inverted);
+                            input.setInversion(inverted);
                         }
                     }
                 });
@@ -94,12 +103,13 @@ export default class Circuit {
                     ? circuitBlock.inputs[outputNum]
                     : blocks[blockNum].outputs[outputNum];
                 output.setSource(sourcePin);
-                output.setInverted(inverted);
+                output.setInversion(inverted);
             }
         });
         this.blocks = blocks;
         console.log(this.blocks);
     }
     circuitBlock;
-    blocks;
+    _mode = 'offline';
+    _onlineConnection;
 }

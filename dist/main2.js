@@ -8,7 +8,7 @@ import { CircuitMenuBar } from './View/CircuitMenubar.js';
 //
 window.onload = () => app().catch(rejected => console.error(rejected));
 const myProg = {
-    definition: {
+    blockDef: {
         name: 'Test circuit 1',
         inputs: [
             { name: 'meas', value: 123, datatype: 'FLOAT' },
@@ -17,31 +17,31 @@ const myProg = {
         outputs: [
             { name: 'out', value: 0, datatype: 'FLOAT' }
         ],
-        circuit: {
-            blocks: [
-                {
-                    typeName: 'AND',
-                    inputs: {
-                        0: { source: { blockNum: -1, outputNum: 1, inverted: true } },
-                        1: { value: 1 },
-                        2: { value: 1 }
-                    }
-                },
-                { typeName: 'OR' },
-                { typeName: 'RS' },
-                { typeName: 'RisingEdge' },
-                {
-                    typeName: 'Select',
-                    inputs: {
-                        0: { value: 10 },
-                        1: { value: 5 },
-                        sel: { source: { blockNum: 1, outputNum: 0 } }
-                    }
-                },
-            ],
-            circuitOutputSources: {
-                out: { blockNum: 4, outputNum: 0 }
-            }
+    },
+    circuitDef: {
+        blocks: [
+            {
+                typeName: 'AND',
+                inputs: {
+                    0: { source: { blockNum: -1, outputNum: 1, inverted: true } },
+                    1: { value: 1 },
+                    2: { value: 1 }
+                }
+            },
+            { typeName: 'OR' },
+            { typeName: 'RS' },
+            { typeName: 'RisingEdge' },
+            {
+                typeName: 'Select',
+                inputs: {
+                    0: { value: 10 },
+                    1: { value: 5 },
+                    sel: { source: { blockNum: 1, outputNum: 0 } }
+                }
+            },
+        ],
+        circuitOutputSources: {
+            out: { blockNum: 4, outputNum: 0 }
         }
     },
     size: { x: 48, y: 32 },

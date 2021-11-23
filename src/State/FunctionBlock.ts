@@ -1,8 +1,8 @@
 import { EventEmitter } from "../Lib/Events.js"
-import Circuit, { CircuitDefinition, CircuitInterface } from "./Circuit.js"
 import { IODataType } from "./CommonTypes.js"
 import { FunctionTypeName, BlockVisualStyle } from "./FunctionLib.js"
 import { IOPin, IOPinDefinition, IOPinInstanceDefinition, IOPinInterface } from "./IOPin.js"
+import Circuit, { CircuitDefinition, CircuitInterface } from "./Circuit.js"
 
 
 ///////////////////////////////
@@ -21,7 +21,6 @@ export interface FunctionTypeDefinition
     variableInputs?:    VariableIOCountDefinition
     variableOutputs?:   VariableIOCountDefinition
     staticVariables?:   { [name: string]: number }
-    circuit?:           CircuitDefinition
 }
 
 export interface FunctionInstanceDefinition
@@ -61,12 +60,13 @@ export interface FunctionBlockInterface
     readonly description:       string
     readonly inputs:            IOPinInterface[]
     readonly outputs:           IOPinInterface[]
-    readonly circuit?:          CircuitInterface
+    //readonly circuit?:          CircuitInterface
     readonly variableInputs?:   VariableIOCountDefinition
     readonly variableOutputs?:  VariableIOCountDefinition
     readonly typeDef:           FunctionTypeDefinition
     readonly events:            EventEmitter<BlockEvent>
     readonly callIndex:         number
+
 
     parentCircuit?:             CircuitInterface
     
@@ -93,14 +93,13 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     get         description()       { return this._description }
     readonly    inputs:             IOPinInterface[]
     readonly    outputs:            IOPinInterface[]
-    readonly    circuit?:           CircuitInterface
+    //readonly    circuit?:           CircuitInterface
     readonly    variableInputs?:    VariableIOCountDefinition
     readonly    variableOutputs?:   VariableIOCountDefinition
     readonly    typeDef:            FunctionTypeDefinition
     readonly    events =            new EventEmitter<BlockEvent>(this)
     get         callIndex()         { return this.parentCircuit?.getBlockIndex(this) }
     
-
     setCallIndex(n: number) {
         this.parentCircuit?.setBlockIndex(this, n)
     }
@@ -131,16 +130,17 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         // Add inputs
         if (addition > 0) {    
             const initialInputs = Object.values(this.typeDef.inputs).map(input => {
-                const name = input.name ? splitToStringAndNumber(input.name || '')[0] : ''
-                return { name, value: input.value, dataType: input.datatype }
+                const emptyName = (input.name == '')
+                const name = (input.name) ? splitToStringAndNumber(input.name || '')[0] : ''
+                return { name, value: input.value, dataType: input.datatype, emptyName }
             })
             const initialStruct = initialInputs.slice(staticInputsCount, staticInputsCount + structSize)
             const currentLastIndex = this.inputs.length - structSize
             const numberingStart = splitToStringAndNumber(this.inputs[currentLastIndex].name)[1] + 1
             for (let i = 0; i < addition; i++) {
-                const numbering = numberingStart + i
-                const newInputs = initialStruct.map(({name, value, dataType}) => {
-                    return new IOPin('input', value, name+numbering, dataType, this )
+                const numbering = (numberingStart + i).toString()
+                const newInputs = initialStruct.map(({name, value, dataType, emptyName}) => {
+                    return new IOPin('input', value, emptyName ? '' : name+numbering, dataType, this )
                 })
                 newInputs.forEach(input => {
                     this.inputs.push(input)
@@ -190,9 +190,11 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         const inputs = this.inputs.map(input => input.value)
         const outputs = this.outputs.map(outputs => outputs.value)
         let ret = this.run(inputs, outputs, dt)
-        if (typeof ret == 'object') {
+        if (ret === null) return
+        else if (typeof ret == 'object') {
             ret.forEach((value, i) => this.outputs[i].setValue(value))
-        } else if (typeof ret == 'number') {
+        }
+        else if (typeof ret == 'number') {
             this.outputs[0].setValue(ret)
         }
     }
@@ -200,9 +202,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     remove() {
         this.inputs.forEach(input => input.remove())
         this.outputs.forEach(output => output.remove())
-        if (this.circuit) {
-            this.circuit.remove()
-        }
         if (this.parentCircuit) {
             this.parentCircuit.removeBlock(this)
         }
@@ -260,10 +259,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
         this.variableInputs = typeDef.variableInputs
         this.variableOutputs = typeDef.variableOutputs
         this.staticVariables = {...typeDef.staticVariables}
-        
-        if (typeDef.circuit) {
-            this.circuit = new Circuit(typeDef.circuit, this)
-        }
     }
 
     ///////////////  PROTECTED  //////////////////
@@ -276,7 +271,8 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     protected _symbol: string
     protected _description: string
 
-    protected updateInputs() {
+    protected updateInputs()
+    {
         this.inputs.forEach(input => {
             if (input.sourceIO) {
                 let newValue = input.sourceIO.value
@@ -286,7 +282,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
             }
         })
     }
-
 }
 
 ///////////////////////////////

@@ -14,7 +14,7 @@ export default function FunctionBlockContextMenu(options: {
     const {ioPinView, pos, parentContainer, destructor} = options
     
     const items = {
-        'Invert':       (ioPinView.io.sourceIO && ioPinView.io.datatype == 'BINARY') ? () => { ioPinView.io.setInverted(!ioPinView.io.inverted) } : null,
+        'Invert':       (ioPinView.io.sourceIO && ioPinView.io.datatype == 'BINARY') ? () => { ioPinView.io.setInversion(!ioPinView.io.inverted) } : null,
         'Disconnect':   (ioPinView.io.sourceIO) ? () => { ioPinView.io.setSource(null) } : null
     }
     

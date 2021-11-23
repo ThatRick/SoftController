@@ -4,7 +4,7 @@ export const LogicLibDefinitions = createFunctionCollection({
     AND: {
         name: 'AND',
         symbol: '&',
-        visualStyle: 'minimal',
+        visualStyle: 'symbol',
         description: 'Logical AND function',
         inputs: [
             { name: '0', value: 1, datatype: 'BINARY' },
@@ -20,7 +20,7 @@ export const LogicLibDefinitions = createFunctionCollection({
     OR: {
         name: 'OR',
         symbol: '≥1',
-        visualStyle: 'minimal',
+        visualStyle: 'symbol',
         description: 'Logical OR function',
         inputs: [
             { name: '0', value: 0, datatype: 'BINARY' },
@@ -48,7 +48,7 @@ export const LogicLibDefinitions = createFunctionCollection({
     RisingEdge: {
         name: 'Rising edge',
         symbol: '_|‾',
-        visualStyle: 'minimal',
+        visualStyle: 'symbol',
         description: 'Rising signal edge detector (0 -> 1)',
         inputs: [
             { name: 'input', value: 0, datatype: 'BINARY' }
@@ -58,6 +58,21 @@ export const LogicLibDefinitions = createFunctionCollection({
         ],
         staticVariables: {
             prev: 0
+        }
+    },
+    FallingEdge: {
+        name: 'Falling edge',
+        symbol: '‾|_',
+        visualStyle: 'symbol',
+        description: 'Falling signal edge detector (1 -> 0)',
+        inputs: [
+            { name: 'input', value: 1, datatype: 'BINARY' }
+        ],
+        outputs: [
+            { name: 'out', value: 0, datatype: 'BINARY' }
+        ],
+        staticVariables: {
+            prev: 1
         }
     },
 });
@@ -85,9 +100,18 @@ class RisingEdge extends FunctionBlock {
         return out;
     };
 }
+class FallingEdge extends FunctionBlock {
+    constructor() { super(LogicLibDefinitions.FallingEdge); }
+    run = ([input]) => {
+        const out = (this.staticVariables.prev && !input) ? 1 : 0;
+        this.staticVariables.prev = input;
+        return out;
+    };
+}
 export const logicLib = {
     AND,
     OR,
     RS,
     RisingEdge,
+    FallingEdge,
 };

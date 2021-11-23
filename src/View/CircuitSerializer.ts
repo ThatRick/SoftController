@@ -27,7 +27,7 @@ export function generateCircuitViewDefinition(circuitView: CircuitView)
         }
     }
 
-    const circuit: CircuitDefinition = {
+    const circuitDef: CircuitDefinition = {
         blocks: circuitView.circuit.blocks.map(block => ({
             typeName: block.typeName,
 
@@ -75,12 +75,12 @@ export function generateCircuitViewDefinition(circuitView: CircuitView)
         }
     })
     const def: CircuitViewDefinition = {
-        definition: {
+        blockDef: {
             name: circuitView.name,
             inputs: circuitView.circuitBlock.inputs,
             outputs: circuitView.circuitBlock.outputs,
-            circuit
         },
+        circuitDef,
         size: {x: circuitView.size.x, y: circuitView.size.y},
         positions: {
             blocks: circuitView.circuit.blocks.map(block => {
