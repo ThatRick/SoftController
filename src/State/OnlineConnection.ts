@@ -1,5 +1,14 @@
-export interface OnlineConnectionInterface
+export interface OnlineControllerInterface
 {
-    onUpdateIOValue(ioNum: number, value: number): void
-
+    start()
+    stop()
+    step()
+    getProgram()
 }
+
+export interface OnlineCircuitInterface
+{
+    onIOValueReceived(blockNum: number, ioNum: number, value: number): void
+    modifyIOValue(blockNum: number, ioNum: number, value: number): void
+}
+

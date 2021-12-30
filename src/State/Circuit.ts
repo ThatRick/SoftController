@@ -2,7 +2,7 @@ import { BlockEventType, FunctionBlock, FunctionBlockInterface, FunctionInstance
 import { IOPinSource } from './IOPin.js'
 import { getFunctionBlock } from './FunctionLib.js'
 import { EventEmitter } from "../Lib/Events.js"
-import { OnlineConnectionInterface } from "./OnlineConnection.js"
+import { OnlineCircuitInterface } from "./OnlineConnection.js"
 
 ///////////////////////////////
 //          Circuit
@@ -40,7 +40,7 @@ export interface CircuitInterface
     getBlockIndex(block: FunctionBlockInterface): number
     setBlockIndex(block: FunctionBlockInterface, newIndex: number)
 
-    setMode(mode: 'online' | 'offline', onlineConnection?: OnlineConnectionInterface): void
+    setMode(mode: 'online' | 'offline', onlineConnection?: OnlineCircuitInterface): void
 }
 
 export default class Circuit implements CircuitInterface
@@ -106,7 +106,7 @@ export default class Circuit implements CircuitInterface
 
     get mode() { return this._mode }
     
-    setMode(mode: 'online' | 'offline', onlineConnection?: OnlineConnectionInterface) {
+    setMode(mode: 'online' | 'offline', onlineConnection?: OnlineCircuitInterface) {
         this._onlineConnection ??= onlineConnection
         if (mode == 'offline' ||
             mode == 'online' && this._onlineConnection) {
@@ -168,5 +168,5 @@ export default class Circuit implements CircuitInterface
     protected circuitBlock: FunctionBlock
 
     protected _mode: 'online' | 'offline' = 'offline'
-    protected _onlineConnection: OnlineConnectionInterface
+    protected _onlineConnection: OnlineCircuitInterface
 }

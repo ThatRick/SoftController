@@ -6,7 +6,6 @@ export class FunctionBlock {
     get description() { return this._description; }
     inputs;
     outputs;
-    //readonly    circuit?:           CircuitInterface
     variableInputs;
     variableOutputs;
     typeDef;

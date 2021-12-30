@@ -2,7 +2,7 @@ import { EventEmitter } from "../Lib/Events.js"
 import { IODataType } from "./CommonTypes.js"
 import { FunctionTypeName, BlockVisualStyle } from "./FunctionLib.js"
 import { IOPin, IOPinDefinition, IOPinInstanceDefinition, IOPinInterface } from "./IOPin.js"
-import Circuit, { CircuitDefinition, CircuitInterface } from "./Circuit.js"
+import { CircuitInterface } from "./Circuit.js"
 
 
 ///////////////////////////////
@@ -60,7 +60,6 @@ export interface FunctionBlockInterface
     readonly description:       string
     readonly inputs:            IOPinInterface[]
     readonly outputs:           IOPinInterface[]
-    //readonly circuit?:          CircuitInterface
     readonly variableInputs?:   VariableIOCountDefinition
     readonly variableOutputs?:  VariableIOCountDefinition
     readonly typeDef:           FunctionTypeDefinition
@@ -93,7 +92,6 @@ export abstract class FunctionBlock implements FunctionBlockInterface
     get         description()       { return this._description }
     readonly    inputs:             IOPinInterface[]
     readonly    outputs:            IOPinInterface[]
-    //readonly    circuit?:           CircuitInterface
     readonly    variableInputs?:    VariableIOCountDefinition
     readonly    variableOutputs?:   VariableIOCountDefinition
     readonly    typeDef:            FunctionTypeDefinition
