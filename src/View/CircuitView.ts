@@ -113,7 +113,7 @@ export class CircuitIOArea extends GUIChildElement
 
 class Ticker
 {
-    protected timerHandle: number
+    protected timerHandle: ReturnType<typeof setInterval>
     protected running = false
     
     constructor (

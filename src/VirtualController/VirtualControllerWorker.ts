@@ -8,7 +8,7 @@ class Ticker
 {
     constructor(private cpu: Tickable) {}
  
-    timer: number
+    timer: ReturnType<typeof setInterval>
     start(interval: number) {
         if (this.timer) this.stop()
         this.timer = setInterval(() => {

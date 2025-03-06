@@ -1,4 +1,4 @@
-import Vec2, { vec2 } from '../lib/Vector2.js'
+import Vec2, { vec2 } from '../Lib/Vector2.js'
 import { GUIChildElement } from './GUIChildElement.js'
 import { GUIPointerEventHandler, IChildElementGUI } from './GUITypes.js'
 import GUIView from './GUIView.js'
